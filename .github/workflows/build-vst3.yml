@@ -1,0 +1,118 @@
+name: Build VST3 Plugin
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_id:
+        description: 'Project UUID'
+        required: true
+        type: string
+      plugin_name:
+        description: 'Sanitized plugin name (PascalCase, used in CMake)'
+        required: true
+        type: string
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout builds repo
+        uses: actions/checkout@v4
+
+      - name: Verify project files exist
+        run: |
+          if [ ! -d "projects/${{ inputs.project_id }}" ]; then
+            echo "Error: Project directory projects/${{ inputs.project_id }} not found"
+            exit 1
+          fi
+          echo "Project files:"
+          find "projects/${{ inputs.project_id }}" -type f
+
+      - name: Cache JUCE SDK
+        id: cache-juce
+        uses: actions/cache@v4
+        with:
+          path: ~/juce-sdk
+          key: juce-8.0.4-macos
+
+      - name: Download and setup JUCE SDK
+        if: steps.cache-juce.outputs.cache-hit != 'true'
+        run: |
+          cd ~
+          git clone --depth 1 --branch 8.0.4 \
+            https://github.com/juce-framework/JUCE.git juce-sdk
+
+      - name: Copy JUCE JS bridge files into project
+        run: |
+          PROJECT_DIR="projects/${{ inputs.project_id }}"
+          JUCE_JS_SRC="$HOME/juce-sdk/modules/juce_gui_extra/native/javascript"
+
+          # Create target directory
+          mkdir -p "$PROJECT_DIR/Source/ui/js/juce"
+
+          # Copy JUCE WebView bridge files
+          cp "$JUCE_JS_SRC/index.js" "$PROJECT_DIR/Source/ui/js/juce/index.js"
+          cp "$JUCE_JS_SRC/check_native_interop.js" "$PROJECT_DIR/Source/ui/js/juce/check_native_interop.js"
+
+          echo "JUCE JS bridge files copied:"
+          ls -la "$PROJECT_DIR/Source/ui/js/juce/"
+
+      - name: Configure CMake
+        run: |
+          cmake -B build \
+            -S "projects/${{ inputs.project_id }}" \
+            -DJUCE_SOURCE_DIR="$HOME/juce-sdk" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+
+      - name: Build
+        run: |
+          cmake --build build --config Release -j$(sysctl -n hw.ncpu)
+
+      - name: Find and package VST3
+        id: package
+        run: |
+          VST3_PATH=$(find build -name "*.vst3" -type d | head -1)
+          if [ -z "$VST3_PATH" ]; then
+            echo "Error: VST3 bundle not found in build output"
+            find build -type d -name "*.vst3" || true
+            exit 1
+          fi
+          echo "Found VST3 at: $VST3_PATH"
+          echo "vst3_path=$VST3_PATH" >> "$GITHUB_OUTPUT"
+
+          # Create zip for artifact upload
+          cd "$(dirname "$VST3_PATH")"
+          zip -r "$GITHUB_WORKSPACE/${{ inputs.plugin_name }}.vst3.zip" \
+            "$(basename "$VST3_PATH")"
+
+      - name: Upload VST3 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: "${{ inputs.plugin_name }}-vst3"
+          path: "${{ inputs.plugin_name }}.vst3.zip"
+          retention-days: 30
+
+      - name: Notify Inngest - build completed
+        if: always()
+        run: |
+          STATUS="${{ job.status }}"
+          # Map GitHub job status to our conclusion format
+          if [ "$STATUS" = "success" ]; then
+            CONCLUSION="success"
+          else
+            CONCLUSION="failure"
+          fi
+
+          curl -s -X POST "https://inn.gs/e/${{ secrets.INNGEST_EVENT_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"name\": \"build/workflow.completed\",
+              \"data\": {
+                \"project_id\": \"${{ inputs.project_id }}\",
+                \"conclusion\": \"$CONCLUSION\",
+                \"run_id\": ${{ github.run_id }}
+              }
+            }" || echo "Warning: Failed to notify Inngest (non-fatal)"
