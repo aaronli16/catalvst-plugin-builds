@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reverb</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .knob-container {
+            position: relative;
+            width: 180px;
+            height: 180px;
+            margin-bottom: 30px;
+        }
+
+        .knob {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: #111;
+            border: 2px solid #333;
+            cursor: pointer;
+            position: relative;
+            transition: border-color 0.2s;
+        }
+
+        .knob:hover {
+            border-color: #555;
+        }
+
+        .knob-indicator {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            width: 3px;
+            height: 40px;
+            background: #fff;
+            transform-origin: center 75px;
+            transform: translateX(-50%) rotate(0deg);
+            transition: background 0.2s;
+        }
+
+        .knob:hover .knob-indicator {
+            background: #ddd;
+        }
+
+        .label {
+            text-align: center;
+            font-size: 11px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .value {
+            text-align: center;
+            font-size: 24px;
+            font-weight: 300;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="knob-container">
+            <div class="knob" id="wetKnob">
+                <div class="knob-indicator"></div>
+            </div>
+        </div>
+        <div class="label">Wet</div>
+        <div class="value" id="wetValue">0%</div>
+    </div>
+
+    <script>
+        class Knob {
+            constructor(element, options = {}) {
+                this.element = element;
+                this.indicator = element.querySelector('.knob-indicator');
+                this.valueDisplay = document.getElementById(options.valueId);
+                
+                this.min = options.min || 0;
+                this.max = options.max || 100;
+                this.value = options.defaultValue || 0;
+                this.paramId = options.paramId;
+                
+                this.isDragging = false;
+                this.startY = 0;
+                this.startValue = 0;
+                
+                this.sensitivity = 0.5;
+                
+                this.init();
+                this.updateDisplay();
+            }
+            
+            init() {
+                this.element.addEventListener('mousedown', (e) => this.onMouseDown(e));
+                document.addEventListener('mousemove', (e) => this.onMouseMove(e));
+                document.addEventListener('mouseup', () => this.onMouseUp());
+                
+                this.element.addEventListener('dblclick', () => this.reset());
+            }
+            
+            onMouseDown(e) {
+                e.preventDefault();
+                this.isDragging = true;
+                this.startY = e.clientY;
+                this.startValue = this.value;
+                this.element.style.cursor = 'grabbing';
+            }
+            
+            onMouseMove(e) {
+                if (!this.isDragging) return;
+                
+                const deltaY = this.startY - e.clientY;
+                const range = this.max - this.min;
+                const valueChange = (deltaY * this.sensitivity);
+                
+                this.value = Math.max(this.min, Math.min(this.max, this.startValue + valueChange));
+                
+                this.updateDisplay();
+                this.sendToPlugin();
+            }
+            
+            onMouseUp() {
+                if (this.isDragging) {
+                    this.isDragging = false;
+                    this.element.style.cursor = 'pointer';
+                }
+            }
+            
+            reset() {
+                this.value = 0;
+                this.updateDisplay();
+                this.sendToPlugin();
+            }
+            
+            updateDisplay() {
+                const range = this.max - this.min;
+                const normalizedValue = (this.value - this.min) / range;
+                
+                const minAngle = -135;
+                const maxAngle = 135;
+                const angle = minAngle + (normalizedValue * (maxAngle - minAngle));
+                
+                this.indicator.style.transform = `translateX(-50%) rotate(${angle}deg)`;
+                
+                if (this.valueDisplay) {
+                    this.valueDisplay.textContent = `${Math.round(this.value)}%`;
+                }
+            }
+            
+            sendToPlugin() {
+                if (window.flutter_inappwebview) {
+                    window.flutter_inappwebview.callHandler('parameterChanged', {
+                        id: this.paramId,
+                        value: this.value / 100
+                    });
+                }
+            }
+            
+            setValue(value) {
+                this.value = Math.max(this.min, Math.min(this.max, value));
+                this.updateDisplay();
+            }
+        }
+        
+        // Initialize knob
+        const wetKnob = new Knob(document.getElementById('wetKnob'), {
+            min: 0,
+            max: 100,
+            defaultValue: 0,
+            valueId: 'wetValue',
+            paramId: 'wet'
+        });
+        
+        // Receive parameter updates from plugin
+        window.setParameter = function(paramId, value) {
+            if (paramId === 'wet') {
+                wetKnob.setValue(value * 100);
+            }
+        };
+    </script>
+</body>
+</html>
