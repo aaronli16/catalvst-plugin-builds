@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Reverb</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1e 100%);
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .plugin-container {
+            width: 400px;
+            height: 500px;
+            background: linear-gradient(145deg, #16213e 0%, #0f1624 100%);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px;
+            position: relative;
+        }
+
+        .plugin-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .plugin-title {
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .plugin-subtitle {
+            font-size: 12px;
+            letter-spacing: 3px;
+            color: #6b7280;
+            text-transform: uppercase;
+        }
+
+        .knob-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 40px;
+        }
+
+        .knob-wrapper {
+            position: relative;
+            width: 160px;
+            height: 160px;
+            margin-bottom: 30px;
+        }
+
+        .knob {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #1a2332, #0d1117);
+            box-shadow: 
+                inset 0 8px 16px rgba(0, 0, 0, 0.6),
+                inset 0 -8px 16px rgba(255, 255, 255, 0.03),
+                0 8px 24px rgba(0, 0, 0, 0.4);
+            position: relative;
+            cursor: pointer;
+            transition: box-shadow 0.2s ease;
+        }
+
+        .knob:hover {
+            box-shadow: 
+                inset 0 8px 16px rgba(0, 0, 0, 0.6),
+                inset 0 -8px 16px rgba(255, 255, 255, 0.05),
+                0 8px 32px rgba(79, 172, 254, 0.2);
+        }
+
+        .knob-indicator {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 40px;
+            background: linear-gradient(180deg, #4facfe 0%, #00f2fe 100%);
+            border-radius: 2px;
+            box-shadow: 0 0 10px rgba(79, 172, 254, 0.6);
+        }
+
+        .knob-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 28px;
+            font-weight: bold;
+            color: #ffffff;
+            text-shadow: 0 2px 8px rgba(79, 172, 254, 0.4);
+        }
+
+        .knob-label {
+            font-size: 16px;
+            letter-spacing: 2px;
+            color: #9ca3af;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .knob-range {
+            font-size: 11px;
+            color: #4b5563;
+            margin-top: 8px;
+            letter-spacing: 1px;
+        }
+
+        /* Bypass Button */
+        .bypass-button {
+            position: absolute;
+            bottom: 30px;
+            width: 80px;
+            height: 36px;
+            background: linear-gradient(145deg, #1a2332, #0d1117);
+            border: 2px solid #2d3748;
+            border-radius: 18px;
+            color: #9ca3af;
+            font-size: 12px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .bypass-button:hover {
+            border-color: #4a5568;
+        }
+
+        .bypass-button.active {
+            background: linear-gradient(145deg, #4facfe, #00f2fe);
+            border-color: #4facfe;
+            color: #ffffff;
+            box-shadow: 0 4px 16px rgba(79, 172, 254, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="plugin-container">
+        <div class="plugin-header">
+            <div class="plugin-title">REVERB</div>
+            <div class="plugin-subtitle">Simple & Clean</div>
+        </div>
+
+        <div class="knob-container">
+            <div class="knob-wrapper">
+                <div class="knob" id="dryWetKnob">
+                    <div class="knob-indicator" id="dryWetIndicator"></div>
+                    <div class="knob-value" id="dryWetValue">50%</div>
+                </div>
+            </div>
+            <div class="knob-label">Dry / Wet</div>
+            <div class="knob-range">0% - 100%</div>
+        </div>
+
+        <button class="bypass-button active" id="bypassButton">Active</button>
+    </div>
+
+    <script>
+        class Knob {
+            constructor(element, options = {}) {
+                this.element = element;
+                this.indicator = element.querySelector('.knob-indicator');
+                this.valueDisplay = element.querySelector('.knob-value');
+                
+                this.min = options.min || 0;
+                this.max = options.max || 100;
+                this.value = options.value || 50;
+                this.step = options.step || 1;
+                this.suffix = options.suffix || '%';
+                this.onChange = options.onChange || (() => {});
+                
+                this.isDragging = false;
+                this.startY = 0;
+                this.startValue = 0;
+                
+                this.init();
+            }
+            
+            init() {
+                this.updateDisplay();
+                
+                this.element.addEventListener('mousedown', (e) => this.onMouseDown(e));
+                document.addEventListener('mousemove', (e) => this.onMouseMove(e));
+                document.addEventListener('mouseup', () => this.onMouseUp());
+                
+                // Touch support
+                this.element.addEventListener('touchstart', (e) => this.onTouchStart(e));
+                document.addEventListener('touchmove', (e) => this.onTouchMove(e));
+                document.addEventListener('touchend', () => this.onTouchEnd());
+            }
+            
+            onMouseDown(e) {
+                this.isDragging = true;
+                this.startY = e.clientY;
+                this.startValue = this.value;
+                e.preventDefault();
+            }
+            
+            onMouseMove(e) {
+                if (!this.isDragging) return;
+                
+                const deltaY = this.startY - e.clientY;
+                const range = this.max - this.min;
+                const sensitivity = 0.5;
+                const delta = deltaY * sensitivity;
+                
+                this.value = Math.max(this.min, Math.min(this.max, this.startValue + delta));
+                this.value = Math.round(this.value / this.step) * this.step;
+                
+                this.updateDisplay();
+                this.onChange(this.value);
+            }
+            
+            onMouseUp() {
+                this.isDragging = false;
+            }
+            
+            onTouchStart(e) {
+                this.isDragging = true;
+                this.startY = e.touches[0].clientY;
+                this.startValue = this.value;
+                e.preventDefault();
+            }
+            
+            onTouchMove(e) {
+                if (!this.isDragging) return;
+                
+                const deltaY = this.startY - e.touches[0].clientY;
+                const range = this.max - this.min;
+                const sensitivity = 0.5;
+                const delta = deltaY * sensitivity;
+                
+                this.value = Math.max(this.min, Math.min(this.max, this.startValue + delta));
+                this.value = Math.round(this.value / this.step) * this.step;
+                
+                this.updateDisplay();
+                this.onChange(this.value);
+            }
+            
+            onTouchEnd() {
+                this.isDragging = false;
+            }
+            
+            updateDisplay() {
+                const percentage = (this.value - this.min) / (this.max - this.min);
+                const degrees = -135 + (percentage * 270); // -135° to +135° (270° range)
+                
+                this.indicator.style.transform = `translateX(-50%) rotate(${degrees}deg)`;
+                this.indicator.style.transformOrigin = 'center bottom';
+                this.valueDisplay.textContent = `${Math.round(this.value)}${this.suffix}`;
+            }
+            
+            setValue(value) {
+                this.value = Math.max(this.min, Math.min(this.max, value));
+                this.updateDisplay();
+            }
+        }
+        
+        // Initialize Dry/Wet Knob
+        const dryWetKnob = new Knob(document.getElementById('dryWetKnob'), {
+            min: 0,
+            max: 100,
+            value: 50,
+            step: 1,
+            suffix: '%',
+            onChange: (value) => {
+                console.log('Dry/Wet:', value);
+                // Send to plugin backend
+                if (window.pluginInterface) {
+                    window.pluginInterface.setParameter('dryWet', value / 100);
+                }
+            }
+        });
+        
+        // Bypass Button
+        const bypassButton = document.getElementById('bypassButton');
+        let isActive = true;
+        
+        bypassButton.addEventListener('click', () => {
+            isActive = !isActive;
+            bypassButton.classList.toggle('active', isActive);
+            bypassButton.textContent = isActive ? 'Active' : 'Bypassed';
+            
+            console.log('Bypass:', !isActive);
+            // Send to plugin backend
+            if (window.pluginInterface) {
+                window.pluginInterface.setParameter('bypass', isActive ? 0 : 1);
+            }
+        });
+        
+        // Expose interface for plugin backend
+        window.uiInterface = {
+            setDryWet: (value) => {
+                dryWetKnob.setValue(value * 100);
+            },
+            setBypass: (bypassed) => {
+                isActive = !bypassed;
+                bypassButton.classList.toggle('active', isActive);
+                bypassButton.textContent = isActive ? 'Active' : 'Bypassed';
+            }
+        };
+    </script>
+</body>
+</html>
