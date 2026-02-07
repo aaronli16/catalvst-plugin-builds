@@ -71,7 +71,7 @@ jobs:
         run: |
           cmake --build build --config Release -j$(sysctl -n hw.ncpu)
 
-      - name: Find and package VST3
+      - name: Find, sign, and package VST3
         id: package
         run: |
           VST3_PATH=$(find build -name "*.vst3" -type d | head -1)
@@ -83,16 +83,24 @@ jobs:
           echo "Found VST3 at: $VST3_PATH"
           echo "vst3_path=$VST3_PATH" >> "$GITHUB_OUTPUT"
 
-          # Create zip for artifact upload
-          cd "$(dirname "$VST3_PATH")"
-          zip -r "$GITHUB_WORKSPACE/${{ inputs.plugin_name }}.vst3.zip" \
-            "$(basename "$VST3_PATH")"
+          # Ad-hoc sign the plugin so macOS doesn't reject it
+          codesign --force --deep --sign - "$VST3_PATH"
+          echo "Ad-hoc signed successfully"
+
+          # Create DMG for artifact upload (handles macOS quarantine better than zip)
+          mkdir -p "$GITHUB_WORKSPACE/staging"
+          cp -R "$VST3_PATH" "$GITHUB_WORKSPACE/staging/"
+          hdiutil create \
+            -volname "${{ inputs.plugin_name }}" \
+            -srcfolder "$GITHUB_WORKSPACE/staging" \
+            -ov -format UDZO \
+            "$GITHUB_WORKSPACE/${{ inputs.plugin_name }}.vst3.dmg"
 
       - name: Upload VST3 artifact
         uses: actions/upload-artifact@v4
         with:
           name: "${{ inputs.plugin_name }}-vst3"
-          path: "${{ inputs.plugin_name }}.vst3.zip"
+          path: "${{ inputs.plugin_name }}.vst3.dmg"
           retention-days: 30
 
       - name: Notify Inngest - build completed
