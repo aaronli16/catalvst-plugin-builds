@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hall Reverb</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            background: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Subtle film grain texture overlay */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.03;
+            background-image: 
+                repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,.05) 2px, rgba(255,255,255,.05) 4px),
+                repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(255,255,255,.05) 2px, rgba(255,255,255,.05) 4px);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .title {
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: #666;
+        }
+
+        .knob-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .knob-wrapper {
+            position: relative;
+            width: 120px;
+            height: 120px;
+        }
+
+        .knob {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #202020, #151515);
+            box-shadow: 
+                -8px -8px 16px rgba(40, 40, 40, 0.4),
+                8px 8px 16px rgba(0, 0, 0, 0.8),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+            cursor: pointer;
+            position: relative;
+            transition: box-shadow 0.1s ease;
+        }
+
+        .knob:active {
+            box-shadow: 
+                -4px -4px 8px rgba(40, 40, 40, 0.3),
+                4px 4px 8px rgba(0, 0, 0, 0.9),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+        }
+
+        .knob-indicator {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            width: 3px;
+            height: 28px;
+            background: #888;
+            border-radius: 2px;
+            transform-origin: center 48px;
+            transition: background 0.2s ease;
+        }
+
+        .knob:hover .knob-indicator {
+            background: #aaa;
+        }
+
+        .knob-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 22px;
+            font-weight: 600;
+            color: #999;
+            letter-spacing: -0.5px;
+        }
+
+        .knob-label {
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #555;
+        }
+
+        /* Subtle arc progress indicator */
+        svg {
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            width: 130px;
+            height: 130px;
+            transform: rotate(-135deg);
+            pointer-events: none;
+        }
+
+        .knob-arc-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.02);
+            stroke-width: 2;
+        }
+
+        .knob-arc {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 2;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.05s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">Hall Reverb</div>
+        
+        <div class="knob-container">
+            <div class="knob-wrapper">
+                <svg>
+                    <circle class="knob-arc-bg" cx="65" cy="65" r="58" 
+                            stroke-dasharray="257" stroke-dashoffset="0"/>
+                    <circle class="knob-arc" cx="65" cy="65" r="58" 
+                            stroke-dasharray="257" stroke-dashoffset="257"/>
+                </svg>
+                <div class="knob" data-param="mix">
+                    <div class="knob-indicator"></div>
+                    <div class="knob-value">0%</div>
+                </div>
+            </div>
+            <div class="knob-label">Mix</div>
+        </div>
+    </div>
+
+    <script>
+        class KnobController {
+            constructor(element) {
+                this.knob = element;
+                this.indicator = element.querySelector('.knob-indicator');
+                this.valueDisplay = element.querySelector('.knob-value');
+                this.arc = element.parentElement.querySelector('.knob-arc');
+                this.param = element.dataset.param;
+                
+                this.value = 0; // 0-100
+                this.isDragging = false;
+                this.startY = 0;
+                this.startValue = 0;
+                
+                this.minAngle = -135;
+                this.maxAngle = 135;
+                this.sensitivity = 0.5;
+                
+                this.arcCircumference = 257;
+                
+                this.init();
+            }
+            
+            init() {
+                this.knob.addEventListener('mousedown', this.onMouseDown.bind(this));
+                document.addEventListener('mousemove', this.onMouseMove.bind(this));
+                document.addEventListener('mouseup', this.onMouseUp.bind(this));
+                
+                this.knob.addEventListener('wheel', this.onWheel.bind(this), { passive: false });
+                
+                this.updateDisplay();
+            }
+            
+            onMouseDown(e) {
+                e.preventDefault();
+                this.isDragging = true;
+                this.startY = e.clientY;
+                this.startValue = this.value;
+                document.body.style.cursor = 'grabbing';
+            }
+            
+            onMouseMove(e) {
+                if (!this.isDragging) return;
+                
+                const deltaY = this.startY - e.clientY;
+                const deltaValue = deltaY * this.sensitivity;
+                
+                this.value = Math.max(0, Math.min(100, this.startValue + deltaValue));
+                this.updateDisplay();
+                this.sendToBackend();
+            }
+            
+            onMouseUp() {
+                if (this.isDragging) {
+                    this.isDragging = false;
+                    document.body.style.cursor = 'default';
+                }
+            }
+            
+            onWheel(e) {
+                e.preventDefault();
+                const delta = -e.deltaY * 0.1;
+                this.value = Math.max(0, Math.min(100, this.value + delta));
+                this.updateDisplay();
+                this.sendToBackend();
+            }
+            
+            updateDisplay() {
+                const angle = this.minAngle + (this.value / 100) * (this.maxAngle - this.minAngle);
+                this.indicator.style.transform = `rotate(${angle}deg)`;
+                this.valueDisplay.textContent = Math.round(this.value) + '%';
+                
+                // Update arc progress
+                const progress = this.value / 100;
+                const offset = this.arcCircumference * (1 - progress);
+                this.arc.style.strokeDashoffset = offset;
+            }
+            
+            sendToBackend() {
+                const normalizedValue = this.value / 100;
+                
+                if (window.vsthook) {
+                    window.vsthook.setParameter(this.param, normalizedValue);
+                }
+            }
+        }
+        
+        // Initialize knob
+        const knobElement = document.querySelector('.knob');
+        const knobController = new KnobController(knobElement);
+        
+        // Receive parameter updates from backend
+        window.updateParameter = function(paramName, value) {
+            if (paramName === 'mix') {
+                knobController.value = value * 100;
+                knobController.updateDisplay();
+            }
+        };
+    </script>
+</body>
+</html>
