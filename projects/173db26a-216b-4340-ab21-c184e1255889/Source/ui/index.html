@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPACE</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 320px;
+    height: 440px;
+    background: #0c0c10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    color: #e0e0e6;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* --- Title --- */
+  .title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: #5a5a70;
+    margin-bottom: 40px;
+  }
+
+  /* --- Knob Container --- */
+  .knob-wrap {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    cursor: grab;
+  }
+  .knob-wrap:active { cursor: grabbing; }
+
+  .knob-svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .knob-track {
+    fill: none;
+    stroke: #1e1e2a;
+    stroke-width: 6;
+    stroke-linecap: round;
+  }
+
+  .knob-fill {
+    fill: none;
+    stroke: url(#knobGradient);
+    stroke-width: 6;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.05s ease-out;
+    filter: drop-shadow(0 0 6px rgba(120, 90, 255, 0.4));
+  }
+
+  /* Center circle */
+  .knob-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 38%, #1f1f2e, #131318);
+    border: 1px solid #2a2a3a;
+    box-shadow:
+      0 2px 12px rgba(0,0,0,0.5),
+      inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  /* Indicator notch */
+  .knob-indicator-wrap {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+  }
+  .knob-indicator {
+    position: absolute;
+    width: 2px;
+    height: 22px;
+    margin-left: -1px;
+    top: 0;
+    left: 0;
+    transform-origin: 50% 0%;
+    border-radius: 1px;
+    background: #8a6cff;
+    box-shadow: 0 0 6px rgba(138, 108, 255, 0.6);
+  }
+
+  /* Glow behind knob */
+  .knob-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(120, 90, 255, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+
+  /* --- Value Display --- */
+  .value-display {
+    margin-top: 32px;
+    text-align: center;
+  }
+
+  .value-number {
+    font-size: 36px;
+    font-weight: 300;
+    letter-spacing: 2px;
+    color: #e8e4f0;
+    line-height: 1;
+  }
+  .value-number span.percent {
+    font-size: 18px;
+    color: #5a5a70;
+    margin-left: 2px;
+  }
+
+  .value-label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #3e3e52;
+    margin-top: 8px;
+  }
+
+  /* --- Subtle bottom line --- */
+  .bottom-line {
+    position: absolute;
+    bottom: 20px;
+    width: 40px;
+    height: 2px;
+    border-radius: 1px;
+    background: linear-gradient(90deg, transparent, #2a2a3a, transparent);
+  }
+
+  /* --- Double-click reset hint --- */
+  .hint {
+    position: absolute;
+    bottom: 36px;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: #2e2e40;
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+  .hint.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+  <div class="title">S P A C E</div>
+
+  <div class="knob-wrap" id="knobWrap">
+    <svg class="knob-svg" viewBox="0 0 180 180">
+      <defs>
+        <linearGradient id="knobGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#6c4fff"/>
+          <stop offset="100%" stop-color="#a78bff"/>
+        </linearGradient>
+      </defs>
+      <path class="knob-track" id="knobTrack"/>
+      <path class="knob-fill" id="knobFill"/>
+    </svg>
+    <div class="knob-glow" id="knobGlow"></div>
+    <div class="knob-center">
+      <div class="knob-indicator-wrap">
+        <div class="knob-indicator" id="knobIndicator"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="value-display">
+    <div class="value-number" id="valueNumber">0<span class="percent">%</span></div>
+    <div class="value-label">Wetness</div>
+  </div>
+
+  <div class="bottom-line"></div>
+  <div class="hint" id="hint">double-click to reset</div>
+
+<script type="module" src="js/juce/index.js"></script>
+<script type="module">
+import { getSliderState } from './js/juce/index.js';
+
+(function() {
+  // --- Config ---
+  const MIN_ANGLE = 135;
+  const MAX_ANGLE = 405;
+  const ARC_RANGE = MAX_ANGLE - MIN_ANGLE; // 270 degrees
+  const RADIUS = 78;
+  const CENTER = 90;
+
+  let value = 0.0;
+  let isDragging = false;
+  let lastY = 0;
+
+  // --- Elements ---
+  const knobWrap = document.getElementById('knobWrap');
+  const knobFill = document.getElementById('knobFill');
+  const knobTrack = document.getElementById('knobTrack');
+  const knobIndicator = document.getElementById('knobIndicator');
+  const knobGlow = document.getElementById('knobGlow');
+  const valueNumber = document.getElementById('valueNumber');
+  const hint = document.getElementById('hint');
+
+  // --- JUCE parameter binding ---
+  let mixState = null;
+  try {
+    mixState = getSliderState("MIX");
+  } catch(e) {
+    console.log("JUCE slider state not available, running standalone");
+  }
+
+  // --- Arc path helper ---
+  function polarToCartesian(cx, cy, r, angleDeg) {
+    const rad = (angleDeg - 90) * Math.PI / 180;
+    return {
+      x: cx + r * Math.cos(rad),
+      y: cy + r * Math.sin(rad)
+    };
+  }
+
+  function describeArc(cx, cy, r, startAngle, endAngle) {
+    const start = polarToCartesian(cx, cy, r, endAngle);
+    const end = polarToCartesian(cx, cy, r, startAngle);
+    const largeArc = (endAngle - startAngle) <= 180 ? 0 : 1;
+    return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 0 ${end.x} ${end.y}`;
+  }
+
+  // --- Draw ---
+  function draw() {
+    // Background track
+    knobTrack.setAttribute('d', describeArc(CENTER, CENTER, RADIUS, MIN_ANGLE, MAX_ANGLE));
+
+    // Active fill
+    const fillEnd = MIN_ANGLE + ARC_RANGE * value;
+    if (value > 0.003) {
+      knobFill.setAttribute('d', describeArc(CENTER, CENTER, RADIUS, MIN_ANGLE, fillEnd));
+      knobFill.style.display = '';
+    } else {
+      knobFill.style.display = 'none';
+    }
+
+    // Indicator rotation
+    const indicatorAngle = MIN_ANGLE + ARC_RANGE * value;
+    const cssRotation = indicatorAngle - 180;
+    knobIndicator.style.transform = `rotate(${cssRotation}deg)`;
+
+    // Glow intensity
+    const glowOpacity = 0.3 + value * 0.7;
+    knobGlow.style.opacity = glowOpacity;
+    knobGlow.style.width = (120 + value * 40) + 'px';
+    knobGlow.style.height = (120 + value * 40) + 'px';
+
+    // Value text
+    const displayVal = Math.round(value * 100);
+    valueNumber.innerHTML = `${displayVal}<span class="percent">%</span>`;
+  }
+
+  // --- Set value and update host ---
+  function setValue(v, notifyHost) {
+    value = Math.max(0, Math.min(1, v));
+    draw();
+    if (notifyHost !== false && mixState) {
+      mixState.setNormalisedValue(value);
+    }
+  }
+
+  // --- Listen for host parameter changes ---
+  if (mixState) {
+    mixState.valueChangedEvent.addListener(() => {
+      const hostValue = mixState.getNormalisedValue();
+      value = hostValue;
+      draw();
+    });
+  }
+
+  // --- Mouse / touch interaction (relative drag) ---
+  function onPointerDown(e) {
+    e.preventDefault();
+    isDragging = true;
+    lastY = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+    document.body.style.cursor = 'grabbing';
+
+    if (mixState) {
+      mixState.sliderDragStarted();
+    }
+
+    // Show hint briefly on first interaction
+    hint.classList.add('show');
+    setTimeout(() => hint.classList.remove('show'), 2000);
+  }
+
+  function onPointerMove(e) {
+    if (!isDragging) return;
+    e.preventDefault();
+    const clientY = e.clientY ?? e.touches?.[0]?.clientY ?? lastY;
+    const deltaY = lastY - clientY;
+    lastY = clientY;
+
+    const sensitivity = e.shiftKey ? 0.001 : 0.005;
+    setValue(value + deltaY * sensitivity);
+  }
+
+  function onPointerUp() {
+    if (!isDragging) return;
+    isDragging = false;
+    document.body.style.cursor = '';
+
+    if (mixState) {
+      mixState.sliderDragEnded();
+    }
+  }
+
+  // Double-click to reset
+  knobWrap.addEventListener('dblclick', function(e) {
+    e.preventDefault();
+    setValue(0.0);
+  });
+
+  // Mouse
+  knobWrap.addEventListener('mousedown', onPointerDown);
+  window.addEventListener('mousemove', onPointerMove);
+  window.addEventListener('mouseup', onPointerUp);
+
+  // Touch
+  knobWrap.addEventListener('touchstart', onPointerDown, { passive: false });
+  window.addEventListener('touchmove', onPointerMove, { passive: false });
+  window.addEventListener('touchend', onPointerUp);
+
+  // Scroll wheel
+  knobWrap.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    const step = e.shiftKey ? 0.002 : 0.01;
+    const direction = e.deltaY < 0 ? 1 : -1;
+    setValue(value + direction * step);
+  }, { passive: false });
+
+  // --- Init ---
+  if (mixState) {
+    value = mixState.getNormalisedValue();
+  }
+  draw();
+
+})();
+</script>
+
+</body>
+</html>
