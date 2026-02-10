@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Abyssal Reverb</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 400px;
+    height: 500px;
+    background: #0a0a10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    overflow: hidden;
+    user-select: none;
+    color: #c0c8e0;
+  }
+
+  /* Animated background ripples */
+  .ripple-container {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .ripple-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid rgba(90, 130, 255, 0.06);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    animation: ripple-expand 6s ease-out infinite;
+  }
+
+  .ripple-ring:nth-child(1) { animation-delay: 0s; }
+  .ripple-ring:nth-child(2) { animation-delay: 1.5s; }
+  .ripple-ring:nth-child(3) { animation-delay: 3s; }
+  .ripple-ring:nth-child(4) { animation-delay: 4.5s; }
+
+  @keyframes ripple-expand {
+    0%   { width: 40px; height: 40px; opacity: 0.8; }
+    100% { width: 600px; height: 600px; opacity: 0; }
+  }
+
+  /* Title */
+  .title {
+    font-size: 11px;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: rgba(140, 170, 255, 0.5);
+    margin-bottom: 40px;
+    z-index: 2;
+  }
+
+  /* Knob area */
+  .knob-wrapper {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    z-index: 2;
+    cursor: grab;
+  }
+
+  .knob-wrapper:active { cursor: grabbing; }
+
+  /* Outer glow ring */
+  .knob-glow {
+    position: absolute;
+    top: -10px; left: -10px;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(80, 120, 255, 0.08) 0%, transparent 70%);
+    transition: background 0.3s ease;
+  }
+
+  /* SVG arc track */
+  .knob-svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 180px; height: 180px;
+  }
+
+  .track-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.06);
+    stroke-width: 3;
+    stroke-linecap: round;
+  }
+
+  .track-fill {
+    fill: none;
+    stroke: url(#knobGradient);
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.05s ease;
+    filter: drop-shadow(0 0 6px rgba(100, 150, 255, 0.4));
+  }
+
+  /* Center disc */
+  .knob-disc {
+    position: absolute;
+    top: 24px; left: 24px;
+    width: 132px; height: 132px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at 40% 35%, #1e2038, #0e0f1a 70%);
+    box-shadow:
+      0 2px 15px rgba(0,0,0,0.6),
+      inset 0 1px 1px rgba(255,255,255,0.04),
+      0 0 30px rgba(70, 110, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+
+  /* Indicator notch */
+  .knob-indicator {
+    position: absolute;
+    top: 12px; left: 50%;
+    width: 2px; height: 14px;
+    background: rgba(130, 170, 255, 0.8);
+    border-radius: 1px;
+    transform: translateX(-50%);
+    box-shadow: 0 0 6px rgba(130, 170, 255, 0.6);
+    transform-origin: 50% 54px;
+  }
+
+  /* Value display */
+  .knob-value {
+    font-size: 28px;
+    font-weight: 300;
+    color: #d0d8f0;
+    letter-spacing: 1px;
+    line-height: 1;
+  }
+
+  .knob-unit {
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(140, 170, 255, 0.4);
+    margin-top: 4px;
+  }
+
+  /* Label below */
+  .knob-label {
+    margin-top: 30px;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(160, 180, 220, 0.45);
+    z-index: 2;
+  }
+
+  /* Dry / Wet markers */
+  .knob-markers {
+    position: relative;
+    width: 220px;
+    margin-top: 8px;
+    display: flex;
+    justify-content: space-between;
+    z-index: 2;
+  }
+
+  .knob-markers span {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(140, 160, 200, 0.3);
+  }
+
+  /* Branding */
+  .brand {
+    position: absolute;
+    bottom: 16px;
+    font-size: 9px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: rgba(140, 160, 200, 0.15);
+  }
+
+  /* Active state glow boost */
+  .knob-wrapper.active .knob-glow {
+    background: radial-gradient(circle, rgba(80, 120, 255, 0.18) 0%, transparent 70%);
+  }
+</style>
+</head>
+<body>
+
+  <!-- Animated background ripples -->
+  <div class="ripple-container" id="rippleContainer">
+    <div class="ripple-ring"></div>
+    <div class="ripple-ring"></div>
+    <div class="ripple-ring"></div>
+    <div class="ripple-ring"></div>
+  </div>
+
+  <div class="title">Abyssal Reverb</div>
+
+  <div class="knob-wrapper" id="knobWrapper">
+    <div class="knob-glow"></div>
+
+    <!-- Arc SVG -->
+    <svg class="knob-svg" viewBox="0 0 180 180">
+      <defs>
+        <linearGradient id="knobGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#4a6fff"/>
+          <stop offset="100%" stop-color="#8b5cf6"/>
+        </linearGradient>
+      </defs>
+      <!-- Background arc -->
+      <path class="track-bg" id="trackBg" />
+      <!-- Filled arc -->
+      <path class="track-fill" id="trackFill" />
+    </svg>
+
+    <!-- Center disc with indicator -->
+    <div class="knob-disc" id="knobDisc">
+      <div class="knob-indicator" id="knobIndicator"></div>
+      <span class="knob-value" id="knobValue">0</span>
+      <span class="knob-unit">wet</span>
+    </div>
+  </div>
+
+  <div class="knob-label">Depth</div>
+  <div class="knob-markers">
+    <span>Dry</span>
+    <span>Drowned</span>
+  </div>
+
+  <div class="brand">Phantom DSP</div>
+
+<!-- JUCE native interop check -->
+<script src="/js/juce/check_native_interop.js"></script>
+
+<script type="module">
+  import { getSliderState } from './js/juce/index.js';
+
+  // --- Config ---
+  const MIN_ANGLE = -135;
+  const MAX_ANGLE = 135;
+  const ARC_RADIUS = 84;
+  const CENTER = 90;
+
+  // --- State ---
+  let normValue = 0;  // 0..1
+  let dragging = false;
+  let lastY = 0;
+
+  // --- DOM ---
+  const wrapper   = document.getElementById('knobWrapper');
+  const indicator = document.getElementById('knobIndicator');
+  const valueEl   = document.getElementById('knobValue');
+  const trackBg   = document.getElementById('trackBg');
+  const trackFill = document.getElementById('trackFill');
+  const rippleCtn = document.getElementById('rippleContainer');
+
+  // --- JUCE Parameter Bridge ---
+  const wetState = getSliderState("WET");
+
+  // --- Arc helpers ---
+  function degToRad(d) { return (d - 90) * Math.PI / 180; }
+
+  function arcPath(startAngle, endAngle, radius) {
+    const s = degToRad(startAngle);
+    const e = degToRad(endAngle);
+    const sx = CENTER + radius * Math.cos(s);
+    const sy = CENTER + radius * Math.sin(s);
+    const ex = CENTER + radius * Math.cos(e);
+    const ey = CENTER + radius * Math.sin(e);
+    const large = (endAngle - startAngle > 180) ? 1 : 0;
+    return `M ${sx} ${sy} A ${radius} ${radius} 0 ${large} 1 ${ex} ${ey}`;
+  }
+
+  // Draw background arc
+  trackBg.setAttribute('d', arcPath(MIN_ANGLE, MAX_ANGLE, ARC_RADIUS));
+
+  function updateUI(norm) {
+    normValue = norm;
+    const angle = MIN_ANGLE + norm * (MAX_ANGLE - MIN_ANGLE);
+
+    // Fill arc
+    if (norm < 0.005) {
+      trackFill.setAttribute('d', arcPath(MIN_ANGLE, MIN_ANGLE + 0.1, ARC_RADIUS));
+      trackFill.style.opacity = '0';
+    } else {
+      trackFill.setAttribute('d', arcPath(MIN_ANGLE, angle, ARC_RADIUS));
+      trackFill.style.opacity = '1';
+    }
+
+    // Indicator rotation
+    indicator.style.transform = `translateX(-50%) rotate(${angle}deg)`;
+
+    // Value text (show as 0-100 percentage)
+    valueEl.textContent = Math.round(norm * 100);
+
+    // Dynamic glow intensity on ripples
+    const rippleOpacity = 0.03 + norm * 0.12;
+    const rings = rippleCtn.querySelectorAll('.ripple-ring');
+    rings.forEach(r => {
+      r.style.borderColor = `rgba(90, 130, 255, ${rippleOpacity})`;
+    });
+
+    // Ripple speed - slower when dry, faster when wet
+    const duration = 6 - norm * 3;
+    rings.forEach((r) => {
+      r.style.animationDuration = `${duration}s`;
+    });
+  }
+
+  // --- Listen for parameter changes from host ---
+  wetState.valueChangedEvent.addListener(() => {
+    const val = wetState.getNormalisedValue();
+    normValue = val;
+    updateUI(val);
+  });
+
+  // --- Interaction ---
+  function onPointerDown(e) {
+    dragging = true;
+    lastY = e.clientY;
+    wrapper.classList.add('active');
+    document.body.style.cursor = 'grabbing';
+    e.preventDefault();
+  }
+
+  function onPointerMove(e) {
+    if (!dragging) return;
+    const deltaY = lastY - e.clientY;
+    lastY = e.clientY;
+
+    const sensitivity = 0.004;
+    let newVal = normValue + deltaY * sensitivity;
+    newVal = Math.max(0, Math.min(1, newVal));
+    normValue = newVal;
+
+    wetState.setNormalisedValue(normValue);
+    updateUI(normValue);
+  }
+
+  function onPointerUp() {
+    if (!dragging) return;
+    dragging = false;
+    wrapper.classList.remove('active');
+    document.body.style.cursor = '';
+  }
+
+  // Double-click to reset
+  wrapper.addEventListener('dblclick', () => {
+    normValue = 0;
+    wetState.setNormalisedValue(0);
+    updateUI(0);
+  });
+
+  wrapper.addEventListener('pointerdown', onPointerDown);
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', onPointerUp);
+
+  // Scroll wheel support
+  wrapper.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.02 : 0.02;
+    normValue = Math.max(0, Math.min(1, normValue + delta));
+    wetState.setNormalisedValue(normValue);
+    updateUI(normValue);
+  }, { passive: false });
+
+  // Initial render
+  updateUI(wetState.getNormalisedValue());
+</script>
+</body>
+</html>
