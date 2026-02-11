@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Half Beat Echo</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 400px;
+  height: 300px;
+  background: #1a1a2e;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  user-select: none;
+}
+
+.plugin-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  background: linear-gradient(165deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%);
+  position: relative;
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: #7f8fa6;
+  position: absolute;
+  top: 20px;
+}
+
+.title span {
+  color: #e2b0ff;
+}
+
+.knob-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.knob-label {
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #7f8fa6;
+}
+
+.knob-wrapper {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  cursor: grab;
+}
+
+.knob-wrapper:active {
+  cursor: grabbing;
+}
+
+svg.knob-svg {
+  width: 120px;
+  height: 120px;
+  filter: drop-shadow(0 2px 8px rgba(226, 176, 255, 0.15));
+}
+
+.knob-track {
+  fill: none;
+  stroke: #2a2a4a;
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.knob-arc {
+  fill: none;
+  stroke: url(#knobGradient);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.knob-dot {
+  fill: #e2b0ff;
+  filter: drop-shadow(0 0 4px rgba(226, 176, 255, 0.6));
+}
+
+.knob-value {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  pointer-events: none;
+}
+
+.knob-value span {
+  font-size: 11px;
+  font-weight: 400;
+  color: #7f8fa6;
+}
+
+.beat-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: rgba(226, 176, 255, 0.06);
+  border: 1px solid rgba(226, 176, 255, 0.1);
+  border-radius: 20px;
+}
+
+.beat-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e2b0ff;
+  animation: pulse 1s ease infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+.beat-text {
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: #a0a0c0;
+}
+
+.footer {
+  position: absolute;
+  bottom: 14px;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #3a3a5a;
+  text-transform: uppercase;
+}
+</style>
+</head>
+<body>
+
+<div class="plugin-container">
+  <div class="title">HALF BEAT <span>ECHO</span></div>
+
+  <div class="knob-section">
+    <div class="knob-label">Mix</div>
+    <div class="knob-wrapper" id="mixKnob">
+      <svg class="knob-svg" viewBox="0 0 120 120">
+        <defs>
+          <linearGradient id="knobGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#a855f7"/>
+            <stop offset="100%" stop-color="#e2b0ff"/>
+          </linearGradient>
+        </defs>
+        <path class="knob-track" d="M 25 95 A 45 45 0 1 1 95 95"/>
+        <path class="knob-arc" id="mixArc" d="M 25 95 A 45 45 0 1 1 95 95"/>
+        <circle class="knob-dot" id="mixDot" cx="60" cy="15" r="5"/>
+      </svg>
+      <div class="knob-value" id="mixValue">50<span>%</span></div>
+    </div>
+  </div>
+
+  <div class="beat-info">
+    <div class="beat-dot"></div>
+    <div class="beat-text">1/2 BEAT SYNC</div>
+  </div>
+
+  <div class="footer">ECHO</div>
+</div>
+
+<script type="module" src="js/juce/index.js"></script>
+<script type="module">
+import { getSliderState } from './js/juce/index.js';
+
+// -- Config --
+const ARC_START_ANGLE = 135;
+const ARC_END_ANGLE = 405;
+const ARC_RANGE = ARC_END_ANGLE - ARC_START_ANGLE;
+const CENTER = 60;
+const RADIUS = 45;
+
+// -- DOM --
+const knobEl = document.getElementById('mixKnob');
+const arcEl = document.getElementById('mixArc');
+const dotEl = document.getElementById('mixDot');
+const valueEl = document.getElementById('mixValue');
+
+// -- JUCE parameter state --
+const mixState = getSliderState("MIX");
+
+// -- Arc math --
+function polarToCartesian(angleDeg) {
+  const rad = (angleDeg - 90) * Math.PI / 180;
+  return {
+    x: CENTER + RADIUS * Math.cos(rad),
+    y: CENTER + RADIUS * Math.sin(rad)
+  };
+}
+
+function describeArc(startAngle, endAngle) {
+  const start = polarToCartesian(startAngle);
+  const end = polarToCartesian(endAngle);
+  const sweep = endAngle - startAngle;
+  const largeArc = sweep > 180 ? 1 : 0;
+  return `M ${start.x} ${start.y} A ${RADIUS} ${RADIUS} 0 ${largeArc} 1 ${end.x} ${end.y}`;
+}
+
+function updateKnobVisual(value) {
+  const clamped = Math.max(0, Math.min(1, value));
+  const angle = ARC_START_ANGLE + clamped * ARC_RANGE;
+
+  if (clamped < 0.005) {
+    arcEl.setAttribute('d', '');
+  } else {
+    arcEl.setAttribute('d', describeArc(ARC_START_ANGLE, angle));
+  }
+
+  const dotPos = polarToCartesian(angle);
+  dotEl.setAttribute('cx', dotPos.x);
+  dotEl.setAttribute('cy', dotPos.y);
+
+  const percent = Math.round(clamped * 100);
+  valueEl.innerHTML = percent + '<span>%</span>';
+}
+
+// -- Listen for parameter changes from DAW --
+mixState.valueChangedEvent.addListener(() => {
+  const value = mixState.getNormalisedValue();
+  updateKnobVisual(value);
+});
+
+// -- Drag interaction (relative/frame-delta) --
+let isDragging = false;
+let lastY = 0;
+
+knobEl.addEventListener('mousedown', function(e) {
+  isDragging = true;
+  lastY = e.clientY;
+  document.body.style.cursor = 'grabbing';
+  e.preventDefault();
+});
+
+window.addEventListener('mousemove', function(e) {
+  if (!isDragging) return;
+  const deltaY = lastY - e.clientY;
+  lastY = e.clientY;
+
+  const sensitivity = e.shiftKey ? 0.001 : 0.005;
+  const currentValue = mixState.getNormalisedValue();
+  const newValue = Math.max(0, Math.min(1, currentValue + deltaY * sensitivity));
+
+  mixState.setNormalisedValue(newValue);
+});
+
+window.addEventListener('mouseup', function() {
+  if (isDragging) {
+    isDragging = false;
+    document.body.style.cursor = '';
+  }
+});
+
+// Double-click to reset to 50%
+knobEl.addEventListener('dblclick', function() {
+  mixState.setNormalisedValue(0.5);
+});
+
+// -- Init visual from current parameter value --
+updateKnobVisual(mixState.getNormalisedValue());
+</script>
+
+</body>
+</html>
