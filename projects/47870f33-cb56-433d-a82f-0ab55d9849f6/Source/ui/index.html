@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1/2 Delay</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 400px;
+    height: 300px;
+    background: #1a1a1e;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #e0e0e0;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  .header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #ffffff;
+  }
+
+  .header .subtitle {
+    font-size: 11px;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: #666;
+    margin-top: 4px;
+  }
+
+  .controls {
+    display: flex;
+    gap: 60px;
+    align-items: center;
+  }
+
+  .knob-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .knob-container {
+    position: relative;
+    width: 80px;
+    height: 80px;
+  }
+
+  .knob-svg {
+    width: 80px;
+    height: 80px;
+  }
+
+  .knob-track {
+    fill: none;
+    stroke: #2a2a30;
+    stroke-width: 5;
+    stroke-linecap: round;
+  }
+
+  .knob-fill {
+    fill: none;
+    stroke-width: 5;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.05s ease;
+  }
+
+  .knob-fill.mix { stroke: #6c8cbf; }
+  .knob-fill.feedback { stroke: #bf8c6c; }
+
+  .knob-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 44px;
+    height: 44px;
+    background: radial-gradient(circle at 40% 35%, #3a3a42, #222228);
+    border-radius: 50%;
+    border: 1px solid #3a3a40;
+    cursor: grab;
+  }
+
+  .knob-center:active { cursor: grabbing; }
+
+  .knob-indicator {
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 3px;
+    height: 8px;
+    border-radius: 2px;
+  }
+
+  .knob-indicator.mix { background: #6c8cbf; }
+  .knob-indicator.feedback { background: #bf8c6c; }
+
+  .knob-label {
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #888;
+  }
+
+  .knob-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #ccc;
+    min-width: 40px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>1/2 Delay</h1>
+    <div class="subtitle">Half Note</div>
+  </div>
+
+  <div class="controls">
+    <div class="knob-group">
+      <div class="knob-container" id="knob-mix">
+        <svg class="knob-svg" viewBox="0 0 80 80">
+          <circle class="knob-track" cx="40" cy="40" r="35"
+            stroke-dasharray="164.93"
+            stroke-dashoffset="-41.23"
+            transform="rotate(135 40 40)" />
+          <circle class="knob-fill mix" cx="40" cy="40" r="35"
+            stroke-dasharray="164.93"
+            stroke-dashoffset="164.93"
+            transform="rotate(135 40 40)" />
+        </svg>
+        <div class="knob-center">
+          <div class="knob-indicator mix"></div>
+        </div>
+      </div>
+      <div class="knob-value" id="mix-value">50%</div>
+      <div class="knob-label">Mix</div>
+    </div>
+
+    <div class="knob-group">
+      <div class="knob-container" id="knob-feedback">
+        <svg class="knob-svg" viewBox="0 0 80 80">
+          <circle class="knob-track" cx="40" cy="40" r="35"
+            stroke-dasharray="164.93"
+            stroke-dashoffset="-41.23"
+            transform="rotate(135 40 40)" />
+          <circle class="knob-fill feedback" cx="40" cy="40" r="35"
+            stroke-dasharray="164.93"
+            stroke-dashoffset="164.93"
+            transform="rotate(135 40 40)" />
+        </svg>
+        <div class="knob-center">
+          <div class="knob-indicator feedback"></div>
+        </div>
+      </div>
+      <div class="knob-value" id="feedback-value">30%</div>
+      <div class="knob-label">Feedback</div>
+    </div>
+  </div>
+
+<script type="module" src="js/juce/index.js"></script>
+<script type="module">
+  import { getSliderState } from './js/juce/index.js';
+
+  const FULL_ARC = 164.93;
+
+  // Get JUCE slider states
+  const mixState = getSliderState("MIX");
+  const feedbackState = getSliderState("FEEDBACK");
+
+  // -- Mix Knob --
+  const mixContainer = document.getElementById('knob-mix');
+  const mixFill = mixContainer.querySelector('.knob-fill');
+  const mixCenter = mixContainer.querySelector('.knob-center');
+  const mixValueEl = document.getElementById('mix-value');
+
+  // -- Feedback Knob --
+  const fbContainer = document.getElementById('knob-feedback');
+  const fbFill = fbContainer.querySelector('.knob-fill');
+  const fbCenter = fbContainer.querySelector('.knob-center');
+  const fbValueEl = document.getElementById('feedback-value');
+
+  // ========================================
+  // Update knob visuals from normalized value
+  // ========================================
+  function updateKnob(fill, center, valueEl, norm, suffix, maxDisplay) {
+    const arcUsed = norm * FULL_ARC;
+    fill.style.strokeDashoffset = FULL_ARC - arcUsed;
+
+    const angle = -135 + (norm * 270);
+    center.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+
+    const displayVal = Math.round(norm * maxDisplay);
+    valueEl.textContent = displayVal + suffix;
+  }
+
+  // ========================================
+  // Listen for parameter changes from C++
+  // ========================================
+  mixState.valueChangedEvent.addListener(() => {
+    const norm = mixState.getNormalisedValue();
+    updateKnob(mixFill, mixCenter, mixValueEl, norm, '%', 100);
+  });
+
+  feedbackState.valueChangedEvent.addListener(() => {
+    const norm = feedbackState.getNormalisedValue();
+    updateKnob(fbFill, fbCenter, fbValueEl, norm, '%', 90);
+  });
+
+  // ========================================
+  // Knob drag interaction (relative frame-delta)
+  // ========================================
+  function setupKnobDrag(container, sliderState) {
+    const centerEl = container.querySelector('.knob-center');
+    let dragging = false;
+    let lastY = 0;
+
+    centerEl.addEventListener('mousedown', (e) => {
+      dragging = true;
+      lastY = e.clientY;
+      document.body.style.cursor = 'grabbing';
+      e.preventDefault();
+
+      sliderState.sliderDragStarted();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+
+      const deltaY = lastY - e.clientY;
+      lastY = e.clientY;
+
+      const sensitivity = 0.005;
+      let newNorm = sliderState.getNormalisedValue() + (deltaY * sensitivity);
+      newNorm = Math.max(0, Math.min(1, newNorm));
+
+      sliderState.setNormalisedValue(newNorm);
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (dragging) {
+        dragging = false;
+        document.body.style.cursor = '';
+        sliderState.sliderDragEnded();
+      }
+    });
+
+    // Double click to reset to default
+    centerEl.addEventListener('dblclick', () => {
+      sliderState.setNormalisedValue(sliderState.properties.defaultValue);
+    });
+  }
+
+  setupKnobDrag(mixContainer, mixState);
+  setupKnobDrag(fbContainer, feedbackState);
+
+  // ========================================
+  // Set initial visuals
+  // ========================================
+  updateKnob(mixFill, mixCenter, mixValueEl, mixState.getNormalisedValue(), '%', 100);
+  updateKnob(fbFill, fbCenter, fbValueEl, feedbackState.getNormalisedValue(), '%', 90);
+
+</script>
+
+</body>
+</html>
