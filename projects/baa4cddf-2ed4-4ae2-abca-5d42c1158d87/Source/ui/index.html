@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reverb</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1a1a2e;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    user-select: none;
+    overflow: hidden;
+  }
+
+  .plugin-container {
+    width: 280px;
+    height: 380px;
+    background: linear-gradient(165deg, #1e1e36 0%, #141425 100%);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    position: relative;
+  }
+
+  .plugin-title {
+    position: absolute;
+    top: 28px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.3);
+  }
+
+  .knob-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .knob-container {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    cursor: grab;
+  }
+
+  .knob-container:active {
+    cursor: grabbing;
+  }
+
+  svg.knob-svg {
+    width: 140px;
+    height: 140px;
+    filter: drop-shadow(0 0 12px rgba(100, 140, 255, 0.15));
+  }
+
+  .knob-track {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.06);
+    stroke-width: 5;
+    stroke-linecap: round;
+  }
+
+  .knob-arc {
+    fill: none;
+    stroke: url(#arcGradient);
+    stroke-width: 5;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.05s ease;
+  }
+
+  .knob-body {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 90px;
+    height: 90px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: linear-gradient(145deg, #2a2a48, #1e1e34);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+      0 4px 15px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .knob-indicator {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 3px;
+    height: 14px;
+    margin-left: -1.5px;
+    border-radius: 2px;
+    background: #6b8aff;
+    box-shadow: 0 0 6px rgba(107, 138, 255, 0.5);
+  }
+
+  .knob-value {
+    font-size: 28px;
+    font-weight: 300;
+    color: rgba(255, 255, 255, 0.85);
+    letter-spacing: 1px;
+  }
+
+  .knob-value span {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.3);
+    margin-left: 2px;
+  }
+
+  .knob-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.25);
+    margin-top: -8px;
+  }
+</style>
+</head>
+<body>
+
+<div class="plugin-container">
+  <div class="plugin-title">Reverb</div>
+
+  <div class="knob-wrapper">
+    <div class="knob-container" id="knob">
+      <svg class="knob-svg" viewBox="0 0 140 140">
+        <defs>
+          <linearGradient id="arcGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#4a6cf7" />
+            <stop offset="100%" stop-color="#8ba4ff" />
+          </linearGradient>
+        </defs>
+        <circle class="knob-track"
+          cx="70" cy="70" r="62"
+          stroke-dasharray="264.6"
+          stroke-dashoffset="-66.15"
+          transform="rotate(135 70 70)" />
+        <circle class="knob-arc" id="knobArc"
+          cx="70" cy="70" r="62"
+          stroke-dasharray="264.6"
+          stroke-dashoffset="264.6"
+          transform="rotate(135 70 70)" />
+      </svg>
+
+      <div class="knob-body" id="knobBody">
+        <div class="knob-indicator" id="knobIndicator"></div>
+      </div>
+    </div>
+
+    <div class="knob-value" id="knobValue">0<span>%</span></div>
+    <div class="knob-label">Wet</div>
+  </div>
+</div>
+
+<script type="module" src="js/juce/index.js"></script>
+<script type="module">
+import { getSliderState } from './js/juce/index.js';
+
+const knob = document.getElementById('knob');
+const knobArc = document.getElementById('knobArc');
+const knobBody = document.getElementById('knobBody');
+const knobValue = document.getElementById('knobValue');
+
+const MIN_ANGLE = -135;
+const MAX_ANGLE = 135;
+const ARC_LENGTH = 264.6;
+
+let dragging = false;
+let lastY = 0;
+
+const wetState = getSliderState("WET");
+
+function render() {
+    const value = wetState.getNormalisedValue();
+    const angle = MIN_ANGLE + value * (MAX_ANGLE - MIN_ANGLE);
+
+    const arcOffset = ARC_LENGTH - (value * ARC_LENGTH);
+    knobArc.style.strokeDashoffset = arcOffset;
+
+    knobBody.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+
+    const display = Math.round(value * 100);
+    knobValue.innerHTML = display + '<span>%</span>';
+}
+
+wetState.valueChangedEvent.addListener(() => {
+    render();
+});
+
+// Mouse interaction
+knob.addEventListener('mousedown', function(e) {
+    dragging = true;
+    lastY = e.clientY;
+    document.body.style.cursor = 'grabbing';
+    e.preventDefault();
+});
+
+window.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    const dy = lastY - e.clientY;
+    lastY = e.clientY;
+    const sensitivity = e.shiftKey ? 0.001 : 0.005;
+    const current = wetState.getNormalisedValue();
+    const newVal = Math.max(0, Math.min(1, current + dy * sensitivity));
+    wetState.setNormalisedValue(newVal);
+});
+
+window.addEventListener('mouseup', function() {
+    if (dragging) {
+        dragging = false;
+        document.body.style.cursor = '';
+    }
+});
+
+// Touch interaction
+knob.addEventListener('touchstart', function(e) {
+    dragging = true;
+    lastY = e.touches[0].clientY;
+    e.preventDefault();
+}, { passive: false });
+
+window.addEventListener('touchmove', function(e) {
+    if (!dragging) return;
+    const dy = lastY - e.touches[0].clientY;
+    lastY = e.touches[0].clientY;
+    const current = wetState.getNormalisedValue();
+    const newVal = Math.max(0, Math.min(1, current + dy * 0.005));
+    wetState.setNormalisedValue(newVal);
+});
+
+window.addEventListener('touchend', function() {
+    dragging = false;
+});
+
+// Double-click to reset
+knob.addEventListener('dblclick', function() {
+    wetState.setNormalisedValue(0);
+});
+
+// Initial render
+render();
+</script>
+
+</body>
+</html>
