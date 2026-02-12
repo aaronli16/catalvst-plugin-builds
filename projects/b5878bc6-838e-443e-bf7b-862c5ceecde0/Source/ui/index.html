@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cosmos</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 400px;
+    height: 500px;
+    background: linear-gradient(145deg, #0d0b1a 0%, #1a1035 40%, #0f1a2e 70%, #0d0b1a 100%);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    user-select: none;
+  }
+
+  /* Ambient background glow */
+  .bg-glow {
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.15;
+    pointer-events: none;
+    transition: opacity 0.8s ease;
+  }
+
+  .bg-glow-1 {
+    top: 20%;
+    left: 10%;
+    background: #7b4fcf;
+  }
+
+  .bg-glow-2 {
+    bottom: 10%;
+    right: 5%;
+    background: #2dd4bf;
+  }
+
+  /* Title */
+  .title {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.2);
+    margin-bottom: 50px;
+  }
+
+  /* Knob container */
+  .knob-area {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Outer ring SVG */
+  .knob-ring {
+    position: absolute;
+    width: 220px;
+    height: 220px;
+  }
+
+  .knob-ring-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.06);
+    stroke-width: 4;
+    stroke-linecap: round;
+  }
+
+  .knob-ring-fill {
+    fill: none;
+    stroke: url(#knobGradient);
+    stroke-width: 4;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.05s ease;
+    filter: drop-shadow(0 0 6px rgba(123, 79, 207, 0.4));
+  }
+
+  /* Inner knob */
+  .knob {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #1e1a30, #151125);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow:
+      0 4px 20px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    cursor: grab;
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+
+  .knob:active { cursor: grabbing; }
+
+  /* Knob indicator line */
+  .knob-indicator {
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 3px;
+    height: 16px;
+    border-radius: 2px;
+    background: linear-gradient(to bottom, #a78bfa, #7b4fcf);
+    box-shadow: 0 0 8px rgba(123, 79, 207, 0.6);
+    transition: background 0.3s ease;
+  }
+
+  /* Value display */
+  .knob-value {
+    font-size: 32px;
+    font-weight: 300;
+    color: rgba(255, 255, 255, 0.85);
+    line-height: 1;
+    margin-top: 4px;
+  }
+
+  .knob-value span {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.3);
+    font-weight: 400;
+  }
+
+  /* Label under knob */
+  .knob-label {
+    margin-top: 30px;
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.3);
+  }
+
+  /* Intensity state indicators */
+  .state-dots {
+    display: flex;
+    gap: 8px;
+    margin-top: 40px;
+  }
+
+  .state-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    transition: all 0.4s ease;
+  }
+
+  .state-dot.active {
+    background: #a78bfa;
+    box-shadow: 0 0 8px rgba(167, 139, 250, 0.5);
+  }
+
+  /* Glow intensifies with knob */
+  body.intensity-high .bg-glow-1 { opacity: 0.35; }
+  body.intensity-high .bg-glow-2 { opacity: 0.3; }
+  body.intensity-max .bg-glow-1 { opacity: 0.55; }
+  body.intensity-max .bg-glow-2 { opacity: 0.5; }
+  body.intensity-max .knob-indicator {
+    background: linear-gradient(to bottom, #f0abfc, #c084fc);
+    box-shadow: 0 0 14px rgba(192, 132, 252, 0.8);
+  }
+</style>
+</head>
+<body>
+
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+
+  <div class="title">Cosmos</div>
+  <div class="subtitle">Reverb &bull; Delay</div>
+
+  <div class="knob-area" id="knobArea">
+    <svg class="knob-ring" viewBox="0 0 220 220">
+      <defs>
+        <linearGradient id="knobGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#7b4fcf" />
+          <stop offset="50%" stop-color="#a78bfa" />
+          <stop offset="100%" stop-color="#2dd4bf" />
+        </linearGradient>
+      </defs>
+      <circle class="knob-ring-bg" cx="110" cy="110" r="106"
+        stroke-dasharray="500.4"
+        stroke-dashoffset="83.4"
+        transform="rotate(132 110 110)" />
+      <circle class="knob-ring-fill" cx="110" cy="110" r="106"
+        stroke-dasharray="500.4"
+        stroke-dashoffset="500.4"
+        transform="rotate(132 110 110)"
+        id="ringFill" />
+    </svg>
+
+    <div class="knob" id="knob">
+      <div class="knob-indicator" id="knobIndicator"></div>
+      <div class="knob-value" id="knobValue">0<span>%</span></div>
+    </div>
+  </div>
+
+  <div class="knob-label">Intensity</div>
+
+  <div class="state-dots">
+    <div class="state-dot" id="dot0"></div>
+    <div class="state-dot" id="dot1"></div>
+    <div class="state-dot" id="dot2"></div>
+    <div class="state-dot" id="dot3"></div>
+    <div class="state-dot" id="dot4"></div>
+  </div>
+
+<script type="module" src="js/juce/index.js"></script>
+<script type="module">
+import { getSliderState } from './js/juce/index.js';
+
+(function() {
+  const knob = document.getElementById('knob');
+  const knobArea = document.getElementById('knobArea');
+  const ringFill = document.getElementById('ringFill');
+  const knobValue = document.getElementById('knobValue');
+  const knobIndicator = document.getElementById('knobIndicator');
+  const dots = [
+    document.getElementById('dot0'),
+    document.getElementById('dot1'),
+    document.getElementById('dot2'),
+    document.getElementById('dot3'),
+    document.getElementById('dot4')
+  ];
+
+  // Arc config
+  const ARC_LENGTH = 500.4;
+  const UNUSED_ARC = 83.4;
+  const USABLE_ARC = ARC_LENGTH - UNUSED_ARC;
+  const MIN_ANGLE = -135;
+  const MAX_ANGLE = 135;
+
+  // Connect to JUCE parameter
+  const intensityState = getSliderState("INTENSITY");
+
+  let dragging = false;
+  let lastY = 0;
+
+  function updateUI() {
+    const normValue = intensityState.getNormalisedValue();
+    const intensity = Math.round(normValue * 100);
+
+    // Update value display
+    knobValue.innerHTML = intensity + '<span>%</span>';
+
+    // Update ring fill
+    const fillAmount = USABLE_ARC * (1 - normValue);
+    ringFill.setAttribute('stroke-dashoffset', fillAmount + UNUSED_ARC);
+
+    // Update knob rotation
+    const angle = MIN_ANGLE + normValue * (MAX_ANGLE - MIN_ANGLE);
+    knob.style.transform = 'rotate(' + angle + 'deg)';
+
+    // Keep value text upright
+    knobValue.style.transform = 'rotate(' + (-angle) + 'deg)';
+
+    // Update state dots
+    const activeDots = Math.ceil(intensity / 20);
+    dots.forEach(function(dot, i) {
+      dot.classList.toggle('active', i < activeDots);
+    });
+
+    // Update body class for background glow
+    document.body.classList.remove('intensity-high', 'intensity-max');
+    if (intensity >= 75) {
+      document.body.classList.add('intensity-max');
+    } else if (intensity >= 40) {
+      document.body.classList.add('intensity-high');
+    }
+  }
+
+  // Listen for parameter changes from the host
+  intensityState.valueChangedEvent.addListener(() => {
+    updateUI();
+  });
+
+  // Mouse drag interaction (relative/frame-delta)
+  knobArea.addEventListener('mousedown', function(e) {
+    dragging = true;
+    lastY = e.clientY;
+    document.body.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    const deltaY = lastY - e.clientY;
+    lastY = e.clientY;
+
+    const currentValue = intensityState.getNormalisedValue();
+    const newValue = Math.max(0, Math.min(1, currentValue + deltaY * 0.005));
+    intensityState.setNormalisedValue(newValue);
+  });
+
+  window.addEventListener('mouseup', function() {
+    if (dragging) {
+      dragging = false;
+      document.body.style.cursor = '';
+    }
+  });
+
+  // Touch support (relative/frame-delta)
+  knobArea.addEventListener('touchstart', function(e) {
+    dragging = true;
+    lastY = e.touches[0].clientY;
+    e.preventDefault();
+  }, { passive: false });
+
+  window.addEventListener('touchmove', function(e) {
+    if (!dragging) return;
+    const deltaY = lastY - e.touches[0].clientY;
+    lastY = e.touches[0].clientY;
+
+    const currentValue = intensityState.getNormalisedValue();
+    const newValue = Math.max(0, Math.min(1, currentValue + deltaY * 0.005));
+    intensityState.setNormalisedValue(newValue);
+  }, { passive: false });
+
+  window.addEventListener('touchend', function() {
+    dragging = false;
+  });
+
+  // Double-click to reset
+  knobArea.addEventListener('dblclick', function() {
+    intensityState.setNormalisedValue(0);
+  });
+
+  // Mouse wheel
+  knobArea.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.02 : 0.02;
+    const currentValue = intensityState.getNormalisedValue();
+    const newValue = Math.max(0, Math.min(1, currentValue + delta));
+    intensityState.setNormalisedValue(newValue);
+  }, { passive: false });
+
+  // Initialize UI
+  updateUI();
+})();
+</script>
+
+</body>
+</html>
