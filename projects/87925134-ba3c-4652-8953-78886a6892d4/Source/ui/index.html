@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LP Filter</title>
+  <script type="module" src="js/juce/index.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      width: 300px;
+      height: 360px;
+      background: #1a1a1e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+      overflow: hidden;
+    }
+
+    .plugin-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #555;
+      margin-bottom: 36px;
+    }
+
+    .knob-container {
+      position: relative;
+      width: 140px;
+      height: 140px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .knob-track {
+      position: absolute;
+      width: 140px;
+      height: 140px;
+    }
+
+    .knob-track-bg {
+      fill: none;
+      stroke: #2a2a30;
+      stroke-width: 4;
+      stroke-linecap: round;
+    }
+
+    .knob-track-fill {
+      fill: none;
+      stroke: #e0e0e0;
+      stroke-width: 4;
+      stroke-linecap: round;
+      transition: stroke 0.15s ease;
+    }
+
+    .knob-center {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: #242428;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 2;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .knob-indicator {
+      width: 2px;
+      height: 18px;
+      background: #e0e0e0;
+      border-radius: 1px;
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      transform-origin: center 33px;
+      transition: background 0.15s ease;
+    }
+
+    .value-display {
+      margin-top: 28px;
+      font-size: 18px;
+      font-weight: 300;
+      color: #e0e0e0;
+      letter-spacing: 1px;
+      text-align: center;
+      min-width: 100px;
+    }
+
+    .param-label {
+      margin-top: 6px;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #444;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="plugin-label">Low Pass</div>
+
+  <div class="knob-container" id="knobContainer">
+    <svg class="knob-track" viewBox="0 0 140 140">
+      <path class="knob-track-bg" id="trackBg" />
+      <path class="knob-track-fill" id="trackFill" />
+    </svg>
+    <div class="knob-center">
+      <div class="knob-indicator" id="knobIndicator"></div>
+    </div>
+  </div>
+
+  <div class="value-display" id="valueDisplay">20.0 kHz</div>
+  <div class="param-label">Cutoff</div>
+
+  <script type="module">
+    import { getSliderState } from './js/juce/index.js';
+
+    // --- Config ---
+    const MIN_FREQ = 20;
+    const MAX_FREQ = 20000;
+    const ARC_START = 135;
+    const ARC_END = 405;
+    const ARC_RANGE = ARC_END - ARC_START;
+    const RADIUS = 62;
+    const CENTER = 70;
+    const SENSITIVITY = 0.004;
+
+    // --- JUCE parameter state ---
+    const cutoffState = getSliderState("CUTOFF");
+
+    // --- Local state ---
+    let normalizedValue = 1.0;
+    let isDragging = false;
+    let lastY = 0;
+
+    // --- Elements ---
+    const knobContainer = document.getElementById('knobContainer');
+    const trackBg = document.getElementById('trackBg');
+    const trackFill = document.getElementById('trackFill');
+    const knobIndicator = document.getElementById('knobIndicator');
+    const valueDisplay = document.getElementById('valueDisplay');
+
+    // --- Arc helpers ---
+    function polarToCartesian(cx, cy, r, angleDeg) {
+      const rad = (angleDeg - 90) * Math.PI / 180;
+      return {
+        x: cx + r * Math.cos(rad),
+        y: cy + r * Math.sin(rad)
+      };
+    }
+
+    function describeArc(cx, cy, r, startAngle, endAngle) {
+      const start = polarToCartesian(cx, cy, r, endAngle);
+      const end = polarToCartesian(cx, cy, r, startAngle);
+      const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+      return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 0 ${end.x} ${end.y}`;
+    }
+
+    // --- Frequency mapping (logarithmic) ---
+    function normalizedToFreq(norm) {
+      if (norm <= 0) return 0;
+      const minLog = Math.log10(MIN_FREQ);
+      const maxLog = Math.log10(MAX_FREQ);
+      return Math.pow(10, minLog + norm * (maxLog - minLog));
+    }
+
+    function formatFreq(hz) {
+      if (hz <= 0) return 'OFF';
+      if (hz >= 1000) return (hz / 1000).toFixed(1) + ' kHz';
+      return Math.round(hz) + ' Hz';
+    }
+
+    // --- Render ---
+    function render() {
+      // Background arc (always full)
+      trackBg.setAttribute('d', describeArc(CENTER, CENTER, RADIUS, ARC_START, ARC_END));
+
+      // Fill arc
+      const fillEnd = ARC_START + normalizedValue * ARC_RANGE;
+      if (normalizedValue > 0.005) {
+        trackFill.setAttribute('d', describeArc(CENTER, CENTER, RADIUS, ARC_START, fillEnd));
+        trackFill.style.opacity = '1';
+      } else {
+        trackFill.style.opacity = '0';
+      }
+
+      // Indicator rotation
+      const indicatorAngle = ARC_START + normalizedValue * ARC_RANGE;
+      knobIndicator.style.transform = `translateX(-50%) rotate(${indicatorAngle - 180}deg)`;
+
+      // Value display
+      const freq = normalizedToFreq(normalizedValue);
+      valueDisplay.textContent = formatFreq(freq);
+    }
+
+    // --- Listen for parameter changes from C++ (host automation, preset load) ---
+    cutoffState.valueChangedEvent.addListener(() => {
+      normalizedValue = cutoffState.getNormalisedValue();
+      render();
+    });
+
+    // --- Interaction ---
+    function onPointerDown(e) {
+      isDragging = true;
+      lastY = e.clientY;
+      document.body.style.cursor = 'grabbing';
+      e.preventDefault();
+    }
+
+    function onPointerMove(e) {
+      if (!isDragging) return;
+      const deltaY = lastY - e.clientY;
+      lastY = e.clientY;
+      normalizedValue = Math.max(0, Math.min(1, normalizedValue + deltaY * SENSITIVITY));
+
+      // Send to C++ backend
+      cutoffState.setNormalisedValue(normalizedValue);
+
+      render();
+    }
+
+    function onPointerUp() {
+      if (!isDragging) return;
+      isDragging = false;
+      document.body.style.cursor = '';
+    }
+
+    // Double-click to reset
+    function onDoubleClick(e) {
+      normalizedValue = 1.0;
+      cutoffState.setNormalisedValue(normalizedValue);
+      render();
+      e.preventDefault();
+    }
+
+    knobContainer.addEventListener('mousedown', onPointerDown);
+    knobContainer.addEventListener('dblclick', onDoubleClick);
+    window.addEventListener('mousemove', onPointerMove);
+    window.addEventListener('mouseup', onPointerUp);
+
+    // Touch support
+    knobContainer.addEventListener('touchstart', function(e) {
+      const touch = e.touches[0];
+      onPointerDown({ clientY: touch.clientY, preventDefault: () => e.preventDefault() });
+    });
+    window.addEventListener('touchmove', function(e) {
+      if (!isDragging) return;
+      const touch = e.touches[0];
+      onPointerMove({ clientY: touch.clientY });
+    });
+    window.addEventListener('touchend', onPointerUp);
+
+    // --- Init: sync with current parameter value ---
+    normalizedValue = cutoffState.getNormalisedValue();
+    render();
+  </script>
+
+</body>
+</html>
