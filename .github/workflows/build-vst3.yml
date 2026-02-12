@@ -21,6 +21,41 @@ jobs:
       - name: Checkout builds repo
         uses: actions/checkout@v4
 
+      - name: Import Apple signing certificate
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          # Decode the certificate from base64
+          echo "$APPLE_CERTIFICATE" | base64 --decode > certificate.p12
+
+          # Create a temporary keychain
+          KEYCHAIN_PASSWORD=$(openssl rand -hex 16)
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain-db
+          security set-keychain-settings -lut 21600 build.keychain-db
+          security default-keychain -s build.keychain-db
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain-db
+
+          # Import the certificate into the keychain
+          security import certificate.p12 \
+            -k build.keychain-db \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign \
+            -T /usr/bin/security
+
+          # Allow codesign to access the keychain without UI prompt
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" build.keychain-db
+
+          # Add build keychain to search list (so codesign can find it)
+          security list-keychains -d user -s build.keychain-db login.keychain-db
+
+          # Verify the certificate is available
+          security find-identity -v -p codesigning build.keychain-db
+
+          # Clean up the .p12 file
+          rm certificate.p12
+
       - name: Verify project files exist
         run: |
           if [ ! -d "projects/${{ inputs.project_id }}" ]; then
@@ -65,11 +100,13 @@ jobs:
             -S "projects/${{ inputs.project_id }}" \
             -DJUCE_SOURCE_DIR="$HOME/juce-sdk" \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            2>&1 | tee build_log.txt
 
       - name: Build
         run: |
-          cmake --build build --config Release -j$(sysctl -n hw.ncpu)
+          cmake --build build --config Release -j$(sysctl -n hw.ncpu) \
+            2>&1 | tee -a build_log.txt
 
       - name: Find, sign, and package VST3
         id: package
@@ -83,9 +120,16 @@ jobs:
           echo "Found VST3 at: $VST3_PATH"
           echo "vst3_path=$VST3_PATH" >> "$GITHUB_OUTPUT"
 
-          # Ad-hoc sign the plugin so macOS doesn't reject it
-          codesign --force --deep --sign - "$VST3_PATH"
-          echo "Ad-hoc signed successfully"
+          # Sign with Developer ID certificate (required for notarization)
+          codesign --force --deep \
+            --sign "Developer ID Application: Aaron Li (${{ secrets.APPLE_TEAM_ID }})" \
+            --options runtime \
+            --timestamp \
+            "$VST3_PATH"
+          echo "Developer ID signed successfully"
+
+          # Verify the signature
+          codesign --verify --verbose=2 "$VST3_PATH"
 
           # Create DMG for artifact upload (handles macOS quarantine better than zip)
           mkdir -p "$GITHUB_WORKSPACE/staging"
@@ -96,12 +140,51 @@ jobs:
             -ov -format UDZO \
             "$GITHUB_WORKSPACE/${{ inputs.plugin_name }}.vst3.dmg"
 
+      - name: Notarize and staple DMG
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          DMG_PATH="${{ github.workspace }}/${{ inputs.plugin_name }}.vst3.dmg"
+
+          echo "Submitting DMG for notarization..."
+          xcrun notarytool submit "$DMG_PATH" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait \
+            2>&1 | tee notarization_log.txt
+
+          # Check if notarization succeeded
+          if ! grep -q "status: Accepted" notarization_log.txt; then
+            echo "Notarization failed. Fetching detailed log..."
+            # Extract the submission ID from the output
+            SUBMISSION_ID=$(grep -o '[0-9a-f\-]\{36\}' notarization_log.txt | head -1)
+            if [ -n "$SUBMISSION_ID" ]; then
+              xcrun notarytool log "$SUBMISSION_ID" \
+                --apple-id "$APPLE_ID" \
+                --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+                --team-id "$APPLE_TEAM_ID" || true
+            fi
+            exit 1
+          fi
+
+          echo "Notarization accepted. Stapling ticket..."
+          xcrun stapler staple "$DMG_PATH"
+          echo "DMG notarized and stapled successfully"
+
       - name: Upload VST3 artifact
         uses: actions/upload-artifact@v4
         with:
           name: "${{ inputs.plugin_name }}-vst3"
           path: "${{ inputs.plugin_name }}.vst3.dmg"
           retention-days: 30
+
+      - name: Clean up keychain
+        if: always()
+        run: |
+          security delete-keychain build.keychain-db 2>/dev/null || true
 
       - name: Notify Inngest - build completed
         if: always()
@@ -114,13 +197,37 @@ jobs:
             CONCLUSION="failure"
           fi
 
-          curl -s -X POST "https://inn.gs/e/${{ secrets.INNGEST_EVENT_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d "{
+          # On failure, capture last 50 lines of build log for AI debugging
+          BUILD_ERROR=""
+          if [ "$CONCLUSION" = "failure" ] && [ -f build_log.txt ]; then
+            # Get last 50 lines, cap at 2000 chars, escape for JSON
+            BUILD_ERROR=$(tail -50 build_log.txt | head -c 2000 | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')
+            # python3 outputs a quoted JSON string like "foo\nbar" — strip outer quotes
+            BUILD_ERROR=${BUILD_ERROR:1:-1}
+          fi
+
+          # Build JSON payload — include build_error only on failure
+          if [ -n "$BUILD_ERROR" ]; then
+            PAYLOAD="{
+              \"name\": \"build/workflow.completed\",
+              \"data\": {
+                \"project_id\": \"${{ inputs.project_id }}\",
+                \"conclusion\": \"$CONCLUSION\",
+                \"run_id\": ${{ github.run_id }},
+                \"build_error\": \"$BUILD_ERROR\"
+              }
+            }"
+          else
+            PAYLOAD="{
               \"name\": \"build/workflow.completed\",
               \"data\": {
                 \"project_id\": \"${{ inputs.project_id }}\",
                 \"conclusion\": \"$CONCLUSION\",
                 \"run_id\": ${{ github.run_id }}
               }
-            }" || echo "Warning: Failed to notify Inngest (non-fatal)"
+            }"
+          fi
+
+          curl -s -X POST "https://inn.gs/e/${{ secrets.INNGEST_EVENT_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" || echo "Warning: Failed to notify Inngest (non-fatal)"
