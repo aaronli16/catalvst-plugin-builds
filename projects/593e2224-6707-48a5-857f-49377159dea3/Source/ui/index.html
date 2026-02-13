@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cathedral Reverb</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  body {
+    width: 400px;
+    height: 500px;
+    background: #0a0a0e;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Subtle cathedral arch background motif */
+  body::before {
+    content: '';
+    position: absolute;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 180px;
+    height: 260px;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    border-radius: 90px 90px 0 0;
+    pointer-events: none;
+  }
+
+  .title {
+    font-size: 11px;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.25);
+    margin-bottom: 60px;
+    font-weight: 300;
+  }
+
+  .knob-container {
+    position: relative;
+    width: 160px;
+    height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Outer glow ring */
+  .knob-glow {
+    position: absolute;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(90, 80, 120, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+    transition: background 0.3s ease;
+  }
+
+  .knob-glow.active {
+    background: radial-gradient(circle, rgba(120, 100, 160, 0.15) 0%, transparent 70%);
+  }
+
+  /* SVG Knob */
+  .knob-svg {
+    width: 140px;
+    height: 140px;
+    cursor: grab;
+    position: relative;
+    z-index: 2;
+  }
+
+  .knob-svg:active {
+    cursor: grabbing;
+  }
+
+  .knob-track {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.06);
+    stroke-width: 3;
+    stroke-linecap: round;
+  }
+
+  .knob-arc {
+    fill: none;
+    stroke: url(#arcGradient);
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.05s ease;
+    filter: drop-shadow(0 0 4px rgba(140, 120, 180, 0.3));
+  }
+
+  .knob-body {
+    fill: #131318;
+    stroke: rgba(255, 255, 255, 0.05);
+    stroke-width: 0.5;
+  }
+
+  .knob-indicator {
+    stroke: rgba(180, 160, 220, 0.7);
+    stroke-width: 2;
+    stroke-linecap: round;
+    transition: transform 0.05s ease;
+  }
+
+  /* Value display */
+  .value-display {
+    margin-top: 40px;
+    text-align: center;
+  }
+
+  .value-number {
+    font-size: 28px;
+    font-weight: 200;
+    color: rgba(255, 255, 255, 0.6);
+    letter-spacing: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .value-number span {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.2);
+    margin-left: 1px;
+  }
+
+  .value-label {
+    font-size: 9px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.15);
+    margin-top: 8px;
+    font-weight: 400;
+  }
+
+  /* Footer */
+  .footer {
+    position: absolute;
+    bottom: 20px;
+    font-size: 8px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.08);
+    font-weight: 300;
+  }
+</style>
+</head>
+<body>
+
+  <div class="title">Cathedral</div>
+
+  <div class="knob-container">
+    <div class="knob-glow" id="knobGlow"></div>
+    <svg class="knob-svg" id="knob" viewBox="0 0 140 140">
+      <defs>
+        <linearGradient id="arcGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color: #5a5078" />
+          <stop offset="100%" style="stop-color: #8070a8" />
+        </linearGradient>
+      </defs>
+
+      <!-- Track arc (background) -->
+      <path id="knobTrack" class="knob-track" />
+
+      <!-- Active arc (filled portion) -->
+      <path id="knobArc" class="knob-arc" />
+
+      <!-- Knob body -->
+      <circle class="knob-body" cx="70" cy="70" r="42" />
+
+      <!-- Indicator line -->
+      <line id="knobIndicator" class="knob-indicator" x1="70" y1="70" x2="70" y2="36" />
+    </svg>
+  </div>
+
+  <div class="value-display">
+    <div class="value-number" id="valueNumber">0<span>%</span></div>
+    <div class="value-label">Dry / Wet</div>
+  </div>
+
+  <div class="footer">Reverb</div>
+
+<script type="module" src="js/juce/index.js"></script>
+<script type="module">
+import { getSliderState } from './js/juce/index.js';
+
+(function() {
+  // --- Config ---
+  const MIN_ANGLE = 225;
+  const MAX_ANGLE = -45;
+  const ARC_RADIUS = 58;
+  const CENTER = 70;
+
+  // --- State ---
+  let value = 0;
+  let isDragging = false;
+  let lastY = 0;
+
+  // --- JUCE parameter binding ---
+  const mixState = getSliderState("MIX");
+
+  // --- Elements ---
+  const knobEl = document.getElementById('knob');
+  const knobArc = document.getElementById('knobArc');
+  const knobTrack = document.getElementById('knobTrack');
+  const knobIndicator = document.getElementById('knobIndicator');
+  const knobGlow = document.getElementById('knobGlow');
+  const valueNumber = document.getElementById('valueNumber');
+
+  // --- Arc helpers ---
+  function degToRad(deg) {
+    return (deg * Math.PI) / 180;
+  }
+
+  function polarToCart(cx, cy, r, angleDeg) {
+    const rad = degToRad(angleDeg - 90);
+    return {
+      x: cx + r * Math.cos(rad),
+      y: cy + r * Math.sin(rad)
+    };
+  }
+
+  function describeArc(cx, cy, r, startAngle, endAngle) {
+    const start = polarToCart(cx, cy, r, startAngle);
+    const end = polarToCart(cx, cy, r, endAngle);
+    let sweep = endAngle - startAngle;
+    if (sweep < 0) sweep += 360;
+    const largeArc = sweep > 180 ? 1 : 0;
+    return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y}`;
+  }
+
+  // --- Drawing ---
+  function getAngle(val) {
+    return MIN_ANGLE + val * 270;
+  }
+
+  function drawTrack() {
+    knobTrack.setAttribute('d', describeArc(CENTER, CENTER, ARC_RADIUS, MIN_ANGLE, MIN_ANGLE + 270));
+  }
+
+  function draw() {
+    const currentAngle = getAngle(value);
+
+    if (value < 0.005) {
+      knobArc.setAttribute('d', '');
+    } else {
+      knobArc.setAttribute('d', describeArc(CENTER, CENTER, ARC_RADIUS, MIN_ANGLE, currentAngle));
+    }
+
+    knobIndicator.setAttribute('transform', `rotate(${currentAngle}, ${CENTER}, ${CENTER})`);
+
+    const pct = Math.round(value * 100);
+    valueNumber.innerHTML = pct + '<span>%</span>';
+  }
+
+  // --- Listen for parameter changes from host ---
+  mixState.valueChangedEvent.addListener(() => {
+    value = mixState.getNormalisedValue();
+    draw();
+  });
+
+  // --- Interaction ---
+  function onPointerDown(e) {
+    isDragging = true;
+    lastY = e.clientY;
+    knobGlow.classList.add('active');
+    document.body.style.cursor = 'grabbing';
+    e.preventDefault();
+  }
+
+  function onPointerMove(e) {
+    if (!isDragging) return;
+    const deltaY = lastY - e.clientY;
+    lastY = e.clientY;
+    const sensitivity = 0.004;
+    let newValue = value + deltaY * sensitivity;
+    newValue = Math.max(0, Math.min(1, newValue));
+    value = newValue;
+    mixState.setNormalisedValue(value);
+    draw();
+    e.preventDefault();
+  }
+
+  function onPointerUp() {
+    if (!isDragging) return;
+    isDragging = false;
+    knobGlow.classList.remove('active');
+    document.body.style.cursor = '';
+  }
+
+  function onDoubleClick(e) {
+    value = 0;
+    mixState.setNormalisedValue(0);
+    draw();
+    e.preventDefault();
+  }
+
+  // --- Event Binding ---
+  knobEl.addEventListener('pointerdown', onPointerDown);
+  document.addEventListener('pointermove', onPointerMove);
+  document.addEventListener('pointerup', onPointerUp);
+  knobEl.addEventListener('dblclick', onDoubleClick);
+
+  // --- Init ---
+  drawTrack();
+  value = mixState.getNormalisedValue();
+  draw();
+})();
+</script>
+
+</body>
+</html>
