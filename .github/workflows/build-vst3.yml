@@ -47,14 +47,14 @@ jobs:
             -T /usr/bin/security
 
           # Import the installer certificate (for signing the .pkg)
+          # Using -A to allow all applications (safe on ephemeral CI runners)
           security import installer_certificate.p12 \
             -k build.keychain-db \
             -P "$APPLE_INSTALLER_CERTIFICATE_PASSWORD" \
-            -T /usr/bin/productsign \
-            -T /usr/bin/security
+            -A
 
-          # Allow codesign and productsign to access the keychain without UI prompt
-          security set-key-partition-list -S apple-tool:,apple:,codesign:,productsign: \
+          # Allow codesign to access the keychain without UI prompt
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
             -s -k "$KEYCHAIN_PASSWORD" build.keychain-db
 
           # Add build keychain to search list (so codesign/productsign can find it)
