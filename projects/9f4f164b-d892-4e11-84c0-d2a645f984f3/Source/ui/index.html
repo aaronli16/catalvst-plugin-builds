@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BUILDUP</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 400px;
+    height: 500px;
+    background: #0a0a0f;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    overflow: hidden;
+    user-select: none;
+    position: relative;
+  }
+
+  /* Background glow that intensifies with the knob */
+  .bg-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 150, 255, 0.0) 0%, transparent 70%);
+    pointer-events: none;
+    transition: background 0.15s ease;
+  }
+
+  /* Noise overlay */
+  .noise-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    opacity: 0;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    background-size: 256px 256px;
+    mix-blend-mode: screen;
+    transition: opacity 0.15s ease;
+  }
+
+  /* Title */
+  .title {
+    font-size: 14px;
+    letter-spacing: 6px;
+    color: #444;
+    text-transform: uppercase;
+    margin-bottom: 40px;
+    z-index: 1;
+    transition: color 0.3s ease;
+  }
+
+  /* Knob container */
+  .knob-area {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    z-index: 1;
+  }
+
+  /* Outer ring */
+  .knob-ring {
+    position: absolute;
+    top: 0; left: 0;
+    width: 200px;
+    height: 200px;
+  }
+
+  .knob-ring-bg {
+    fill: none;
+    stroke: #1a1a25;
+    stroke-width: 6;
+    stroke-linecap: round;
+  }
+
+  .knob-ring-fill {
+    fill: none;
+    stroke: #0096ff;
+    stroke-width: 6;
+    stroke-linecap: round;
+    transition: stroke 0.15s ease;
+  }
+
+  /* Knob body */
+  .knob-body {
+    position: absolute;
+    top: 20px; left: 20px;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #1e1e2a, #0e0e15);
+    box-shadow:
+      0 4px 15px rgba(0, 0, 0, 0.6),
+      inset 0 1px 1px rgba(255, 255, 255, 0.03);
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .knob-body:active { cursor: grabbing; }
+
+  /* Indicator line */
+  .knob-indicator {
+    position: absolute;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 3px;
+    height: 20px;
+    border-radius: 2px;
+    background: #0096ff;
+    transition: background 0.15s ease;
+  }
+
+  /* Value display */
+  .knob-value {
+    font-size: 32px;
+    font-weight: 300;
+    color: #666;
+    letter-spacing: 2px;
+    transition: color 0.3s ease;
+  }
+
+  /* FX Labels */
+  .fx-labels {
+    display: flex;
+    gap: 24px;
+    margin-top: 40px;
+    z-index: 1;
+  }
+
+  .fx-label {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: #2a2a35;
+    text-transform: uppercase;
+    transition: color 0.3s ease, text-shadow 0.3s ease;
+  }
+
+  .fx-label.active {
+    color: #556;
+  }
+
+  .fx-label.lit {
+    color: #0096ff;
+    text-shadow: 0 0 8px rgba(0, 150, 255, 0.4);
+  }
+
+  /* Bottom intensity label */
+  .intensity-label {
+    margin-top: 30px;
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: #333;
+    text-transform: uppercase;
+    z-index: 1;
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-glow" id="bgGlow"></div>
+<div class="noise-overlay" id="noiseOverlay"></div>
+
+<div class="title" id="title">BUILDUP</div>
+
+<div class="knob-area" id="knobArea">
+  <svg class="knob-ring" viewBox="0 0 200 200">
+    <circle class="knob-ring-bg" cx="100" cy="100" r="90"
+      stroke-dasharray="452.4"
+      stroke-dashoffset="-75.4"
+      transform="rotate(135 100 100)" />
+    <circle class="knob-ring-fill" id="knobRingFill" cx="100" cy="100" r="90"
+      stroke-dasharray="452.4"
+      stroke-dashoffset="377"
+      transform="rotate(135 100 100)" />
+  </svg>
+  <div class="knob-body" id="knobBody">
+    <div class="knob-indicator" id="knobIndicator"></div>
+    <div class="knob-value" id="knobValue">0</div>
+  </div>
+</div>
+
+<div class="fx-labels">
+  <span class="fx-label" id="fxReverb">REVERB</span>
+  <span class="fx-label" id="fxDelay">DELAY</span>
+  <span class="fx-label" id="fxNoise">NOISE</span>
+</div>
+
+<div class="intensity-label">INTENSITY</div>
+
+<script type="module" src="js/juce/index.js"></script>
+<script type="module">
+import { getSliderState } from './js/juce/index.js';
+
+(function() {
+  // Elements
+  const knobBody = document.getElementById('knobBody');
+  const knobValue = document.getElementById('knobValue');
+  const knobRingFill = document.getElementById('knobRingFill');
+  const knobIndicator = document.getElementById('knobIndicator');
+  const bgGlow = document.getElementById('bgGlow');
+  const noiseOverlay = document.getElementById('noiseOverlay');
+  const titleEl = document.getElementById('title');
+  const fxReverb = document.getElementById('fxReverb');
+  const fxDelay = document.getElementById('fxDelay');
+  const fxNoise = document.getElementById('fxNoise');
+
+  // JUCE parameter state
+  const intensityState = getSliderState("INTENSITY");
+
+  // State
+  let value = 0;        // 0-100
+  let dragging = false;
+  let lastY = 0;
+
+  // Arc constants
+  const arcTotal = 377;
+  const arcRange = 377;
+
+  function updateVisuals(val) {
+    value = Math.max(0, Math.min(100, val));
+    const norm = value / 100;
+
+    // Value text
+    knobValue.textContent = Math.round(value);
+
+    // Ring fill
+    const offset = arcTotal - (norm * arcRange);
+    knobRingFill.setAttribute('stroke-dashoffset', offset);
+
+    // Knob rotation: -135deg to +135deg
+    const rotation = -135 + (norm * 270);
+    knobBody.style.transform = `rotate(${rotation}deg)`;
+
+    // Color shift: blue -> cyan -> magenta -> white
+    let dynColor;
+    if (norm < 0.33) {
+      dynColor = lerpColor([0, 150, 255], [0, 220, 255], norm / 0.33);
+    } else if (norm < 0.66) {
+      dynColor = lerpColor([0, 220, 255], [180, 50, 255], (norm - 0.33) / 0.33);
+    } else {
+      dynColor = lerpColor([180, 50, 255], [255, 255, 255], (norm - 0.66) / 0.34);
+    }
+    const colorStr = `rgb(${dynColor[0]}, ${dynColor[1]}, ${dynColor[2]})`;
+
+    knobRingFill.style.stroke = colorStr;
+    knobIndicator.style.background = colorStr;
+
+    // Value text color
+    const textBright = 40 + (norm * 60);
+    knobValue.style.color = norm > 0.5 ? colorStr : `hsl(0, 0%, ${textBright}%)`;
+
+    // Title glow
+    titleEl.style.color = norm > 0.3 ? colorStr : '#444';
+    if (norm > 0.5) {
+      titleEl.style.textShadow = `0 0 ${norm * 20}px rgba(${dynColor[0]}, ${dynColor[1]}, ${dynColor[2]}, ${norm * 0.5})`;
+    } else {
+      titleEl.style.textShadow = 'none';
+    }
+
+    // Background glow
+    const glowOpacity = norm * 0.25;
+    bgGlow.style.background = `radial-gradient(circle, rgba(${dynColor[0]}, ${dynColor[1]}, ${dynColor[2]}, ${glowOpacity}) 0%, transparent 70%)`;
+    bgGlow.style.width = (300 + norm * 200) + 'px';
+    bgGlow.style.height = (300 + norm * 200) + 'px';
+
+    // Noise overlay (kicks in after 60%)
+    const noiseAmount = norm > 0.6 ? (norm - 0.6) / 0.4 : 0;
+    noiseOverlay.style.opacity = noiseAmount * 0.35;
+
+    // FX labels
+    updateFxLabel(fxReverb, norm, 0.0, 0.3);
+    updateFxLabel(fxDelay, norm, 0.15, 0.5);
+    updateFxLabel(fxNoise, norm, 0.5, 0.8);
+
+    if (noiseAmount > 0) {
+      noiseOverlay.style.backgroundPosition = `${Math.random() * 256}px ${Math.random() * 256}px`;
+    }
+  }
+
+  function updateFxLabel(el, norm, startAt, fullAt) {
+    if (norm < startAt) {
+      el.className = 'fx-label';
+    } else if (norm < fullAt) {
+      el.className = 'fx-label active';
+    } else {
+      el.className = 'fx-label lit';
+    }
+  }
+
+  function lerpColor(a, b, t) {
+    return [
+      Math.round(a[0] + (b[0] - a[0]) * t),
+      Math.round(a[1] + (b[1] - a[1]) * t),
+      Math.round(a[2] + (b[2] - a[2]) * t)
+    ];
+  }
+
+  // Listen for parameter changes from the plugin (DAW automation, preset load, etc.)
+  intensityState.valueChangedEvent.addListener(() => {
+    const normVal = intensityState.getNormalisedValue();
+    value = normVal * 100;
+    updateVisuals(value);
+  });
+
+  // Mouse interaction - relative drag
+  knobBody.addEventListener('mousedown', function(e) {
+    dragging = true;
+    lastY = e.clientY;
+    document.body.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    const deltaY = lastY - e.clientY;
+    lastY = e.clientY;
+    const sensitivity = 0.5;
+    const newVal = value + (deltaY * sensitivity);
+    const clamped = Math.max(0, Math.min(100, newVal));
+
+    // Update plugin parameter via JUCE relay
+    intensityState.setNormalisedValue(clamped / 100);
+    updateVisuals(clamped);
+  });
+
+  window.addEventListener('mouseup', function() {
+    if (dragging) {
+      dragging = false;
+      document.body.style.cursor = '';
+    }
+  });
+
+  // Double-click to reset
+  knobBody.addEventListener('dblclick', function() {
+    intensityState.setNormalisedValue(0);
+    updateVisuals(0);
+  });
+
+  // Scroll wheel
+  knobBody.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -2 : 2;
+    const newVal = Math.max(0, Math.min(100, value + delta));
+    intensityState.setNormalisedValue(newVal / 100);
+    updateVisuals(newVal);
+  }, { passive: false });
+
+  // Noise animation loop
+  function animateNoise() {
+    if (value > 60) {
+      noiseOverlay.style.backgroundPosition = `${Math.random() * 256}px ${Math.random() * 256}px`;
+    }
+    requestAnimationFrame(animateNoise);
+  }
+  animateNoise();
+
+  // Initialize from current parameter value
+  const initNorm = intensityState.getNormalisedValue();
+  updateVisuals(initNorm * 100);
+})();
+</script>
+
+</body>
+</html>
