@@ -120,6 +120,12 @@ jobs:
           echo "Found VST3 at: $VST3_PATH"
           echo "vst3_path=$VST3_PATH" >> "$GITHUB_OUTPUT"
 
+          # Safety net: verify the binary actually exists inside the bundle
+          if [ -z "$(ls -A "$VST3_PATH/Contents/MacOS/" 2>/dev/null)" ]; then
+            echo "Error: VST3 bundle is empty — no binary in Contents/MacOS/"
+            exit 1
+          fi
+
           # Sign with Developer ID certificate (required for notarization)
           codesign --force --deep \
             --sign "Developer ID Application: Aaron Li (${{ secrets.APPLE_TEAM_ID }})" \
