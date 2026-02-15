@@ -21,40 +21,20 @@ jobs:
       - name: Checkout builds repo
         uses: actions/checkout@v4
 
-      - name: Import Apple signing certificate
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-        run: |
-          # Decode the certificate from base64
-          echo "$APPLE_CERTIFICATE" | base64 --decode > certificate.p12
+      - name: Import Application signing certificate
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
+          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          keychain-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
 
-          # Create a temporary keychain
-          KEYCHAIN_PASSWORD=$(openssl rand -hex 16)
-          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain-db
-          security set-keychain-settings -lut 21600 build.keychain-db
-          security default-keychain -s build.keychain-db
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain-db
-
-          # Import the certificate into the keychain
-          security import certificate.p12 \
-            -k build.keychain-db \
-            -P "$APPLE_CERTIFICATE_PASSWORD" \
-            -T /usr/bin/codesign \
-            -T /usr/bin/security
-
-          # Allow codesign to access the keychain without UI prompt
-          security set-key-partition-list -S apple-tool:,apple:,codesign: \
-            -s -k "$KEYCHAIN_PASSWORD" build.keychain-db
-
-          # Add build keychain to search list (so codesign can find it)
-          security list-keychains -d user -s build.keychain-db login.keychain-db
-
-          # Verify the certificate is available
-          security find-identity -v -p codesigning build.keychain-db
-
-          # Clean up the .p12 file
-          rm certificate.p12
+      - name: Import Installer signing certificate
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.APPLE_INSTALLER_CERTIFICATE }}
+          p12-password: ${{ secrets.APPLE_INSTALLER_CERTIFICATE_PASSWORD }}
+          keychain-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          create-keychain: false
 
       - name: Verify project files exist
         run: |
@@ -137,25 +117,37 @@ jobs:
           # Verify the signature
           codesign --verify --verbose=2 "$VST3_PATH"
 
-          # Create DMG for artifact upload (handles macOS quarantine better than zip)
+          # Create PKG installer (auto-installs VST3 to system plugin folder)
           mkdir -p "$GITHUB_WORKSPACE/staging"
           cp -R "$VST3_PATH" "$GITHUB_WORKSPACE/staging/"
-          hdiutil create \
-            -volname "${{ inputs.plugin_name }}" \
-            -srcfolder "$GITHUB_WORKSPACE/staging" \
-            -ov -format UDZO \
-            "$GITHUB_WORKSPACE/${{ inputs.plugin_name }}.vst3.dmg"
 
-      - name: Notarize and staple DMG
+          # Build unsigned pkg
+          pkgbuild \
+            --root "$GITHUB_WORKSPACE/staging" \
+            --install-location "/Library/Audio/Plug-Ins/VST3" \
+            --identifier "com.catalvst.${{ inputs.plugin_name }}" \
+            --version "1.0.0" \
+            "$GITHUB_WORKSPACE/unsigned.pkg"
+
+          # Sign the pkg with Developer ID Installer certificate
+          productsign \
+            --sign "Developer ID Installer: Aaron Li (${{ secrets.APPLE_TEAM_ID }})" \
+            "$GITHUB_WORKSPACE/unsigned.pkg" \
+            "$GITHUB_WORKSPACE/${{ inputs.plugin_name }}.vst3.pkg"
+
+          rm "$GITHUB_WORKSPACE/unsigned.pkg"
+          echo "PKG created and signed successfully"
+
+      - name: Notarize and staple PKG
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          DMG_PATH="${{ github.workspace }}/${{ inputs.plugin_name }}.vst3.dmg"
+          PKG_PATH="${{ github.workspace }}/${{ inputs.plugin_name }}.vst3.pkg"
 
-          echo "Submitting DMG for notarization..."
-          xcrun notarytool submit "$DMG_PATH" \
+          echo "Submitting PKG for notarization..."
+          xcrun notarytool submit "$PKG_PATH" \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_APP_SPECIFIC_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
@@ -177,20 +169,15 @@ jobs:
           fi
 
           echo "Notarization accepted. Stapling ticket..."
-          xcrun stapler staple "$DMG_PATH"
-          echo "DMG notarized and stapled successfully"
+          xcrun stapler staple "$PKG_PATH"
+          echo "PKG notarized and stapled successfully"
 
       - name: Upload VST3 artifact
         uses: actions/upload-artifact@v4
         with:
           name: "${{ inputs.plugin_name }}-vst3"
-          path: "${{ inputs.plugin_name }}.vst3.dmg"
+          path: "${{ inputs.plugin_name }}.vst3.pkg"
           retention-days: 30
-
-      - name: Clean up keychain
-        if: always()
-        run: |
-          security delete-keychain build.keychain-db 2>/dev/null || true
 
       - name: Notify Inngest - build completed
         if: always()
