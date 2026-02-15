@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Room Reverb</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: #1a1a1a;
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
+    }
+
+    .plugin-body {
+      width: 320px;
+      height: 420px;
+      background: linear-gradient(175deg, #2c2a26 0%, #1e1c18 100%);
+      border-radius: 16px;
+      border: 2px solid #3a3630;
+      box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 0 0 1px rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Subtle brushed metal texture */
+    .plugin-body::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 1px,
+        rgba(255, 255, 255, 0.003) 1px,
+        rgba(255, 255, 255, 0.003) 2px
+      );
+      pointer-events: none;
+      border-radius: 14px;
+    }
+
+    /* Top panel strip */
+    .top-strip {
+      width: 100%;
+      padding: 18px 24px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .brand {
+      font-size: 9px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: #5a554a;
+      font-weight: normal;
+    }
+
+    .model {
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #4a4540;
+    }
+
+    /* Title area */
+    .title-area {
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .title {
+      font-size: 22px;
+      letter-spacing: 8px;
+      text-transform: uppercase;
+      color: #c8bfa8;
+      font-weight: normal;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    }
+
+    .subtitle {
+      font-size: 9px;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      color: #5a554a;
+      margin-top: 6px;
+    }
+
+    /* Knob area */
+    .knob-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin-top: -8px;
+    }
+
+    .knob-container {
+      position: relative;
+      width: 140px;
+      height: 140px;
+      cursor: grab;
+    }
+
+    .knob-container:active {
+      cursor: grabbing;
+    }
+
+    /* Knob shadow/base */
+    .knob-base {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 112px;
+      height: 112px;
+      border-radius: 50%;
+      background: #0e0d0b;
+      box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(255, 255, 255, 0.03);
+    }
+
+    /* Main knob */
+    .knob {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #3a3832, #2a2826);
+      box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    /* Knob inner ring */
+    .knob-inner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #33312e, #282623);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    /* Knob indicator line */
+    .knob-indicator {
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 2px;
+      height: 14px;
+      background: #c8bfa8;
+      border-radius: 1px;
+      box-shadow: 0 0 4px rgba(200, 191, 168, 0.3);
+    }
+
+    /* Tick marks around knob */
+    .tick-marks {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .tick {
+      position: absolute;
+      top: 2px;
+      left: 50%;
+      transform-origin: 0 68px;
+      width: 1px;
+      height: 8px;
+      background: #4a4540;
+      border-radius: 1px;
+    }
+
+    .tick.major {
+      height: 10px;
+      background: #5a554a;
+    }
+
+    /* Value display */
+    .value-display {
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .value-number {
+      font-size: 28px;
+      color: #c8bfa8;
+      letter-spacing: 2px;
+      font-weight: normal;
+      text-shadow: 0 0 8px rgba(200, 191, 168, 0.15);
+    }
+
+    .value-unit {
+      font-size: 9px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: #5a554a;
+      margin-top: 4px;
+    }
+
+    /* LED indicator */
+    .led-section {
+      padding: 16px 0 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .led {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #4a7a4a;
+      box-shadow: 0 0 6px rgba(74, 122, 74, 0.4);
+      transition: all 0.3s ease;
+    }
+
+    .led.active {
+      background: #7abd7a;
+      box-shadow: 0 0 8px rgba(122, 189, 122, 0.6);
+    }
+
+    .led-label {
+      font-size: 8px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #4a4540;
+    }
+
+    /* Bottom screws */
+    .bottom-strip {
+      width: 100%;
+      padding: 0 20px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .screw {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #3a3832, #22201e);
+      border: 1px solid rgba(0, 0, 0, 0.3);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      position: relative;
+    }
+
+    .screw::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(35deg);
+      width: 6px;
+      height: 1px;
+      background: rgba(0, 0, 0, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <div class="plugin-body">
+    <!-- Top strip -->
+    <div class="top-strip">
+      <span class="brand">Studio</span>
+      <span class="model">MK-I</span>
+    </div>
+
+    <!-- Title -->
+    <div class="title-area">
+      <div class="title">Room</div>
+      <div class="subtitle">Reverb</div>
+    </div>
+
+    <!-- Knob -->
+    <div class="knob-section">
+      <div class="knob-container" id="knobContainer">
+        <div class="tick-marks" id="tickMarks"></div>
+        <div class="knob-base"></div>
+        <div class="knob" id="knobBody">
+          <div class="knob-inner">
+            <div class="knob-indicator"></div>
+          </div>
+        </div>
+      </div>
+      <div class="value-display">
+        <div class="value-number" id="valueDisplay">0</div>
+        <div class="value-unit">Wet / Dry</div>
+      </div>
+    </div>
+
+    <!-- LED -->
+    <div class="led-section">
+      <div class="led active" id="ledIndicator"></div>
+      <span class="led-label">Active</span>
+    </div>
+
+    <!-- Bottom -->
+    <div class="bottom-strip">
+      <div class="screw"></div>
+      <div class="screw"></div>
+    </div>
+  </div>
+
+  <script>
+    // ---- State ----
+    const state = {
+      wet: 0,         // 0–100
+      dragging: false,
+      lastY: 0
+    };
+
+    // ---- Elements ----
+    const knobContainer = document.getElementById('knobContainer');
+    const knobBody = document.getElementById('knobBody');
+    const valueDisplay = document.getElementById('valueDisplay');
+    const tickMarksContainer = document.getElementById('tickMarks');
+
+    // ---- Constants ----
+    const MIN_ANGLE = -135;
+    const MAX_ANGLE = 135;
+    const SENSITIVITY = 0.4;
+
+    // ---- Generate tick marks ----
+    function generateTicks() {
+      const totalTicks = 21;
+      for (let i = 0; i < totalTicks; i++) {
+        const tick = document.createElement('div');
+        const angle = MIN_ANGLE + (i / (totalTicks - 1)) * (MAX_ANGLE - MIN_ANGLE);
+        tick.className = i % 5 === 0 ? 'tick major' : 'tick';
+        tick.style.transform = `rotate(${angle}deg)`;
+        tickMarksContainer.appendChild(tick);
+      }
+    }
+
+    // ---- Update knob visual ----
+    function updateKnob() {
+      const angle = MIN_ANGLE + (state.wet / 100) * (MAX_ANGLE - MIN_ANGLE);
+      knobBody.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+      valueDisplay.textContent = Math.round(state.wet);
+
+      // Send to plugin host
+      try {
+        if (window.sendParameterChange) {
+          window.sendParameterChange('wet', state.wet / 100);
+        }
+      } catch (e) {}
+    }
+
+    // ---- Pointer events for knob ----
+    knobContainer.addEventListener('pointerdown', (e) => {
+      state.dragging = true;
+      state.lastY = e.clientY;
+      knobContainer.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!state.dragging) return;
+      const delta = (state.lastY - e.clientY) * SENSITIVITY;
+      state.lastY = e.clientY;
+      state.wet = Math.max(0, Math.min(100, state.wet + delta));
+      updateKnob();
+    });
+
+    window.addEventListener('pointerup', () => {
+      state.dragging = false;
+    });
+
+    // ---- Double-click to reset ----
+    knobContainer.addEventListener('dblclick', () => {
+      state.wet = 0;
+      updateKnob();
+    });
+
+    // ---- Initialize ----
+    generateTicks();
+    updateKnob();
+  </script>
+</body>
+</html>
