@@ -69,7 +69,6 @@ SmoothWaveFlangerAudioProcessorEditor::SmoothWaveFlangerAudioProcessorEditor(Smo
     // --------------------------------------------------------------------------
     // WINDOW SIZE
     // --------------------------------------------------------------------------
-    // ===== TODO: SET YOUR PLUGIN WINDOW SIZE =====
     setSize(600, 400);
     setResizable(false, false);
 }
@@ -143,18 +142,6 @@ SmoothWaveFlangerAudioProcessorEditor::getResource(const juce::String& url)
             juce::String("text/javascript")
         };
     }
-
-    // ===== TODO: ADD ADDITIONAL RESOURCES HERE =====
-    //
-    // If you have additional CSS or JS files:
-    //   if (url == "/styles.css") {
-    //       return juce::WebBrowserComponent::Resource {
-    //           makeVector(BinaryData::styles_css, BinaryData::styles_cssSize),
-    //           juce::String("text/css")
-    //       };
-    //   }
-    //
-    // ================================================
 
     // 404 - Resource not found
     return std::nullopt;

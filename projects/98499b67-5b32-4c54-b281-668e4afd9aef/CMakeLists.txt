@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(SmoothWaveFlangerBuild VERSION 1.0.0)
+project(SmoothWaveFlanger VERSION 1.0.0)
 
 # ==============================================================================
 # SmoothWaveFlanger - JUCE Plugin Build Configuration
@@ -13,8 +13,8 @@ endif()
 juce_add_plugin(SmoothWaveFlanger
     COMPANY_NAME "Catalvst"
     PLUGIN_MANUFACTURER_CODE Ctlv
-    PLUGIN_CODE Smoo
-    FORMATS VST3
+    PLUGIN_CODE Swfl
+    FORMATS VST3 AU Standalone
     PRODUCT_NAME "SmoothWaveFlanger"
     NEEDS_WEB_BROWSER TRUE
 )

@@ -15,8 +15,7 @@ SmoothWaveFlangerAudioProcessor::createParameterLayout()
         juce::ParameterID { "RATE", 1 },
         "Rate",
         juce::NormalisableRange<float>(0.05f, 5.0f, 0.01f, 0.4f),
-        0.4f,
-        "Hz"
+        0.4f
     ));
 
     // Depth: how much the LFO modulates the delay time (0-100%)
@@ -24,8 +23,7 @@ SmoothWaveFlangerAudioProcessor::createParameterLayout()
         juce::ParameterID { "DEPTH", 1 },
         "Depth",
         juce::NormalisableRange<float>(0.0f, 100.0f, 0.1f),
-        50.0f,
-        "%"
+        50.0f
     ));
 
     // Manual: base delay time in milliseconds
@@ -33,8 +31,7 @@ SmoothWaveFlangerAudioProcessor::createParameterLayout()
         juce::ParameterID { "MANUAL", 1 },
         "Manual",
         juce::NormalisableRange<float>(0.1f, 10.0f, 0.01f, 0.5f),
-        5.0f,
-        "ms"
+        5.0f
     ));
 
     // Feedback: amount of delayed signal fed back (0-95%)
@@ -42,8 +39,7 @@ SmoothWaveFlangerAudioProcessor::createParameterLayout()
         juce::ParameterID { "FEEDBACK", 1 },
         "Feedback",
         juce::NormalisableRange<float>(0.0f, 95.0f, 0.1f),
-        35.0f,
-        "%"
+        35.0f
     ));
 
     return layout;
