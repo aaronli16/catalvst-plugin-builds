@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Echo Drift</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-dark: #0c0c10;
+      --bg-panel: #141419;
+      --accent-warm: #d4845a;
+      --accent-glow: #e8a472;
+      --accent-cool: #5a7a9e;
+      --text-primary: #e0dcd4;
+      --text-dim: #6e6b64;
+      --knob-track: #2a2a32;
+      --knob-fill: #d4845a;
+      --geo-shape-1: rgba(212, 132, 90, 0.06);
+      --geo-shape-2: rgba(90, 122, 158, 0.05);
+      --geo-line: rgba(212, 132, 90, 0.12);
+    }
+
+    body {
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      width: 500px;
+      height: 380px;
+      overflow: hidden;
+      user-select: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    /* ── Geometric Background ── */
+    .geo-canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .geo-shape {
+      position: absolute;
+      border: 1px solid var(--geo-line);
+      transition: transform 1.2s ease, opacity 1.2s ease;
+    }
+
+    .geo-hex-1 {
+      width: 180px; height: 180px;
+      top: -40px; right: -30px;
+      transform: rotate(15deg);
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+      background: var(--geo-shape-1);
+      border: none;
+    }
+
+    .geo-hex-2 {
+      width: 120px; height: 120px;
+      bottom: 20px; left: -20px;
+      transform: rotate(-10deg);
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+      background: var(--geo-shape-2);
+      border: none;
+    }
+
+    .geo-diamond {
+      width: 60px; height: 60px;
+      top: 60px; left: 60px;
+      transform: rotate(45deg);
+      background: var(--geo-shape-1);
+      border: 1px solid var(--geo-line);
+    }
+
+    .geo-circle {
+      width: 200px; height: 200px;
+      bottom: -60px; right: 40px;
+      border-radius: 50%;
+      border: 1px solid var(--geo-line);
+      background: transparent;
+    }
+
+    .geo-line-1 {
+      width: 300px; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--geo-line), transparent);
+      top: 100px; left: 30px;
+      transform: rotate(-8deg);
+      border: none;
+    }
+
+    .geo-line-2 {
+      width: 200px; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(90, 122, 158, 0.1), transparent);
+      bottom: 120px; right: 20px;
+      transform: rotate(5deg);
+      border: none;
+    }
+
+    .geo-dots {
+      position: absolute;
+      top: 180px; left: 30px;
+      width: 80px; height: 40px;
+      border: none;
+      background: none;
+    }
+
+    .geo-dots::before,
+    .geo-dots::after {
+      content: '';
+      position: absolute;
+      width: 3px; height: 3px;
+      border-radius: 50%;
+      background: var(--geo-line);
+    }
+
+    .geo-dots::before {
+      top: 0; left: 0;
+      box-shadow:
+        16px 0 0 var(--geo-line),
+        32px 0 0 var(--geo-line),
+        48px 0 0 var(--geo-line),
+        0 16px 0 var(--geo-line),
+        16px 16px 0 var(--geo-line),
+        32px 16px 0 var(--geo-line),
+        48px 16px 0 var(--geo-line);
+    }
+
+    /* ── Header ── */
+    .header {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding-top: 28px;
+      margin-bottom: 10px;
+    }
+
+    .header h1 {
+      font-size: 22px;
+      font-weight: 300;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      color: var(--text-primary);
+    }
+
+    .header h1 span {
+      color: var(--accent-warm);
+      font-weight: 400;
+    }
+
+    .header .subtitle {
+      font-size: 9px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    /* ── Ping-Pong Indicator ── */
+    .ping-pong-display {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 16px 0 24px 0;
+      height: 20px;
+    }
+
+    .pp-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--knob-track);
+      transition: background 0.15s, box-shadow 0.15s;
+    }
+
+    .pp-dot.left-active {
+      background: var(--accent-warm);
+      box-shadow: 0 0 8px rgba(212, 132, 90, 0.5);
+    }
+
+    .pp-dot.right-active {
+      background: var(--accent-cool);
+      box-shadow: 0 0 8px rgba(90, 122, 158, 0.5);
+    }
+
+    .pp-line {
+      width: 40px; height: 1px;
+      background: var(--knob-track);
+      position: relative;
+    }
+
+    .pp-line .pp-ball {
+      position: absolute;
+      top: -3px;
+      left: 0;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--accent-glow);
+      box-shadow: 0 0 6px rgba(232, 164, 114, 0.4);
+      animation: pingpong 2s ease-in-out infinite;
+    }
+
+    @keyframes pingpong {
+      0%, 100% { left: 0; }
+      50% { left: calc(100% - 7px); }
+    }
+
+    /* ── Knob Section ── */
+    .knobs-section {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      justify-content: center;
+      gap: 56px;
+    }
+
+    .knob-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .knob-container {
+      position: relative;
+      width: 90px;
+      height: 90px;
+      cursor: grab;
+    }
+
+    .knob-container:active { cursor: grabbing; }
+
+    .knob-svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(0deg);
+    }
+
+    .knob-track-circle {
+      fill: none;
+      stroke: var(--knob-track);
+      stroke-width: 3;
+      stroke-linecap: round;
+    }
+
+    .knob-fill-circle {
+      fill: none;
+      stroke: var(--knob-fill);
+      stroke-width: 3;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.05s ease;
+      filter: drop-shadow(0 0 3px rgba(212, 132, 90, 0.3));
+    }
+
+    .knob-center {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 40% 35%, #2a2a34, #1a1a22);
+      box-shadow:
+        0 2px 8px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+
+    .knob-indicator {
+      position: absolute;
+      top: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 2px;
+      height: 10px;
+      border-radius: 1px;
+      background: var(--accent-warm);
+      box-shadow: 0 0 4px rgba(212, 132, 90, 0.4);
+    }
+
+    .knob-label {
+      font-size: 9px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .knob-value {
+      font-size: 13px;
+      color: var(--text-primary);
+      font-weight: 300;
+      letter-spacing: 1px;
+      min-width: 50px;
+      text-align: center;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      position: absolute;
+      bottom: 16px;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .footer .version {
+      font-size: 8px;
+      letter-spacing: 2px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .footer .divider {
+      width: 1px; height: 10px;
+      background: var(--knob-track);
+    }
+
+    .footer .type-label {
+      font-size: 8px;
+      letter-spacing: 2px;
+      color: var(--accent-warm);
+      text-transform: uppercase;
+      opacity: 0.6;
+    }
+
+    /* ── Hover States ── */
+    .knob-container:hover .knob-center {
+      box-shadow:
+        0 2px 10px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+
+    .knob-container:hover .knob-fill-circle {
+      filter: drop-shadow(0 0 5px rgba(212, 132, 90, 0.5));
+    }
+
+    .knob-group:hover .knob-label {
+      color: var(--text-primary);
+      transition: color 0.3s;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Geometric Background -->
+  <div class="geo-canvas">
+    <div class="geo-shape geo-hex-1"></div>
+    <div class="geo-shape geo-hex-2"></div>
+    <div class="geo-shape geo-diamond"></div>
+    <div class="geo-shape geo-circle"></div>
+    <div class="geo-shape geo-line-1"></div>
+    <div class="geo-shape geo-line-2"></div>
+    <div class="geo-shape geo-dots"></div>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <h1>ECHO <span>DRIFT</span></h1>
+    <div class="subtitle">Ping-Pong Delay</div>
+  </div>
+
+  <!-- Ping-Pong Visual -->
+  <div class="ping-pong-display">
+    <div class="pp-dot" id="pp-left"></div>
+    <div class="pp-line">
+      <div class="pp-ball"></div>
+    </div>
+    <div class="pp-dot" id="pp-right"></div>
+  </div>
+
+  <!-- Knobs -->
+  <div class="knobs-section">
+    <!-- Time -->
+    <div class="knob-group">
+      <div class="knob-container" data-param="delayTime" data-min="50" data-max="1200" data-default="400" data-unit="ms">
+        <svg class="knob-svg" viewBox="0 0 90 90">
+          <circle class="knob-track-circle" cx="45" cy="45" r="38"
+            stroke-dasharray="179.07"
+            stroke-dashoffset="-29.85"
+            transform="rotate(135 45 45)" />
+          <circle class="knob-fill-circle" cx="45" cy="45" r="38"
+            stroke-dasharray="179.07"
+            stroke-dashoffset="179.07"
+            transform="rotate(135 45 45)" />
+        </svg>
+        <div class="knob-center">
+          <div class="knob-indicator"></div>
+        </div>
+      </div>
+      <div class="knob-value" id="delayTime-value">400 ms</div>
+      <div class="knob-label">Time</div>
+    </div>
+
+    <!-- Feedback -->
+    <div class="knob-group">
+      <div class="knob-container" data-param="feedback" data-min="0" data-max="95" data-default="45" data-unit="%">
+        <svg class="knob-svg" viewBox="0 0 90 90">
+          <circle class="knob-track-circle" cx="45" cy="45" r="38"
+            stroke-dasharray="179.07"
+            stroke-dashoffset="-29.85"
+            transform="rotate(135 45 45)" />
+          <circle class="knob-fill-circle" cx="45" cy="45" r="38"
+            stroke-dasharray="179.07"
+            stroke-dashoffset="179.07"
+            transform="rotate(135 45 45)" />
+        </svg>
+        <div class="knob-center">
+          <div class="knob-indicator"></div>
+        </div>
+      </div>
+      <div class="knob-value" id="feedback-value">45%</div>
+      <div class="knob-label">Feedback</div>
+    </div>
+
+    <!-- Mix -->
+    <div class="knob-group">
+      <div class="knob-container" data-param="mix" data-min="0" data-max="100" data-default="35" data-unit="%">
+        <svg class="knob-svg" viewBox="0 0 90 90">
+          <circle class="knob-track-circle" cx="45" cy="45" r="38"
+            stroke-dasharray="179.07"
+            stroke-dashoffset="-29.85"
+            transform="rotate(135 45 45)" />
+          <circle class="knob-fill-circle" cx="45" cy="45" r="38"
+            stroke-dasharray="179.07"
+            stroke-dashoffset="179.07"
+            transform="rotate(135 45 45)" />
+        </svg>
+        <div class="knob-center">
+          <div class="knob-indicator"></div>
+        </div>
+      </div>
+      <div class="knob-value" id="mix-value">35%</div>
+      <div class="knob-label">Mix</div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span class="version">v1.0</span>
+    <div class="divider"></div>
+    <span class="type-label">Stereo Ping-Pong</span>
+  </div>
+
+  <script type="module">
+    import { getSliderState } from './js/juce/index.js';
+
+    // ── Arc Constants ──
+    const ARC_RADIUS = 38;
+    const CIRCUMFERENCE = 2 * Math.PI * ARC_RADIUS;
+    const ARC_SPAN = 270;
+    const ARC_LENGTH = (ARC_SPAN / 360) * CIRCUMFERENCE;
+
+    // ── Parameter Mapping ──
+    // Maps HTML data-param names to JUCE parameter IDs
+    const paramConfig = {
+      delayTime: { id: 'DELAY_TIME', min: 50, max: 1200, unit: 'ms', decimals: 0 },
+      feedback:  { id: 'FEEDBACK',   min: 0,  max: 95,   unit: '%',  decimals: 0 },
+      mix:       { id: 'MIX',        min: 0,  max: 100,  unit: '%',  decimals: 0 }
+    };
+
+    // ── Connect each knob to JUCE parameter relay ──
+    const knobs = document.querySelectorAll('.knob-container');
+    const knobStates = {};
+
+    knobs.forEach(knob => {
+      const paramName = knob.dataset.param;
+      const config = paramConfig[paramName];
+      if (!config) return;
+
+      const sliderState = getSliderState(config.id);
+
+      knobStates[paramName] = {
+        element: knob,
+        config,
+        sliderState,
+        lastY: 0
+      };
+
+      // Listen for value changes from the host
+      sliderState.valueChangedEvent.addListener(() => {
+        const normValue = sliderState.getNormalisedValue();
+        updateKnobVisual(paramName, normValue);
+      });
+
+      // Initialize the visual to match the current value
+      const initNorm = sliderState.getNormalisedValue();
+      updateKnobVisual(paramName, initNorm);
+    });
+
+    // ── Update Knob Visual ──
+    function updateKnobVisual(paramName, normalized) {
+      const ks = knobStates[paramName];
+      if (!ks) return;
+
+      const { element, config } = ks;
+
+      // Update arc fill
+      const fillCircle = element.querySelector('.knob-fill-circle');
+      const fillLength = normalized * ARC_LENGTH;
+      const offset = ARC_LENGTH - fillLength;
+      fillCircle.style.strokeDashoffset = offset;
+
+      // Update indicator rotation (-135 to +135 = 270 range)
+      const angle = -135 + (normalized * 270);
+      const center = element.querySelector('.knob-center');
+      center.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+
+      // Update value display
+      const realValue = config.min + normalized * (config.max - config.min);
+      const display = document.getElementById(`${paramName}-value`);
+      if (config.unit === 'ms') {
+        display.textContent = `${Math.round(realValue)} ms`;
+      } else {
+        display.textContent = `${Math.round(realValue)}%`;
+      }
+    }
+
+    // ── Knob Drag Interaction (frame-delta) ──
+    let activeKnob = null;
+    let lastY = 0;
+
+    document.addEventListener('mousedown', (e) => {
+      const container = e.target.closest('.knob-container');
+      if (!container) return;
+
+      activeKnob = container.dataset.param;
+      lastY = e.clientY;
+      document.body.style.cursor = 'grabbing';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!activeKnob) return;
+
+      const ks = knobStates[activeKnob];
+      if (!ks) return;
+
+      const deltaY = lastY - e.clientY;
+      lastY = e.clientY;
+
+      const sensitivity = 0.004;
+      let currentNorm = ks.sliderState.getNormalisedValue();
+      let newNorm = currentNorm + deltaY * sensitivity;
+      newNorm = Math.max(0, Math.min(1, newNorm));
+
+      ks.sliderState.setNormalisedValue(newNorm);
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (activeKnob) {
+        const ks = knobStates[activeKnob];
+        if (ks) ks.sliderState.endGesture();
+        document.body.style.cursor = '';
+        activeKnob = null;
+      }
+    });
+
+    // ── Double-click to reset ──
+    knobs.forEach(knob => {
+      knob.addEventListener('dblclick', () => {
+        const paramName = knob.dataset.param;
+        const ks = knobStates[paramName];
+        if (!ks) return;
+        const config = ks.config;
+        const defaultVal = parseFloat(knob.dataset.default);
+        const normDefault = (defaultVal - config.min) / (config.max - config.min);
+        ks.sliderState.setNormalisedValue(normDefault);
+      });
+    });
+
+    // ── Ping-Pong Dot Animation ──
+    const leftDot = document.getElementById('pp-left');
+    const rightDot = document.getElementById('pp-right');
+
+    function animatePingPong() {
+      const duration = 2000;
+      const half = duration / 2;
+
+      setInterval(() => {
+        leftDot.classList.add('left-active');
+        setTimeout(() => leftDot.classList.remove('left-active'), 200);
+        setTimeout(() => {
+          rightDot.classList.add('right-active');
+          setTimeout(() => rightDot.classList.remove('right-active'), 200);
+        }, half);
+      }, duration);
+    }
+
+    animatePingPong();
+
+    // ── Subtle geometric parallax on mouse move ──
+    const geoCanvas = document.querySelector('.geo-canvas');
+    document.addEventListener('mousemove', (e) => {
+      if (activeKnob) return;
+      const x = (e.clientX / 500 - 0.5) * 6;
+      const y = (e.clientY / 380 - 0.5) * 4;
+      geoCanvas.style.transform = `translate(${x}px, ${y}px)`;
+    });
+  </script>
+</body>
+</html>
