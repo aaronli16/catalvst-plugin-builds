@@ -55,7 +55,6 @@
     overflow: hidden;
   }
 
-  /* Subtle texture overlay */
   .plugin-container::before {
     content: '';
     position: absolute;
@@ -71,7 +70,6 @@
     border-radius: 22px;
   }
 
-  /* Header */
   .header {
     display: flex;
     align-items: center;
@@ -103,7 +101,6 @@
     margin-top: 4px;
   }
 
-  /* Status indicator */
   .status-led {
     width: 10px;
     height: 10px;
@@ -118,7 +115,6 @@
     box-shadow: 0 0 14px rgba(232, 155, 94, 0.7);
   }
 
-  /* Knob section */
   .knobs-row {
     display: flex;
     justify-content: space-between;
@@ -153,7 +149,6 @@
     cursor: grabbing;
   }
 
-  /* Knob SVG styling */
   .knob-track {
     fill: none;
     stroke: var(--cream-dark);
@@ -211,24 +206,6 @@
     text-align: center;
   }
 
-  /* Tick marks around knobs */
-  .knob-ticks {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-  }
-
-  .tick {
-    position: absolute;
-    width: 1px;
-    height: 4px;
-    background: var(--cream-dark);
-    top: 2px;
-    left: 50%;
-    transform-origin: 50% 42px;
-  }
-
-  /* Manual knob is slightly larger */
   .knob-group.manual .knob-wrapper {
     width: 96px;
     height: 96px;
@@ -245,7 +222,6 @@
     transform-origin: center 25px;
   }
 
-  /* Sweep animation indicator */
   .sweep-bar {
     margin-top: 24px;
     padding-top: 20px;
@@ -287,7 +263,6 @@
     50% { left: calc(100% - 0px); }
   }
 
-  /* Footer */
   .footer {
     display: flex;
     justify-content: space-between;
@@ -304,7 +279,6 @@
     opacity: 0.6;
   }
 
-  /* Hover effects */
   .knob-wrapper:hover .knob-body {
     box-shadow:
       0 3px 12px var(--shadow-med),
@@ -316,7 +290,6 @@
     stroke: var(--orange-light);
   }
 
-  /* Double-click reset animation */
   .knob-body.resetting {
     transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
@@ -326,7 +299,6 @@
 
 <div class="plugin-container">
 
-  <!-- Header -->
   <div class="header">
     <div class="logo-area">
       <div class="plugin-title">Tape Flanger</div>
@@ -335,72 +307,66 @@
     <div class="status-led active" id="statusLed"></div>
   </div>
 
-  <!-- Knobs -->
   <div class="knobs-row">
 
-    <!-- Rate -->
     <div class="knob-group">
       <div class="knob-label">Rate</div>
-      <div class="knob-wrapper" data-param="rate" data-min="0.05" data-max="5.0" data-default="0.4" data-value="0.4" data-unit=" Hz">
+      <div class="knob-wrapper" data-param="RATE" data-min="0.05" data-max="5.0" data-default="0.4" data-unit=" Hz" data-decimals="2">
         <svg viewBox="0 0 88 88" class="knob-svg">
-          <path class="knob-track" id="rate-track" />
-          <path class="knob-arc" id="rate-arc" />
+          <path class="knob-track" id="RATE-track" />
+          <path class="knob-arc" id="RATE-arc" />
         </svg>
         <div class="knob-body">
           <div class="knob-indicator"></div>
         </div>
       </div>
-      <div class="knob-value" id="rate-value">0.40 Hz</div>
+      <div class="knob-value" id="RATE-value">0.40 Hz</div>
     </div>
 
-    <!-- Depth -->
     <div class="knob-group">
       <div class="knob-label">Depth</div>
-      <div class="knob-wrapper" data-param="depth" data-min="0" data-max="100" data-default="50" data-value="50" data-unit="%">
+      <div class="knob-wrapper" data-param="DEPTH" data-min="0" data-max="100" data-default="50" data-unit="%" data-decimals="0">
         <svg viewBox="0 0 88 88" class="knob-svg">
-          <path class="knob-track" id="depth-track" />
-          <path class="knob-arc" id="depth-arc" />
+          <path class="knob-track" id="DEPTH-track" />
+          <path class="knob-arc" id="DEPTH-arc" />
         </svg>
         <div class="knob-body">
           <div class="knob-indicator"></div>
         </div>
       </div>
-      <div class="knob-value" id="depth-value">50%</div>
+      <div class="knob-value" id="DEPTH-value">50%</div>
     </div>
 
-    <!-- Manual -->
     <div class="knob-group manual">
       <div class="knob-label">Manual</div>
-      <div class="knob-wrapper" data-param="manual" data-min="0.1" data-max="10.0" data-default="5.0" data-value="5.0" data-unit=" ms">
+      <div class="knob-wrapper" data-param="MANUAL" data-min="0.1" data-max="10.0" data-default="5.0" data-unit=" ms" data-decimals="1">
         <svg viewBox="0 0 96 96" class="knob-svg">
-          <path class="knob-track" id="manual-track" />
-          <path class="knob-arc" id="manual-arc" />
+          <path class="knob-track" id="MANUAL-track" />
+          <path class="knob-arc" id="MANUAL-arc" />
         </svg>
         <div class="knob-body">
           <div class="knob-indicator"></div>
         </div>
       </div>
-      <div class="knob-value" id="manual-value">5.0 ms</div>
+      <div class="knob-value" id="MANUAL-value">5.0 ms</div>
     </div>
 
-    <!-- Feedback -->
     <div class="knob-group">
       <div class="knob-label">Feedback</div>
-      <div class="knob-wrapper" data-param="feedback" data-min="0" data-max="95" data-default="35" data-value="35" data-unit="%">
+      <div class="knob-wrapper" data-param="FEEDBACK" data-min="0" data-max="95" data-default="35" data-unit="%" data-decimals="0">
         <svg viewBox="0 0 88 88" class="knob-svg">
-          <path class="knob-track" id="feedback-track" />
-          <path class="knob-arc" id="feedback-arc" />
+          <path class="knob-track" id="FEEDBACK-track" />
+          <path class="knob-arc" id="FEEDBACK-arc" />
         </svg>
         <div class="knob-body">
           <div class="knob-indicator"></div>
         </div>
       </div>
-      <div class="knob-value" id="feedback-value">35%</div>
+      <div class="knob-value" id="FEEDBACK-value">35%</div>
     </div>
 
   </div>
 
-  <!-- Sweep Indicator -->
   <div class="sweep-bar">
     <div class="sweep-label">Modulation Sweep</div>
     <div class="sweep-track">
@@ -408,7 +374,6 @@
     </div>
   </div>
 
-  <!-- Footer -->
   <div class="footer">
     <span class="footer-text">Tape Flanger v1.0</span>
     <span class="footer-text">Double-click to reset</span>
@@ -416,187 +381,198 @@
 
 </div>
 
-<script>
-(function() {
-  // === Constants ===
-  const ARC_START_ANGLE = 135;
-  const ARC_END_ANGLE = 405;
-  const ARC_RANGE = ARC_END_ANGLE - ARC_START_ANGLE;
+<script type="module" src="js/juce/index.js"></script>
+<script type="module">
+import { getSliderState } from './js/juce/index.js';
 
-  // === Utility ===
-  function degToRad(deg) {
-    return (deg * Math.PI) / 180;
-  }
+// === Constants ===
+const ARC_START_ANGLE = 135;
+const ARC_END_ANGLE = 405;
+const ARC_RANGE = ARC_END_ANGLE - ARC_START_ANGLE;
 
-  function polarToCartesian(cx, cy, r, angleDeg) {
-    const rad = degToRad(angleDeg - 90);
-    return {
-      x: cx + r * Math.cos(rad),
-      y: cy + r * Math.sin(rad)
-    };
-  }
+// === Utility ===
+function degToRad(deg) {
+  return (deg * Math.PI) / 180;
+}
 
-  function describeArc(cx, cy, r, startAngle, endAngle) {
-    if (Math.abs(endAngle - startAngle) < 0.1) return '';
-    const start = polarToCartesian(cx, cy, r, startAngle);
-    const end = polarToCartesian(cx, cy, r, endAngle);
-    const largeArc = (endAngle - startAngle) > 180 ? 1 : 0;
-    return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y}`;
-  }
-
-  // === Draw knob arcs ===
-  function updateKnob(wrapper) {
-    const param = wrapper.dataset.param;
-    const min = parseFloat(wrapper.dataset.min);
-    const max = parseFloat(wrapper.dataset.max);
-    const value = parseFloat(wrapper.dataset.value);
-    const unit = wrapper.dataset.unit || '';
-
-    const normalized = (value - min) / (max - min);
-    const isManual = wrapper.closest('.knob-group').classList.contains('manual');
-    const size = isManual ? 96 : 88;
-    const cx = size / 2;
-    const cy = size / 2;
-    const r = (size / 2) - 6;
-
-    // Track arc
-    const trackPath = document.getElementById(param + '-track');
-    trackPath.setAttribute('d', describeArc(cx, cy, r, ARC_START_ANGLE, ARC_END_ANGLE));
-
-    // Value arc
-    const arcPath = document.getElementById(param + '-arc');
-    const endAngle = ARC_START_ANGLE + normalized * ARC_RANGE;
-    arcPath.setAttribute('d', describeArc(cx, cy, r, ARC_START_ANGLE, endAngle));
-
-    // Indicator rotation
-    const indicator = wrapper.querySelector('.knob-indicator');
-    const rotationDeg = ARC_START_ANGLE + normalized * ARC_RANGE;
-    indicator.style.transform = `translateX(-50%) rotate(${rotationDeg}deg)`;
-
-    // Value display
-    const display = document.getElementById(param + '-value');
-    if (param === 'rate') {
-      display.textContent = value.toFixed(2) + unit;
-    } else if (param === 'manual') {
-      display.textContent = value.toFixed(1) + unit;
-    } else {
-      display.textContent = Math.round(value) + unit;
-    }
-
-    // Update sweep animation speed based on rate
-    if (param === 'rate') {
-      updateSweepSpeed(value);
-    }
-
-    // Send to DAW
-    sendParam(param, normalized);
-  }
-
-  function updateSweepSpeed(rateHz) {
-    const duration = 1 / rateHz;
-    const fill = document.getElementById('sweepFill');
-    fill.style.animationDuration = duration + 's';
-  }
-
-  function sendParam(name, normalizedValue) {
-    try {
-      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.pluginMessage) {
-        window.webkit.messageHandlers.pluginMessage.postMessage({
-          type: 'parameterChange',
-          name: name,
-          value: normalizedValue
-        });
-      }
-    } catch(e) {}
-  }
-
-  // === Mouse interaction ===
-  let activeKnob = null;
-  let startY = 0;
-  let startValue = 0;
-
-  function onPointerDown(e) {
-    const wrapper = e.target.closest('.knob-wrapper');
-    if (!wrapper) return;
-
-    activeKnob = wrapper;
-    startY = e.clientY;
-    startValue = parseFloat(wrapper.dataset.value);
-
-    document.addEventListener('pointermove', onPointerMove);
-    document.addEventListener('pointerup', onPointerUp);
-    e.preventDefault();
-  }
-
-  function onPointerMove(e) {
-    if (!activeKnob) return;
-
-    const min = parseFloat(activeKnob.dataset.min);
-    const max = parseFloat(activeKnob.dataset.max);
-    const range = max - min;
-
-    const dy = startY - e.clientY;
-    const sensitivity = e.shiftKey ? 600 : 200;
-    const delta = (dy / sensitivity) * range;
-
-    let newValue = Math.min(max, Math.max(min, startValue + delta));
-    activeKnob.dataset.value = newValue;
-    updateKnob(activeKnob);
-  }
-
-  function onPointerUp() {
-    activeKnob = null;
-    document.removeEventListener('pointermove', onPointerMove);
-    document.removeEventListener('pointerup', onPointerUp);
-  }
-
-  // Double-click to reset
-  function onDoubleClick(e) {
-    const wrapper = e.target.closest('.knob-wrapper');
-    if (!wrapper) return;
-
-    const defaultVal = parseFloat(wrapper.dataset.default);
-    wrapper.dataset.value = defaultVal;
-
-    const body = wrapper.querySelector('.knob-body');
-    body.classList.add('resetting');
-    setTimeout(() => body.classList.remove('resetting'), 300);
-
-    updateKnob(wrapper);
-  }
-
-  // === Initialize ===
-  const knobs = document.querySelectorAll('.knob-wrapper');
-  knobs.forEach(knob => {
-    knob.addEventListener('pointerdown', onPointerDown);
-    knob.addEventListener('dblclick', onDoubleClick);
-    updateKnob(knob);
-  });
-
-  // LED pulse
-  const led = document.getElementById('statusLed');
-  function pulseLed() {
-    const rateKnob = document.querySelector('[data-param="rate"]');
-    const rateHz = parseFloat(rateKnob.dataset.value);
-    const interval = (1 / rateHz) * 1000;
-
-    led.classList.remove('active');
-    setTimeout(() => led.classList.add('active'), 80);
-    setTimeout(pulseLed, interval);
-  }
-  pulseLed();
-
-  // Receive updates from DAW
-  window.updateFromDSP = function(name, normalizedValue) {
-    const wrapper = document.querySelector(`[data-param="${name}"]`);
-    if (!wrapper) return;
-    const min = parseFloat(wrapper.dataset.min);
-    const max = parseFloat(wrapper.dataset.max);
-    wrapper.dataset.value = min + normalizedValue * (max - min);
-    updateKnob(wrapper);
+function polarToCartesian(cx, cy, r, angleDeg) {
+  const rad = degToRad(angleDeg - 90);
+  return {
+    x: cx + r * Math.cos(rad),
+    y: cy + r * Math.sin(rad)
   };
+}
 
-})();
+function describeArc(cx, cy, r, startAngle, endAngle) {
+  if (Math.abs(endAngle - startAngle) < 0.1) return '';
+  const start = polarToCartesian(cx, cy, r, startAngle);
+  const end = polarToCartesian(cx, cy, r, endAngle);
+  const largeArc = (endAngle - startAngle) > 180 ? 1 : 0;
+  return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y}`;
+}
+
+// === Parameter Relay States ===
+const paramConfigs = {
+  RATE:     { min: 0.05, max: 5.0,  unit: ' Hz', decimals: 2 },
+  DEPTH:    { min: 0,    max: 100,  unit: '%',    decimals: 0 },
+  MANUAL:   { min: 0.1,  max: 10.0, unit: ' ms',  decimals: 1 },
+  FEEDBACK: { min: 0,    max: 95,   unit: '%',    decimals: 0 }
+};
+
+const sliderStates = {};
+
+// === Visual Update ===
+function updateKnobVisual(paramId, normalizedValue) {
+  const wrapper = document.querySelector(`[data-param="${paramId}"]`);
+  if (!wrapper) return;
+
+  const cfg = paramConfigs[paramId];
+  const isManual = wrapper.closest('.knob-group').classList.contains('manual');
+  const size = isManual ? 96 : 88;
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = (size / 2) - 6;
+
+  // Track arc
+  const trackPath = document.getElementById(paramId + '-track');
+  trackPath.setAttribute('d', describeArc(cx, cy, r, ARC_START_ANGLE, ARC_END_ANGLE));
+
+  // Value arc
+  const arcPath = document.getElementById(paramId + '-arc');
+  const endAngle = ARC_START_ANGLE + normalizedValue * ARC_RANGE;
+  arcPath.setAttribute('d', describeArc(cx, cy, r, ARC_START_ANGLE, endAngle));
+
+  // Indicator rotation
+  const indicator = wrapper.querySelector('.knob-indicator');
+  const rotationDeg = ARC_START_ANGLE + normalizedValue * ARC_RANGE;
+  indicator.style.transform = `translateX(-50%) rotate(${rotationDeg}deg)`;
+
+  // Value display
+  const realValue = cfg.min + normalizedValue * (cfg.max - cfg.min);
+  const display = document.getElementById(paramId + '-value');
+  display.textContent = realValue.toFixed(cfg.decimals) + cfg.unit;
+
+  // Update sweep speed when rate changes
+  if (paramId === 'RATE') {
+    const fill = document.getElementById('sweepFill');
+    fill.style.animationDuration = (1 / Math.max(0.05, realValue)) + 's';
+  }
+}
+
+// === Wire up JUCE Slider States ===
+for (const paramId of Object.keys(paramConfigs)) {
+  try {
+    const state = getSliderState(paramId);
+    sliderStates[paramId] = state;
+
+    // Listen for value changes from the DAW / automation
+    state.valueChangedEvent.addListener(() => {
+      const norm = state.getNormalisedValue();
+      updateKnobVisual(paramId, norm);
+    });
+
+    // Initial sync
+    updateKnobVisual(paramId, state.getNormalisedValue());
+  } catch (e) {
+    console.warn('Could not get slider state for', paramId, e);
+    // Still draw initial visuals from defaults
+    const wrapper = document.querySelector(`[data-param="${paramId}"]`);
+    if (wrapper) {
+      const cfg = paramConfigs[paramId];
+      const def = parseFloat(wrapper.dataset.default);
+      const norm = (def - cfg.min) / (cfg.max - cfg.min);
+      updateKnobVisual(paramId, norm);
+    }
+  }
+}
+
+// === Mouse Interaction (relative drag) ===
+let activeKnob = null;
+let lastY = 0;
+let currentNorm = 0;
+
+function onPointerDown(e) {
+  const wrapper = e.target.closest('.knob-wrapper');
+  if (!wrapper) return;
+
+  const paramId = wrapper.dataset.param;
+  const state = sliderStates[paramId];
+  if (!state) return;
+
+  activeKnob = { wrapper, paramId, state };
+  lastY = e.clientY;
+  currentNorm = state.getNormalisedValue();
+
+  document.addEventListener('pointermove', onPointerMove);
+  document.addEventListener('pointerup', onPointerUp);
+  e.preventDefault();
+}
+
+function onPointerMove(e) {
+  if (!activeKnob) return;
+
+  const deltaY = lastY - e.clientY;
+  lastY = e.clientY;
+
+  const sensitivity = e.shiftKey ? 0.001 : 0.005;
+  currentNorm = Math.min(1.0, Math.max(0.0, currentNorm + deltaY * sensitivity));
+
+  activeKnob.state.setNormalisedValue(currentNorm);
+}
+
+function onPointerUp() {
+  if (activeKnob) {
+    activeKnob.state.endGesture();
+  }
+  activeKnob = null;
+  document.removeEventListener('pointermove', onPointerMove);
+  document.removeEventListener('pointerup', onPointerUp);
+}
+
+// Double-click to reset
+function onDoubleClick(e) {
+  const wrapper = e.target.closest('.knob-wrapper');
+  if (!wrapper) return;
+
+  const paramId = wrapper.dataset.param;
+  const state = sliderStates[paramId];
+  if (!state) return;
+
+  const cfg = paramConfigs[paramId];
+  const defaultVal = parseFloat(wrapper.dataset.default);
+  const defaultNorm = (defaultVal - cfg.min) / (cfg.max - cfg.min);
+
+  state.setNormalisedValue(defaultNorm);
+
+  const body = wrapper.querySelector('.knob-body');
+  body.classList.add('resetting');
+  setTimeout(() => body.classList.remove('resetting'), 300);
+}
+
+// Bind events
+const knobs = document.querySelectorAll('.knob-wrapper');
+knobs.forEach(knob => {
+  knob.addEventListener('pointerdown', onPointerDown);
+  knob.addEventListener('dblclick', onDoubleClick);
+});
+
+// LED pulse
+const led = document.getElementById('statusLed');
+function pulseLed() {
+  const rateState = sliderStates['RATE'];
+  const cfg = paramConfigs['RATE'];
+  let rateHz = cfg.min;
+  if (rateState) {
+    const norm = rateState.getNormalisedValue();
+    rateHz = cfg.min + norm * (cfg.max - cfg.min);
+  }
+  const interval = (1 / Math.max(0.05, rateHz)) * 1000;
+
+  led.classList.remove('active');
+  setTimeout(() => led.classList.add('active'), 80);
+  setTimeout(pulseLed, interval);
+}
+pulseLed();
 </script>
 
 </body>

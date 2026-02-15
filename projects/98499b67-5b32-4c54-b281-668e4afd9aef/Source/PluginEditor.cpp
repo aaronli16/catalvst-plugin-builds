@@ -51,16 +51,14 @@ SmoothWaveFlangerAudioProcessorEditor::SmoothWaveFlangerAudioProcessorEditor(Smo
     // --------------------------------------------------------------------------
     // STEP 3: CREATE PARAMETER ATTACHMENTS (after WebView!)
     // --------------------------------------------------------------------------
-    // ===== TODO: CREATE YOUR ATTACHMENTS HERE =====
-    //
-    // One attachment per parameter:
-    //   gainAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
-    //       *processorRef.parameters.getParameter("GAIN"),
-    //       *gainRelay,
-    //       nullptr  // No undo manager
-    //   );
-    //
-    // ==============================================
+    rateAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
+        *processorRef.parameters.getParameter("RATE"), *rateRelay, nullptr);
+    depthAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
+        *processorRef.parameters.getParameter("DEPTH"), *depthRelay, nullptr);
+    manualAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
+        *processorRef.parameters.getParameter("MANUAL"), *manualRelay, nullptr);
+    feedbackAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
+        *processorRef.parameters.getParameter("FEEDBACK"), *feedbackRelay, nullptr);
 
     // --------------------------------------------------------------------------
     // WEBVIEW SETUP
