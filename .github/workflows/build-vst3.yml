@@ -85,6 +85,7 @@ jobs:
 
       - name: Build
         run: |
+          set -o pipefail
           cmake --build build --config Release -j$(sysctl -n hw.ncpu) \
             2>&1 | tee -a build_log.txt
 
