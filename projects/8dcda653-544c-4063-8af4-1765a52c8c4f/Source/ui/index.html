@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ping Pong Delay</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    :root {
+      --bg: #0e0e10;
+      --surface: #18181c;
+      --surface-hover: #1f1f24;
+      --accent: #5b8def;
+      --accent-glow: rgba(91, 141, 239, 0.25);
+      --text: #e2e2e8;
+      --text-dim: #6e6e7a;
+      --knob-size: 80px;
+      --border: #2a2a30;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .plugin {
+      width: 520px;
+      background: var(--surface);
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      padding: 32px 36px 28px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+
+    .header h1 {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .header .badge {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-glow);
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+
+    /* Ping Pong Visualizer */
+    .visualizer {
+      width: 100%;
+      height: 64px;
+      background: var(--bg);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      margin-bottom: 32px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .visualizer canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .visualizer-labels {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding: 0 14px 8px;
+      pointer-events: none;
+    }
+
+    .visualizer-labels span {
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    /* Knobs Section */
+    .knobs {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 28px;
+    }
+
+    .knob-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .knob-label {
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .knob-container {
+      position: relative;
+      width: var(--knob-size);
+      height: var(--knob-size);
+      cursor: grab;
+    }
+
+    .knob-container:active {
+      cursor: grabbing;
+    }
+
+    .knob-container svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .knob-track {
+      fill: none;
+      stroke: var(--border);
+      stroke-width: 3.5;
+      stroke-linecap: round;
+    }
+
+    .knob-fill {
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 3.5;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.05s ease;
+      filter: drop-shadow(0 0 4px var(--accent-glow));
+    }
+
+    .knob-value {
+      font-size: 13px;
+      font-weight: 600;
+      fill: #ffffff;
+      text-anchor: middle;
+      dominant-baseline: central;
+    }
+
+    /* Mix Slider */
+    .mix-section {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--bg);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 16px 20px;
+    }
+
+    .mix-label {
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      min-width: 28px;
+    }
+
+    .slider-track {
+      flex: 1;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .slider-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      box-shadow: 0 0 8px var(--accent-glow);
+      pointer-events: none;
+    }
+
+    .slider-thumb {
+      width: 14px;
+      height: 14px;
+      background: var(--text);
+      border-radius: 50%;
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+      pointer-events: none;
+      transition: transform 0.1s ease;
+    }
+
+    .slider-track:hover .slider-thumb {
+      transform: translate(-50%, -50%) scale(1.15);
+    }
+
+    .mix-value {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      min-width: 36px;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+
+<div class="plugin">
+  <!-- Header -->
+  <div class="header">
+    <h1>Ping Pong</h1>
+    <span class="badge">Stereo Delay</span>
+  </div>
+
+  <!-- Visualizer -->
+  <div class="visualizer">
+    <canvas id="vizCanvas"></canvas>
+    <div class="visualizer-labels">
+      <span>L</span>
+      <span>R</span>
+    </div>
+  </div>
+
+  <!-- Knobs -->
+  <div class="knobs">
+    <div class="knob-group">
+      <div class="knob-container" data-param="delayTime" data-min="50" data-max="1000" data-value="350" data-unit="ms" data-step="1">
+        <svg viewBox="0 0 80 80">
+          <path class="knob-track" d="M 18.5 62 A 30 30 0 1 1 61.5 62" />
+          <path class="knob-fill" d="M 18.5 62 A 30 30 0 1 1 61.5 62" />
+          <text class="knob-value" x="40" y="42"></text>
+        </svg>
+      </div>
+      <span class="knob-label">Time</span>
+    </div>
+
+    <div class="knob-group">
+      <div class="knob-container" data-param="feedback" data-min="0" data-max="95" data-value="45" data-unit="%" data-step="1">
+        <svg viewBox="0 0 80 80">
+          <path class="knob-track" d="M 18.5 62 A 30 30 0 1 1 61.5 62" />
+          <path class="knob-fill" d="M 18.5 62 A 30 30 0 1 1 61.5 62" />
+          <text class="knob-value" x="40" y="42"></text>
+        </svg>
+      </div>
+      <span class="knob-label">Feedback</span>
+    </div>
+
+    <div class="knob-group">
+      <div class="knob-container" data-param="modDepth" data-min="0" data-max="100" data-value="25" data-unit="%" data-step="1">
+        <svg viewBox="0 0 80 80">
+          <path class="knob-track" d="M 18.5 62 A 30 30 0 1 1 61.5 62" />
+          <path class="knob-fill" d="M 18.5 62 A 30 30 0 1 1 61.5 62" />
+          <text class="knob-value" x="40" y="42"></text>
+        </svg>
+      </div>
+      <span class="knob-label">Mod</span>
+    </div>
+  </div>
+
+  <!-- Mix Slider -->
+  <div class="mix-section">
+    <span class="mix-label">Mix</span>
+    <div class="slider-track" data-param="mix" data-min="0" data-max="100" data-value="30">
+      <div class="slider-fill"></div>
+      <div class="slider-thumb"></div>
+    </div>
+    <span class="mix-value">30%</span>
+  </div>
+</div>
+
+<script>
+  // ─── Knob Logic ───────────────────────────────────────────────
+  const knobs = document.querySelectorAll('.knob-container');
+  const arcLength = 197; // approximate length of the SVG arc
+
+  function updateKnob(knob) {
+    const min = parseFloat(knob.dataset.min);
+    const max = parseFloat(knob.dataset.max);
+    const value = parseFloat(knob.dataset.value);
+    const unit = knob.dataset.unit;
+    const ratio = (value - min) / (max - min);
+
+    const fill = knob.querySelector('.knob-fill');
+    const text = knob.querySelector('.knob-value');
+
+    const totalLength = fill.getTotalLength();
+    fill.style.strokeDasharray = totalLength;
+    fill.style.strokeDashoffset = totalLength - (totalLength * ratio);
+
+    if (unit === 'ms') {
+      text.textContent = value >= 1000 ? (value / 1000).toFixed(1) + 's' : Math.round(value) + 'ms';
+    } else {
+      text.textContent = Math.round(value) + unit;
+    }
+
+    // Send to DAW
+    if (window.PluginUI) {
+      window.PluginUI.setParameter(knob.dataset.param, ratio);
+    }
+  }
+
+  knobs.forEach(knob => {
+    let dragging = false;
+    let startY, startValue;
+
+    knob.addEventListener('mousedown', e => {
+      dragging = true;
+      startY = e.clientY;
+      startValue = parseFloat(knob.dataset.value);
+      document.body.style.cursor = 'grabbing';
+      e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      const min = parseFloat(knob.dataset.min);
+      const max = parseFloat(knob.dataset.max);
+      const step = parseFloat(knob.dataset.step);
+      const sensitivity = (max - min) / 200;
+      const delta = (startY - e.clientY) * sensitivity;
+      let newValue = Math.round((startValue + delta) / step) * step;
+      newValue = Math.max(min, Math.min(max, newValue));
+      knob.dataset.value = newValue;
+      updateKnob(knob);
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (dragging) {
+        dragging = false;
+        document.body.style.cursor = '';
+      }
+    });
+
+    // Double-click to reset
+    knob.addEventListener('dblclick', () => {
+      const defaults = { delayTime: 350, feedback: 45, modDepth: 25 };
+      knob.dataset.value = defaults[knob.dataset.param];
+      updateKnob(knob);
+    });
+
+    updateKnob(knob);
+  });
+
+  // ─── Slider Logic ─────────────────────────────────────────────
+  const sliderTrack = document.querySelector('.slider-track');
+  const sliderFill = sliderTrack.querySelector('.slider-fill');
+  const sliderThumb = sliderTrack.querySelector('.slider-thumb');
+  const mixValueLabel = document.querySelector('.mix-value');
+
+  function updateSlider(ratio) {
+    ratio = Math.max(0, Math.min(1, ratio));
+    const min = parseFloat(sliderTrack.dataset.min);
+    const max = parseFloat(sliderTrack.dataset.max);
+    const value = Math.round(min + ratio * (max - min));
+    sliderTrack.dataset.value = value;
+
+    const pct = ratio * 100;
+    sliderFill.style.width = pct + '%';
+    sliderThumb.style.left = pct + '%';
+    mixValueLabel.textContent = value + '%';
+
+    if (window.PluginUI) {
+      window.PluginUI.setParameter('mix', ratio);
+    }
+  }
+
+  function getSliderRatio(e) {
+    const rect = sliderTrack.getBoundingClientRect();
+    return (e.clientX - rect.left) / rect.width;
+  }
+
+  let sliderDragging = false;
+
+  sliderTrack.addEventListener('mousedown', e => {
+    sliderDragging = true;
+    updateSlider(getSliderRatio(e));
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', e => {
+    if (!sliderDragging) return;
+    updateSlider(getSliderRatio(e));
+  });
+
+  window.addEventListener('mouseup', () => {
+    sliderDragging = false;
+  });
+
+  // Double-click to reset
+  sliderTrack.addEventListener('dblclick', () => {
+    updateSlider(0.3);
+  });
+
+  // Init slider
+  updateSlider(parseFloat(sliderTrack.dataset.value) / 100);
+
+  // ─── Ping Pong Visualizer ────────────────────────────────────
+  const canvas = document.getElementById('vizCanvas');
+  const ctx = canvas.getContext('2d');
+
+  function resizeCanvas() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * window.devicePixelRatio;
+    canvas.height = rect.height * window.devicePixelRatio;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  // Simulated delay taps
+  let animTime = 0;
+
+  function drawVisualizer() {
+    const w = canvas.width / window.devicePixelRatio;
+    const h = canvas.height / window.devicePixelRatio;
+    ctx.clearRect(0, 0, w, h);
+
+    const feedback = parseFloat(document.querySelector('[data-param="feedback"]').dataset.value) / 100;
+    const modDepth = parseFloat(document.querySelector('[data-param="modDepth"]').dataset.value) / 100;
+    const mix = parseFloat(sliderTrack.dataset.value) / 100;
+
+    const numTaps = 8;
+    const spacing = w / (numTaps + 1);
+    const accent = [91, 141, 239];
+
+    animTime += 0.02;
+
+    for (let i = 0; i < numTaps; i++) {
+      const decay = Math.pow(feedback, i) * mix;
+      if (decay < 0.02) continue;
+
+      const isLeft = i % 2 === 0;
+      const x = spacing * (i + 1);
+
+      // Modulation wobble
+      const wobble = Math.sin(animTime * 2 + i * 1.2) * modDepth * 6;
+      const barH = (h * 0.55) * decay;
+      const y = (h / 2) - barH / 2 + wobble;
+
+      const alpha = 0.3 + decay * 0.7;
+      const barWidth = 6;
+      const radius = 3;
+
+      ctx.beginPath();
+      ctx.roundRect(x - barWidth / 2, y, barWidth, barH, radius);
+      ctx.fillStyle = `rgba(${accent[0]}, ${accent[1]}, ${accent[2]}, ${alpha})`;
+      ctx.fill();
+
+      // Glow
+      ctx.shadowColor = `rgba(${accent[0]}, ${accent[1]}, ${accent[2]}, ${alpha * 0.4})`;
+      ctx.shadowBlur = 10;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    requestAnimationFrame(drawVisualizer);
+  }
+
+  drawVisualizer();
+</script>
+
+</body>
+</html>
