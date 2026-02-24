@@ -79,6 +79,8 @@ target_link_libraries(RiserX
 # ==============================================================================
 # Compile Definitions
 # ==============================================================================
+juce_generate_juce_header(RiserX)
+
 target_compile_definitions(RiserX
     PUBLIC
         JUCE_WEB_BROWSER=1

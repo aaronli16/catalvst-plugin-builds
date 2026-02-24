@@ -40,28 +40,24 @@ RiserXAudioProcessorEditor::RiserXAudioProcessorEditor(RiserXAudioProcessor& p)
             // OPTIONAL: FL Studio fix (prevents blank screen on focus loss)
             .withKeepPageLoadedWhenBrowserIsHidden()
 
-            // ===== TODO: REGISTER YOUR RELAYS HERE =====
-            //
-            // Add .withOptionsFrom() for each relay:
-            //   .withOptionsFrom(*gainRelay)
-            //   .withOptionsFrom(*mixRelay)
-            //
-            // ============================================
+            .withOptionsFrom(*intensityRelay)
+            .withOptionsFrom(*syncBarsRelay)
     );
 
     // --------------------------------------------------------------------------
     // STEP 3: CREATE PARAMETER ATTACHMENTS (after WebView!)
     // --------------------------------------------------------------------------
-    // ===== TODO: CREATE YOUR ATTACHMENTS HERE =====
-    //
-    // One attachment per parameter:
-    //   gainAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
-    //       *processorRef.parameters.getParameter("GAIN"),
-    //       *gainRelay,
-    //       nullptr  // No undo manager
-    //   );
-    //
-    // ==============================================
+    intensityAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
+        *processorRef.parameters.getParameter("INTENSITY"),
+        *intensityRelay,
+        nullptr
+    );
+
+    syncBarsAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
+        *processorRef.parameters.getParameter("SYNC_BARS"),
+        *syncBarsRelay,
+        nullptr
+    );
 
     // --------------------------------------------------------------------------
     // WEBVIEW SETUP
@@ -72,8 +68,7 @@ RiserXAudioProcessorEditor::RiserXAudioProcessorEditor(RiserXAudioProcessor& p)
     // --------------------------------------------------------------------------
     // WINDOW SIZE
     // --------------------------------------------------------------------------
-    // ===== TODO: SET YOUR PLUGIN WINDOW SIZE =====
-    setSize(600, 400);
+    setSize(400, 560);
     setResizable(false, false);
 }
 

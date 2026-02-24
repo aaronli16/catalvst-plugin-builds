@@ -201,9 +201,9 @@ void RiserXAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         {
             float dry = rightData[i];
 
-            float delayed = delayLine.popSample(1 % delayLine.getNumChannels(), delayTimeSamples * 0.75f);
+            float delayed = delayLine.popSample(1, delayTimeSamples * 0.75f);
             delayFeedbackR = std::tanh(delayed * (0.3f + delayAmount * 0.55f));
-            delayLine.pushSample(1 % delayLine.getNumChannels(), dry + delayFeedbackR);
+            delayLine.pushSample(1, dry + delayFeedbackR);
             float withDelay = dry + delayed * delayAmount;
 
             float flanged = flangerDelayR.popSample(0, flangerDelaySamplesR);

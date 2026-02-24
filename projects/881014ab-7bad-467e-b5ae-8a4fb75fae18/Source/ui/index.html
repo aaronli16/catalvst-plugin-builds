@@ -460,19 +460,20 @@
     <canvas id="waveformCanvas"></canvas>
   </div>
 
-  <script>
+  <script type="module">
+    import { getSliderState } from './js/juce/index.js';
+
+    // === JUCE PARAMETER STATES ===
+    const intensityState = getSliderState("INTENSITY");
+    const syncBarsState = getSliderState("SYNC_BARS");
+
     // === STATE ===
     const state = {
       intensity: 0,
       syncBars: 4,
       dragging: false,
-      dragStartY: 0,
-      dragStartVal: 0,
+      lastY: 0,
     };
-
-    // === PARAMETER ID ===
-    const PARAM_INTENSITY = "intensity";
-    const PARAM_SYNC = "sync_bars";
 
     // === DOM REFS ===
     const knobContainer = document.getElementById('knobContainer');
@@ -633,24 +634,24 @@
       }
     }
 
-    // === KNOB INTERACTION ===
+    // === KNOB INTERACTION (relative drag) ===
     function onPointerDown(e) {
       state.dragging = true;
-      state.dragStartY = e.clientY;
-      state.dragStartVal = state.intensity;
+      state.lastY = e.clientY;
       knobContainer.setPointerCapture(e.pointerId);
       e.preventDefault();
     }
 
     function onPointerMove(e) {
       if (!state.dragging) return;
-      const dy = state.dragStartY - e.clientY;
+      const deltaY = state.lastY - e.clientY;
+      state.lastY = e.clientY;
       const sensitivity = 0.5;
-      let newVal = state.dragStartVal + dy * sensitivity;
+      let newVal = state.intensity + deltaY * sensitivity;
       newVal = Math.max(0, Math.min(100, newVal));
       state.intensity = newVal;
       updateUI();
-      sendParam(PARAM_INTENSITY, state.intensity / 100);
+      intensityState.setNormalisedValue(state.intensity / 100);
     }
 
     function onPointerUp(e) {
@@ -665,16 +666,41 @@
     knobContainer.addEventListener('dblclick', () => {
       state.intensity = 0;
       updateUI();
-      sendParam(PARAM_INTENSITY, 0);
+      intensityState.setNormalisedValue(0);
     });
 
     // === SYNC BUTTONS ===
+    // SYNC_BARS is a Choice parameter with 5 options (index 0-4 maps to 1,2,4,8,16 bars)
+    const syncBarValues = [1, 2, 4, 8, 16];
+
     document.querySelectorAll('.sync-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.sync-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
-        state.syncBars = parseInt(btn.dataset.value);
-        sendParam(PARAM_SYNC, state.syncBars);
+        const barValue = parseInt(btn.dataset.value);
+        state.syncBars = barValue;
+        const choiceIndex = syncBarValues.indexOf(barValue);
+        if (choiceIndex >= 0) {
+          // Normalise: choice index / (numChoices - 1)
+          syncBarsState.setNormalisedValue(choiceIndex / 4.0);
+        }
+      });
+    });
+
+    // === LISTEN FOR DAW PARAMETER CHANGES (automation, presets) ===
+    intensityState.valueChangedEvent.addListener(() => {
+      const val = intensityState.getNormalisedValue();
+      state.intensity = val * 100;
+      updateUI();
+    });
+
+    syncBarsState.valueChangedEvent.addListener(() => {
+      const normVal = syncBarsState.getNormalisedValue();
+      const choiceIndex = Math.round(normVal * 4);
+      const barValue = syncBarValues[choiceIndex] || 4;
+      state.syncBars = barValue;
+      document.querySelectorAll('.sync-btn').forEach(btn => {
+        btn.classList.toggle('selected', parseInt(btn.dataset.value) === barValue);
       });
     });
 
@@ -760,7 +786,6 @@
 
       for (let x = 0; x < w; x++) {
         const xNorm = x / w;
-        // Exponential amplitude increase toward the end
         const envelope = Math.pow(xNorm, 2 - t * 1.5) * t;
         const freq = 3 + t * 8;
         const noise = Math.sin(x * 0.3 + wavePhase * 3) * t * 2;
@@ -794,29 +819,14 @@
     }
     animate();
 
-    // === DAW COMMUNICATION ===
-    function sendParam(id, value) {
-      try {
-        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.pluginMessage) {
-          window.webkit.messageHandlers.pluginMessage.postMessage({ paramId: id, value: value });
-        }
-      } catch (e) { /* Silent fail for standalone preview */ }
-    }
-
-    // Receive parameter updates from DAW
-    window.setParameterValue = function(id, value) {
-      if (id === PARAM_INTENSITY) {
-        state.intensity = value * 100;
-        updateUI();
-      } else if (id === PARAM_SYNC) {
-        state.syncBars = value;
-        document.querySelectorAll('.sync-btn').forEach(btn => {
-          btn.classList.toggle('selected', parseInt(btn.dataset.value) === value);
-        });
-      }
-    };
-
-    // Initialize
+    // Initialize UI from current parameter state
+    state.intensity = intensityState.getNormalisedValue() * 100;
+    const syncNorm = syncBarsState.getNormalisedValue();
+    const syncIdx = Math.round(syncNorm * 4);
+    state.syncBars = syncBarValues[syncIdx] || 4;
+    document.querySelectorAll('.sync-btn').forEach(btn => {
+      btn.classList.toggle('selected', parseInt(btn.dataset.value) === state.syncBars);
+    });
     updateUI();
   </script>
 </body>
