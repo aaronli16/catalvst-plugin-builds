@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CATALVST</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    @font-face {
+      font-family: 'instruments';
+      src: local('SF Pro Display'), local('Inter'), local('Segoe UI'), local('Helvetica Neue');
+    }
+
+    :root {
+      --bg-dark: #0a0a0f;
+      --bg-panel: #111118;
+      --bg-surface: #16161f;
+      --border-dim: #1e1e2a;
+      --border-glow: #00f0ff;
+      --accent-cyan: #00f0ff;
+      --accent-magenta: #ff00aa;
+      --accent-red: #ff2244;
+      --text-bright: #e8e8f0;
+      --text-dim: #5a5a70;
+      --text-label: #8888a0;
+      --knob-track: #222233;
+    }
+
+    body {
+      background: var(--bg-dark);
+      color: var(--text-bright);
+      font-family: 'Inter', 'SF Pro Display', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Plugin Container ── */
+    .plugin {
+      width: 580px;
+      height: 420px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-dim);
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Scanline overlay */
+    .plugin::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.04) 2px,
+        rgba(0, 0, 0, 0.04) 4px
+      );
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    /* Glitch flicker */
+    .plugin::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, transparent 98%, rgba(0, 240, 255, 0.03) 100%);
+      pointer-events: none;
+      z-index: 99;
+      animation: flicker 4s infinite;
+    }
+
+    @keyframes flicker {
+      0%, 95%, 100% { opacity: 0; }
+      96% { opacity: 1; transform: translateX(-2px); }
+      97% { opacity: 0; }
+      98% { opacity: 1; transform: translateX(1px); }
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px 12px;
+      border-bottom: 1px solid var(--border-dim);
+    }
+
+    .logo {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      color: var(--accent-cyan);
+      text-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+      position: relative;
+    }
+
+    .logo-sub {
+      font-size: 9px;
+      font-weight: 400;
+      letter-spacing: 3px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      box-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+      animation: pulse-dot 2s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .version-tag {
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: var(--text-dim);
+      font-weight: 500;
+    }
+
+    /* ── Meter Section ── */
+    .meter-strip {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 24px;
+      gap: 3px;
+      border-bottom: 1px solid var(--border-dim);
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .meter-bar-container {
+      flex: 1;
+      max-width: 420px;
+      height: 18px;
+      display: flex;
+      gap: 2px;
+    }
+
+    .meter-segment {
+      flex: 1;
+      height: 100%;
+      background: var(--knob-track);
+      border-radius: 1px;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.08s ease;
+    }
+
+    .meter-segment.active-green {
+      background: var(--accent-cyan);
+      box-shadow: 0 0 4px rgba(0, 240, 255, 0.3);
+    }
+
+    .meter-segment.active-yellow {
+      background: #ffaa00;
+      box-shadow: 0 0 4px rgba(255, 170, 0, 0.3);
+    }
+
+    .meter-segment.active-red {
+      background: var(--accent-red);
+      box-shadow: 0 0 6px rgba(255, 34, 68, 0.4);
+    }
+
+    .meter-label {
+      font-size: 8px;
+      letter-spacing: 2px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      width: 36px;
+      text-align: center;
+    }
+
+    /* ── Knob Section ── */
+    .controls {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 24px;
+      gap: 12px;
+    }
+
+    .knob-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .knob-group.primary {
+      transform: scale(1);
+    }
+
+    .knob-group.secondary {
+      transform: scale(0.85);
+      opacity: 0.9;
+    }
+
+    .knob-container {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      cursor: grab;
+    }
+
+    .knob-container:active {
+      cursor: grabbing;
+    }
+
+    .knob-svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-135deg);
+    }
+
+    .knob-track-circle {
+      fill: none;
+      stroke: var(--knob-track);
+      stroke-width: 4;
+      stroke-linecap: round;
+    }
+
+    .knob-value-arc {
+      fill: none;
+      stroke: var(--accent-cyan);
+      stroke-width: 4;
+      stroke-linecap: round;
+      filter: drop-shadow(0 0 4px rgba(0, 240, 255, 0.4));
+      transition: stroke-dashoffset 0.05s ease;
+    }
+
+
+
+    .knob-center-dot {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 6px;
+      height: 6px;
+      background: var(--text-bright);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .knob-value-display {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-bright);
+      letter-spacing: 1px;
+      text-align: center;
+      min-width: 50px;
+    }
+
+    .knob-label {
+      font-size: 8px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--text-label);
+      text-align: center;
+    }
+
+    /* Divider between knob groups */
+    .control-divider {
+      width: 1px;
+      height: 80px;
+      background: var(--border-dim);
+      margin: 0 16px;
+      align-self: center;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 24px 14px;
+      border-top: 1px solid var(--border-dim);
+    }
+
+    .bypass-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: transparent;
+      border: 1px solid var(--border-dim);
+      border-radius: 4px;
+      color: var(--text-dim);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .bypass-btn:hover {
+      border-color: var(--text-dim);
+    }
+
+    .bypass-btn.active {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      box-shadow: 0 0 8px rgba(0, 240, 255, 0.15);
+    }
+
+    .bypass-indicator {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--text-dim);
+      transition: all 0.2s ease;
+    }
+
+    .bypass-btn.active .bypass-indicator {
+      background: var(--accent-cyan);
+      box-shadow: 0 0 6px rgba(0, 240, 255, 0.5);
+    }
+
+    .gain-reduction-display {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .gr-label {
+      font-size: 8px;
+      letter-spacing: 2px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .gr-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent-cyan);
+      letter-spacing: 1px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Glitch bar accent ── */
+    .glitch-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, 
+        transparent 0%, 
+        var(--accent-cyan) 20%, 
+        var(--accent-magenta) 50%, 
+        var(--accent-cyan) 80%, 
+        transparent 100%
+      );
+      opacity: 0.6;
+    }
+
+    /* ── Tooltip ── */
+    .tooltip {
+      position: absolute;
+      background: #1a1a25;
+      border: 1px solid var(--border-glow);
+      color: var(--accent-cyan);
+      font-size: 10px;
+      letter-spacing: 1px;
+      padding: 4px 10px;
+      border-radius: 3px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 200;
+      white-space: nowrap;
+    }
+
+    .tooltip.visible {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="plugin">
+    <!-- Header -->
+    <div class="header">
+      <div>
+        <div class="logo">CATALVST</div>
+        <div class="logo-sub">Vocal Destroyer</div>
+      </div>
+      <div class="header-right">
+        <div class="status-dot"></div>
+        <div class="version-tag">V1.0</div>
+      </div>
+    </div>
+
+    <!-- Meter Strip -->
+    <div class="meter-strip">
+      <div class="meter-label">In</div>
+      <div class="meter-bar-container" id="inputMeter">
+        <!-- 24 segments generated by JS -->
+      </div>
+      <div class="meter-label">Out</div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <!-- Threshold -->
+      <div class="knob-group secondary">
+        <div class="knob-label">Threshold</div>
+        <div class="knob-container" data-param="threshold" data-min="-60" data-max="0" data-default="-20" data-unit="dB">
+          <svg class="knob-svg" viewBox="0 0 80 80">
+            <circle class="knob-track-circle" cx="40" cy="40" r="34" stroke-dasharray="160.22" stroke-dashoffset="-26.7" />
+            <circle class="knob-value-arc" cx="40" cy="40" r="34" stroke-dasharray="160.22" stroke-dashoffset="160.22" />
+          </svg>
+          <div class="knob-center-dot"></div>
+        </div>
+        <div class="knob-value-display" data-param-display="threshold">-20 dB</div>
+      </div>
+
+      <div class="control-divider"></div>
+
+      <!-- Drive (Primary) -->
+      <div class="knob-group primary">
+        <div class="knob-label">Drive</div>
+        <div class="knob-container" data-param="drive" data-min="0" data-max="100" data-default="30" data-unit="%">
+          <svg class="knob-svg" viewBox="0 0 80 80">
+            <circle class="knob-track-circle" cx="40" cy="40" r="34" stroke-dasharray="160.22" stroke-dashoffset="-26.7" />
+            <circle class="knob-value-arc" cx="40" cy="40" r="34" stroke-dasharray="160.22" stroke-dashoffset="160.22" />
+          </svg>
+          <div class="knob-center-dot"></div>
+        </div>
+        <div class="knob-value-display" data-param-display="drive">30%</div>
+      </div>
+
+      <!-- Crush -->
+      <div class="knob-group primary">
+        <div class="knob-label">Crush</div>
+        <div class="knob-container" data-param="crush" data-min="0" data-max="100" data-default="0" data-unit="%">
+          <svg class="knob-svg" viewBox="0 0 80 80">
+            <circle class="knob-track-circle" cx="40" cy="40" r="34" stroke-dasharray="160.22" stroke-dashoffset="-26.7" />
+            <circle class="knob-value-arc" cx="40" cy="40" r="34" stroke-dasharray="160.22" stroke-dashoffset="160.22" />
+          </svg>
+          <div class="knob-center-dot"></div>
+        </div>
+        <div class="knob-value-display" data-param-display="crush">0%</div>
+      </div>
+
+      <div class="control-divider"></div>
+
+      <!-- Mix -->
+      <div class="knob-group secondary">
+        <div class="knob-label">Mix</div>
+        <div class="knob-container" data-param="mix" data-min="0" data-max="100" data-default="100" data-unit="%">
+          <svg class="knob-svg" viewBox="0 0 80 80">
+            <circle class="knob-track-circle" cx="40" cy="40" r="34" stroke-dasharray="160.22" stroke-dashoffset="-26.7" />
+            <circle class="knob-value-arc" cx="40" cy="40" r="34" stroke-dasharray="160.22" stroke-dashoffset="160.22" />
+          </svg>
+          <div class="knob-center-dot"></div>
+        </div>
+        <div class="knob-value-display" data-param-display="mix">100%</div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <button class="bypass-btn active" id="bypassBtn">
+        <div class="bypass-indicator"></div>
+        Active
+      </button>
+      <div class="gain-reduction-display">
+        <span class="gr-label">GR</span>
+        <span class="gr-value" id="grDisplay">0.0 dB</span>
+      </div>
+    </div>
+
+    <!-- Glitch accent bar -->
+    <div class="glitch-bar"></div>
+
+    <!-- Tooltip -->
+    <div class="tooltip" id="tooltip"></div>
+  </div>
+
+  <script>
+    // ── State ──
+    const params = {};
+    let activeKnob = null;
+    let startY = 0;
+    let startValue = 0;
+
+    // ── Initialize meters ──
+    function initMeters() {
+      const meter = document.getElementById('inputMeter');
+      for (let i = 0; i < 24; i++) {
+        const seg = document.createElement('div');
+        seg.className = 'meter-segment';
+        seg.dataset.index = i;
+        meter.appendChild(seg);
+      }
+    }
+
+    // ── Animate meters ──
+    function animateMeters() {
+      const segments = document.querySelectorAll('.meter-segment');
+      const level = 8 + Math.random() * 10;
+      const driveVal = params.drive ? params.drive.normalized : 0.3;
+      const boost = level + (driveVal * 6);
+
+      segments.forEach((seg, i) => {
+        seg.className = 'meter-segment';
+        if (i < boost) {
+          if (i < 16) seg.classList.add('active-green');
+          else if (i < 20) seg.classList.add('active-yellow');
+          else seg.classList.add('active-red');
+        }
+      });
+
+      // GR display
+      const threshVal = params.threshold ? params.threshold.value : -20;
+      const gr = Math.min(0, threshVal + 15 + Math.random() * 3).toFixed(1);
+      document.getElementById('grDisplay').textContent = `${gr} dB`;
+
+      requestAnimationFrame(animateMeters);
+    }
+
+    // ── Knob helpers ──
+    const ARC_LENGTH = 160.22;
+    const USABLE_ARC = ARC_LENGTH * (270 / 360); // 270 degree sweep
+
+    function valueToNormalized(value, min, max) {
+      return (value - min) / (max - min);
+    }
+
+    function normalizedToValue(normalized, min, max) {
+      return min + normalized * (max - min);
+    }
+
+    function updateKnobArc(container, normalized) {
+      const arc = container.querySelector('.knob-value-arc');
+      const usable = ARC_LENGTH * 0.75; // 270 degrees
+      const offset = usable - (normalized * usable);
+      arc.style.strokeDashoffset = offset;
+    }
+
+    function formatValue(value, unit) {
+      if (unit === 'dB') return `${Math.round(value)} dB`;
+      if (unit === '%') return `${Math.round(value)}%`;
+      return Math.round(value).toString();
+    }
+
+    // ── Initialize knobs ──
+    function initKnobs() {
+      document.querySelectorAll('.knob-container').forEach(container => {
+        const param = container.dataset.param;
+        const min = parseFloat(container.dataset.min);
+        const max = parseFloat(container.dataset.max);
+        const def = parseFloat(container.dataset.default);
+        const unit = container.dataset.unit;
+
+        const normalized = valueToNormalized(def, min, max);
+
+        params[param] = { value: def, normalized, min, max, unit, container };
+
+        updateKnobArc(container, normalized);
+
+        // Mouse events
+        container.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          activeKnob = param;
+          startY = e.clientY;
+          startValue = params[param].normalized;
+          document.body.style.cursor = 'grabbing';
+        });
+
+        // Double-click to reset
+        container.addEventListener('dblclick', (e) => {
+          e.preventDefault();
+          const p = params[param];
+          p.value = def;
+          p.normalized = valueToNormalized(def, min, max);
+          updateKnobArc(container, p.normalized);
+          const display = document.querySelector(`[data-param-display="${param}"]`);
+          if (display) display.textContent = formatValue(def, unit);
+
+          // Notify host
+          if (window.Catalyst) {
+            window.Catalyst.setParameter(param, p.normalized);
+          }
+        });
+      });
+    }
+
+    // ── Mouse move / up ──
+    document.addEventListener('mousemove', (e) => {
+      if (!activeKnob) return;
+
+      const p = params[activeKnob];
+      const sensitivity = e.shiftKey ? 0.001 : 0.004;
+      const delta = (startY - e.clientY) * sensitivity;
+      let newNorm = Math.max(0, Math.min(1, startValue + delta));
+
+      p.normalized = newNorm;
+      p.value = normalizedToValue(newNorm, p.min, p.max);
+
+      updateKnobArc(p.container, newNorm);
+
+      const display = document.querySelector(`[data-param-display="${activeKnob}"]`);
+      if (display) display.textContent = formatValue(p.value, p.unit);
+
+      // Notify host
+      if (window.Catalyst) {
+        window.Catalyst.setParameter(activeKnob, newNorm);
+      }
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (activeKnob) {
+        activeKnob = null;
+        document.body.style.cursor = '';
+      }
+    });
+
+    // ── Bypass button ──
+    document.getElementById('bypassBtn').addEventListener('click', function() {
+      this.classList.toggle('active');
+      const isActive = this.classList.contains('active');
+      this.querySelector('.bypass-indicator');
+      this.childNodes[2].textContent = isActive ? ' Active' : ' Bypass';
+
+      if (window.Catalyst) {
+        window.Catalyst.setParameter('bypass', isActive ? 0 : 1);
+      }
+    });
+
+    // ── Host communication ──
+    window.onParameterChange = function(paramId, value) {
+      const p = params[paramId];
+      if (!p) return;
+
+      p.normalized = value;
+      p.value = normalizedToValue(value, p.min, p.max);
+      updateKnobArc(p.container, value);
+
+      const display = document.querySelector(`[data-param-display="${paramId}"]`);
+      if (display) display.textContent = formatValue(p.value, p.unit);
+    };
+
+    // ── Init ──
+    initMeters();
+    initKnobs();
+    animateMeters();
+  </script>
+</body>
+</html>
