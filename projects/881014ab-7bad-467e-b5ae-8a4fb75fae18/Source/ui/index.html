@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RISER X</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    :root {
+      --intensity: 0;
+      --hue-base: 260;
+      --glow-color: hsl(calc(var(--hue-base) + var(--intensity) * 1.2), 100%, 55%);
+      --glow-secondary: hsl(calc(var(--hue-base) + var(--intensity) * 1.2 + 40), 100%, 50%);
+      --bg-dark: #0a0a0e;
+      --bg-surface: #111118;
+      --text-primary: #e8e8f0;
+      --text-dim: #6a6a80;
+      --ring-track: #1a1a28;
+    }
+
+    body {
+      width: 400px;
+      height: 560px;
+      background: var(--bg-dark);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* === BACKGROUND ENERGY FIELD === */
+    .energy-field {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .energy-field::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 300px;
+      height: 300px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--glow-color) 0%, transparent 70%);
+      opacity: calc(var(--intensity) / 200);
+      transition: opacity 0.1s;
+    }
+
+    .energy-field::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 500px;
+      height: 500px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--glow-secondary) 0%, transparent 60%);
+      opacity: calc(var(--intensity) / 350);
+      transition: opacity 0.1s;
+    }
+
+    /* === PARTICLE CANVAS === */
+    #particleCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* === HEADER === */
+    .header {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .header h1 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 8px;
+      text-transform: uppercase;
+      color: var(--text-primary);
+      text-shadow: 0 0 20px color-mix(in srgb, var(--glow-color) calc(var(--intensity) * 1%), transparent);
+    }
+
+    .header .subtitle {
+      font-size: 10px;
+      letter-spacing: 4px;
+      color: var(--text-dim);
+      margin-top: 2px;
+      text-transform: uppercase;
+    }
+
+    /* === MAIN KNOB AREA === */
+    .knob-section {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 12px 0;
+    }
+
+    .knob-container {
+      position: relative;
+      width: 220px;
+      height: 220px;
+      cursor: grab;
+    }
+
+    .knob-container:active {
+      cursor: grabbing;
+    }
+
+    .knob-svg {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 0 calc(var(--intensity) * 0.3px) var(--glow-color));
+      transition: filter 0.15s;
+    }
+
+    /* Arc track */
+    .arc-track {
+      fill: none;
+      stroke: var(--ring-track);
+      stroke-width: 8;
+      stroke-linecap: round;
+    }
+
+    /* Active arc */
+    .arc-active {
+      fill: none;
+      stroke: url(#arcGradient);
+      stroke-width: 8;
+      stroke-linecap: round;
+      filter: drop-shadow(0 0 6px var(--glow-color));
+      transition: stroke-dashoffset 0.05s;
+    }
+
+    /* Tick marks */
+    .tick-mark {
+      stroke: #222233;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+    }
+
+    .tick-mark.active {
+      stroke: var(--glow-color);
+      filter: drop-shadow(0 0 3px var(--glow-color));
+    }
+
+    /* Knob body */
+    .knob-body {
+      fill: url(#knobGradient);
+      stroke: #2a2a3a;
+      stroke-width: 1.5;
+    }
+
+    .knob-indicator {
+      stroke: var(--glow-color);
+      stroke-width: 3;
+      stroke-linecap: round;
+      filter: drop-shadow(0 0 4px var(--glow-color));
+    }
+
+    /* Center display */
+    .knob-value {
+      font-size: 36px;
+      font-weight: 800;
+      fill: var(--text-primary);
+      text-anchor: middle;
+      dominant-baseline: central;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    .knob-unit {
+      font-size: 11px;
+      font-weight: 600;
+      fill: var(--text-dim);
+      text-anchor: middle;
+      letter-spacing: 3px;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    /* === INTENSITY LABEL === */
+    .intensity-label {
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-top: 8px;
+      text-align: center;
+    }
+
+    /* === EFFECT METERS === */
+    .meters-section {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      width: 340px;
+      margin-top: 18px;
+    }
+
+    .meter {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 4px;
+      border-radius: 10px;
+      background: var(--bg-surface);
+      border: 1px solid #1a1a28;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .meter.active {
+      border-color: color-mix(in srgb, var(--glow-color) 40%, transparent);
+      box-shadow: 0 0 12px color-mix(in srgb, var(--glow-color) 15%, transparent);
+    }
+
+    .meter-name {
+      font-size: 8px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      font-weight: 600;
+    }
+
+    .meter-bar-container {
+      width: 4px;
+      height: 50px;
+      background: #1a1a28;
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .meter-bar-fill {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      border-radius: 2px;
+      background: linear-gradient(to top, var(--glow-color), var(--glow-secondary));
+      transition: height 0.12s ease-out;
+    }
+
+    .meter-value {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* === SYNC SELECTOR === */
+    .sync-section {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .sync-label {
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      font-weight: 600;
+    }
+
+    .sync-options {
+      display: flex;
+      gap: 3px;
+      background: var(--bg-surface);
+      padding: 3px;
+      border-radius: 8px;
+      border: 1px solid #1a1a28;
+    }
+
+    .sync-btn {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 5px 10px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      letter-spacing: 0.5px;
+    }
+
+    .sync-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .sync-btn.selected {
+      background: var(--glow-color);
+      color: #fff;
+      box-shadow: 0 0 10px color-mix(in srgb, var(--glow-color) 50%, transparent);
+    }
+
+    /* === WAVEFORM VISUALIZER === */
+    .waveform-section {
+      position: relative;
+      z-index: 2;
+      width: 340px;
+      height: 40px;
+      margin-top: 16px;
+      border-radius: 8px;
+      background: var(--bg-surface);
+      border: 1px solid #1a1a28;
+      overflow: hidden;
+    }
+
+    #waveformCanvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* === SHAKE ANIMATION === */
+    @keyframes shake {
+      0%, 100% { transform: translate(0, 0); }
+      10% { transform: translate(-1px, 0.5px); }
+      30% { transform: translate(1px, -0.5px); }
+      50% { transform: translate(-0.5px, 1px); }
+      70% { transform: translate(1px, 0.5px); }
+      90% { transform: translate(-1px, -0.5px); }
+    }
+
+    body.shaking {
+      animation: shake 0.08s infinite;
+    }
+  </style>
+</head>
+<body>
+  <!-- Background energy glow -->
+  <div class="energy-field"></div>
+
+  <!-- Particle system -->
+  <canvas id="particleCanvas"></canvas>
+
+  <!-- Header -->
+  <div class="header">
+    <h1>RISER X</h1>
+    <div class="subtitle">Build Engine</div>
+  </div>
+
+  <!-- Main Knob -->
+  <div class="knob-section">
+    <div class="knob-container" id="knobContainer">
+      <svg class="knob-svg" viewBox="0 0 220 220">
+        <defs>
+          <radialGradient id="knobGradient" cx="50%" cy="40%" r="50%">
+            <stop offset="0%" stop-color="#2a2a3a"/>
+            <stop offset="100%" stop-color="#141420"/>
+          </radialGradient>
+          <linearGradient id="arcGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" id="arcGradStop1" stop-color="hsl(260, 100%, 55%)"/>
+            <stop offset="100%" id="arcGradStop2" stop-color="hsl(300, 100%, 50%)"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Tick marks -->
+        <g id="tickMarks"></g>
+
+        <!-- Arc track -->
+        <path id="arcTrack" class="arc-track" />
+        <!-- Active arc -->
+        <path id="arcActive" class="arc-active" />
+
+        <!-- Knob body -->
+        <circle class="knob-body" cx="110" cy="110" r="60"/>
+
+        <!-- Indicator line -->
+        <line id="knobIndicator" class="knob-indicator" x1="110" y1="110" x2="110" y2="60"/>
+
+        <!-- Value display -->
+        <text class="knob-value" id="knobValueText" x="110" y="106">0</text>
+        <text class="knob-unit" x="110" y="126">INTENSITY</text>
+      </svg>
+    </div>
+    <div class="intensity-label" id="intensityStatus">IDLE</div>
+  </div>
+
+  <!-- Effect Meters -->
+  <div class="meters-section">
+    <div class="meter" id="meterReverb">
+      <div class="meter-name">Reverb</div>
+      <div class="meter-bar-container">
+        <div class="meter-bar-fill" id="fillReverb" style="height: 0%"></div>
+      </div>
+      <div class="meter-value" id="valReverb">0%</div>
+    </div>
+    <div class="meter" id="meterDelay">
+      <div class="meter-name">Delay</div>
+      <div class="meter-bar-container">
+        <div class="meter-bar-fill" id="fillDelay" style="height: 0%"></div>
+      </div>
+      <div class="meter-value" id="valDelay">0%</div>
+    </div>
+    <div class="meter" id="meterFlanger">
+      <div class="meter-name">Flanger</div>
+      <div class="meter-bar-container">
+        <div class="meter-bar-fill" id="fillFlanger" style="height: 0%"></div>
+      </div>
+      <div class="meter-value" id="valFlanger">0%</div>
+    </div>
+    <div class="meter" id="meterFilter">
+      <div class="meter-name">Filter</div>
+      <div class="meter-bar-container">
+        <div class="meter-bar-fill" id="fillFilter" style="height: 0%"></div>
+      </div>
+      <div class="meter-value" id="valFilter">0%</div>
+    </div>
+  </div>
+
+  <!-- Tempo Sync Selector -->
+  <div class="sync-section">
+    <div class="sync-label">Sync</div>
+    <div class="sync-options">
+      <button class="sync-btn" data-value="1">1 Bar</button>
+      <button class="sync-btn" data-value="2">2 Bar</button>
+      <button class="sync-btn selected" data-value="4">4 Bar</button>
+      <button class="sync-btn" data-value="8">8 Bar</button>
+      <button class="sync-btn" data-value="16">16 Bar</button>
+    </div>
+  </div>
+
+  <!-- Waveform Visualizer -->
+  <div class="waveform-section">
+    <canvas id="waveformCanvas"></canvas>
+  </div>
+
+  <script>
+    // === STATE ===
+    const state = {
+      intensity: 0,
+      syncBars: 4,
+      dragging: false,
+      dragStartY: 0,
+      dragStartVal: 0,
+    };
+
+    // === PARAMETER ID ===
+    const PARAM_INTENSITY = "intensity";
+    const PARAM_SYNC = "sync_bars";
+
+    // === DOM REFS ===
+    const knobContainer = document.getElementById('knobContainer');
+    const knobValueText = document.getElementById('knobValueText');
+    const knobIndicator = document.getElementById('knobIndicator');
+    const arcTrack = document.getElementById('arcTrack');
+    const arcActive = document.getElementById('arcActive');
+    const tickMarksGroup = document.getElementById('tickMarks');
+    const intensityStatus = document.getElementById('intensityStatus');
+    const particleCanvas = document.getElementById('particleCanvas');
+    const waveformCanvas = document.getElementById('waveformCanvas');
+    const pCtx = particleCanvas.getContext('2d');
+    const wCtx = waveformCanvas.getContext('2d');
+
+    const arcGradStop1 = document.getElementById('arcGradStop1');
+    const arcGradStop2 = document.getElementById('arcGradStop2');
+
+    const meterIds = ['Reverb', 'Delay', 'Flanger', 'Filter'];
+    const fills = {};
+    const vals = {};
+    const meters = {};
+    meterIds.forEach(id => {
+      fills[id] = document.getElementById('fill' + id);
+      vals[id] = document.getElementById('val' + id);
+      meters[id] = document.getElementById('meter' + id);
+    });
+
+    // === ARC MATH ===
+    const CX = 110, CY = 110, R = 90;
+    const START_ANGLE = 135 * Math.PI / 180;
+    const END_ANGLE = 405 * Math.PI / 180;
+    const TOTAL_ARC = END_ANGLE - START_ANGLE;
+    const NUM_TICKS = 31;
+
+    function polarToCart(cx, cy, r, angle) {
+      return {
+        x: cx + r * Math.cos(angle),
+        y: cy + r * Math.sin(angle)
+      };
+    }
+
+    function describeArc(cx, cy, r, startAngle, endAngle) {
+      const start = polarToCart(cx, cy, r, startAngle);
+      const end = polarToCart(cx, cy, r, endAngle);
+      const largeArc = (endAngle - startAngle) > Math.PI ? 1 : 0;
+      return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y}`;
+    }
+
+    // Draw track arc
+    arcTrack.setAttribute('d', describeArc(CX, CY, R, START_ANGLE, END_ANGLE));
+
+    // Generate tick marks
+    for (let i = 0; i < NUM_TICKS; i++) {
+      const angle = START_ANGLE + (i / (NUM_TICKS - 1)) * TOTAL_ARC;
+      const inner = polarToCart(CX, CY, R - 14, angle);
+      const outer = polarToCart(CX, CY, R - 8, angle);
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', inner.x);
+      line.setAttribute('y1', inner.y);
+      line.setAttribute('x2', outer.x);
+      line.setAttribute('y2', outer.y);
+      line.classList.add('tick-mark');
+      line.dataset.index = i;
+      tickMarksGroup.appendChild(line);
+    }
+
+    // === EFFECT CURVES (Exponential rush) ===
+    function exponentialCurve(t, power) {
+      return Math.pow(t, power);
+    }
+
+    function getEffectLevels(intensity) {
+      const t = intensity / 100;
+      return {
+        Reverb: Math.min(100, exponentialCurve(t, 1.5) * 100),
+        Delay: Math.min(100, exponentialCurve(t, 2.0) * 100),
+        Flanger: Math.min(100, exponentialCurve(t, 2.5) * 100),
+        Filter: Math.min(100, exponentialCurve(t, 1.8) * 100),
+      };
+    }
+
+    // === UPDATE UI ===
+    function updateUI() {
+      const intensity = state.intensity;
+      const t = intensity / 100;
+
+      // CSS variable
+      document.documentElement.style.setProperty('--intensity', intensity);
+
+      // Knob value text
+      knobValueText.textContent = Math.round(intensity);
+
+      // Arc gradient colors
+      const hue1 = 260 + intensity * 1.2;
+      const hue2 = hue1 + 40;
+      arcGradStop1.setAttribute('stop-color', `hsl(${hue1}, 100%, 55%)`);
+      arcGradStop2.setAttribute('stop-color', `hsl(${hue2}, 100%, 50%)`);
+
+      // Active arc
+      if (intensity > 0) {
+        const endAngle = START_ANGLE + (t * TOTAL_ARC);
+        arcActive.setAttribute('d', describeArc(CX, CY, R, START_ANGLE, endAngle));
+        arcActive.style.display = '';
+      } else {
+        arcActive.style.display = 'none';
+      }
+
+      // Indicator rotation
+      const indicatorAngle = START_ANGLE + t * TOTAL_ARC;
+      const indEnd = polarToCart(CX, CY, 52, indicatorAngle);
+      const indStart = polarToCart(CX, CY, 35, indicatorAngle);
+      knobIndicator.setAttribute('x1', indStart.x);
+      knobIndicator.setAttribute('y1', indStart.y);
+      knobIndicator.setAttribute('x2', indEnd.x);
+      knobIndicator.setAttribute('y2', indEnd.y);
+
+      // Tick marks
+      const activeTicks = Math.floor(t * (NUM_TICKS - 1));
+      tickMarksGroup.querySelectorAll('.tick-mark').forEach((tick, i) => {
+        if (i <= activeTicks) {
+          tick.classList.add('active');
+        } else {
+          tick.classList.remove('active');
+        }
+      });
+
+      // Status text
+      if (intensity === 0) {
+        intensityStatus.textContent = 'IDLE';
+      } else if (intensity < 30) {
+        intensityStatus.textContent = 'WARMING UP';
+      } else if (intensity < 60) {
+        intensityStatus.textContent = 'BUILDING';
+      } else if (intensity < 85) {
+        intensityStatus.textContent = 'RISING';
+      } else {
+        intensityStatus.textContent = 'MAXIMUM INTENSITY';
+      }
+
+      // Effect meters
+      const levels = getEffectLevels(intensity);
+      meterIds.forEach(id => {
+        const level = levels[id];
+        fills[id].style.height = level + '%';
+        vals[id].textContent = Math.round(level) + '%';
+        if (level > 5) {
+          meters[id].classList.add('active');
+        } else {
+          meters[id].classList.remove('active');
+        }
+      });
+
+      // Shake at extreme intensity
+      if (intensity > 90) {
+        document.body.classList.add('shaking');
+      } else {
+        document.body.classList.remove('shaking');
+      }
+    }
+
+    // === KNOB INTERACTION ===
+    function onPointerDown(e) {
+      state.dragging = true;
+      state.dragStartY = e.clientY;
+      state.dragStartVal = state.intensity;
+      knobContainer.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    }
+
+    function onPointerMove(e) {
+      if (!state.dragging) return;
+      const dy = state.dragStartY - e.clientY;
+      const sensitivity = 0.5;
+      let newVal = state.dragStartVal + dy * sensitivity;
+      newVal = Math.max(0, Math.min(100, newVal));
+      state.intensity = newVal;
+      updateUI();
+      sendParam(PARAM_INTENSITY, state.intensity / 100);
+    }
+
+    function onPointerUp(e) {
+      state.dragging = false;
+    }
+
+    knobContainer.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+
+    // Double-click to reset
+    knobContainer.addEventListener('dblclick', () => {
+      state.intensity = 0;
+      updateUI();
+      sendParam(PARAM_INTENSITY, 0);
+    });
+
+    // === SYNC BUTTONS ===
+    document.querySelectorAll('.sync-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.sync-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        state.syncBars = parseInt(btn.dataset.value);
+        sendParam(PARAM_SYNC, state.syncBars);
+      });
+    });
+
+    // === PARTICLE SYSTEM ===
+    const particles = [];
+
+    function resizeCanvases() {
+      particleCanvas.width = particleCanvas.offsetWidth * devicePixelRatio;
+      particleCanvas.height = particleCanvas.offsetHeight * devicePixelRatio;
+      waveformCanvas.width = waveformCanvas.offsetWidth * devicePixelRatio;
+      waveformCanvas.height = waveformCanvas.offsetHeight * devicePixelRatio;
+      pCtx.scale(devicePixelRatio, devicePixelRatio);
+      wCtx.scale(devicePixelRatio, devicePixelRatio);
+    }
+    resizeCanvases();
+
+    function spawnParticle() {
+      const intensity = state.intensity;
+      if (intensity < 5) return;
+
+      const hue = 260 + intensity * 1.2 + Math.random() * 60 - 30;
+      const cx = particleCanvas.offsetWidth / 2;
+      const cy = particleCanvas.offsetHeight / 2;
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 60 + Math.random() * 40;
+
+      particles.push({
+        x: cx + Math.cos(angle) * dist,
+        y: cy + Math.sin(angle) * dist,
+        vx: (Math.random() - 0.5) * (1 + intensity / 25),
+        vy: -(1 + Math.random() * (intensity / 20)),
+        life: 1,
+        decay: 0.008 + Math.random() * 0.015,
+        size: 1 + Math.random() * (1 + intensity / 30),
+        hue: hue,
+      });
+    }
+
+    function updateParticles() {
+      pCtx.clearRect(0, 0, particleCanvas.offsetWidth, particleCanvas.offsetHeight);
+
+      const spawnRate = Math.floor(state.intensity / 8);
+      for (let i = 0; i < spawnRate; i++) {
+        spawnParticle();
+      }
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= p.decay;
+
+        if (p.life <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+
+        pCtx.beginPath();
+        pCtx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+        pCtx.fillStyle = `hsla(${p.hue}, 100%, 65%, ${p.life * 0.7})`;
+        pCtx.fill();
+      }
+    }
+
+    // === WAVEFORM VISUALIZER ===
+    let wavePhase = 0;
+
+    function drawWaveform() {
+      const w = waveformCanvas.offsetWidth;
+      const h = waveformCanvas.offsetHeight;
+      wCtx.clearRect(0, 0, w, h);
+
+      const intensity = state.intensity;
+      const t = intensity / 100;
+
+      if (intensity < 1) return;
+
+      const hue = 260 + intensity * 1.2;
+      wavePhase += 0.03 + t * 0.12;
+
+      wCtx.beginPath();
+      wCtx.moveTo(0, h / 2);
+
+      for (let x = 0; x < w; x++) {
+        const xNorm = x / w;
+        // Exponential amplitude increase toward the end
+        const envelope = Math.pow(xNorm, 2 - t * 1.5) * t;
+        const freq = 3 + t * 8;
+        const noise = Math.sin(x * 0.3 + wavePhase * 3) * t * 2;
+        const y = h / 2 + Math.sin(xNorm * freq * Math.PI + wavePhase) * (h * 0.35 * envelope) + noise;
+        wCtx.lineTo(x, y);
+      }
+
+      wCtx.strokeStyle = `hsla(${hue}, 100%, 60%, ${0.3 + t * 0.5})`;
+      wCtx.lineWidth = 1.5;
+      wCtx.stroke();
+
+      // Second harmonic layer
+      wCtx.beginPath();
+      wCtx.moveTo(0, h / 2);
+      for (let x = 0; x < w; x++) {
+        const xNorm = x / w;
+        const envelope = Math.pow(xNorm, 2.5 - t) * t;
+        const y = h / 2 + Math.sin(xNorm * (5 + t * 12) * Math.PI + wavePhase * 1.5) * (h * 0.2 * envelope);
+        wCtx.lineTo(x, y);
+      }
+      wCtx.strokeStyle = `hsla(${hue + 40}, 100%, 55%, ${0.15 + t * 0.3})`;
+      wCtx.lineWidth = 1;
+      wCtx.stroke();
+    }
+
+    // === ANIMATION LOOP ===
+    function animate() {
+      updateParticles();
+      drawWaveform();
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    // === DAW COMMUNICATION ===
+    function sendParam(id, value) {
+      try {
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.pluginMessage) {
+          window.webkit.messageHandlers.pluginMessage.postMessage({ paramId: id, value: value });
+        }
+      } catch (e) { /* Silent fail for standalone preview */ }
+    }
+
+    // Receive parameter updates from DAW
+    window.setParameterValue = function(id, value) {
+      if (id === PARAM_INTENSITY) {
+        state.intensity = value * 100;
+        updateUI();
+      } else if (id === PARAM_SYNC) {
+        state.syncBars = value;
+        document.querySelectorAll('.sync-btn').forEach(btn => {
+          btn.classList.toggle('selected', parseInt(btn.dataset.value) === value);
+        });
+      }
+    };
+
+    // Initialize
+    updateUI();
+  </script>
+</body>
+</html>
