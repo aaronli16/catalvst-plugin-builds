@@ -13,7 +13,7 @@ endif()
 juce_add_plugin(SmoothWaveFlanger
     COMPANY_NAME "Catalvst"
     PLUGIN_MANUFACTURER_CODE Ctlv
-    PLUGIN_CODE Swfl
+    PLUGIN_CODE XMYB
     FORMATS VST3 AU Standalone
     PRODUCT_NAME "SmoothWaveFlanger"
     NEEDS_WEB_BROWSER TRUE
