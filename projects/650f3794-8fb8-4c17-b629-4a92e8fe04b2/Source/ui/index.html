@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mellow Tape</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    :root {
+      --bg: #f5f2ed;
+      --surface: #eae6df;
+      --surface-hover: #e0dbd3;
+      --text: #3a3632;
+      --text-muted: #8a847c;
+      --accent: #c4a882;
+      --accent-warm: #b8956a;
+      --knob-track: #d6d1c9;
+      --knob-fill: #a09688;
+      --shadow-soft: rgba(58, 54, 50, 0.06);
+      --shadow-medium: rgba(58, 54, 50, 0.12);
+    }
+
+    body {
+      background: var(--bg);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    .plugin {
+      width: 420px;
+      padding: 40px 36px 36px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 44px;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .header h1 {
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: 3.5px;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .header .subtitle {
+      font-size: 10px;
+      font-weight: 400;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    /* Tape Reel Visual */
+    .tape-visual {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .reel {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: 2px solid var(--knob-track);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      animation: spin 4s linear infinite;
+      animation-play-state: running;
+    }
+
+    .reel-inner {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1.5px solid var(--knob-track);
+    }
+
+    .reel-spoke {
+      position: absolute;
+      width: 1px;
+      height: 100%;
+      background: var(--knob-track);
+    }
+
+    .reel-spoke:nth-child(2) { transform: rotate(60deg); }
+    .reel-spoke:nth-child(3) { transform: rotate(120deg); }
+
+    .tape-line {
+      width: 28px;
+      height: 1.5px;
+      background: var(--knob-track);
+      position: relative;
+    }
+
+    .tape-line::before {
+      content: '';
+      position: absolute;
+      top: -3px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      border: 1px solid var(--knob-track);
+      background: var(--bg);
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Knobs Section */
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 60px;
+    }
+
+    .knob-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .knob-container {
+      position: relative;
+      width: 88px;
+      height: 88px;
+      cursor: grab;
+    }
+
+    .knob-container:active {
+      cursor: grabbing;
+    }
+
+    .knob-svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-135deg);
+    }
+
+    .knob-track-circle {
+      fill: none;
+      stroke: var(--knob-track);
+      stroke-width: 3;
+      stroke-linecap: round;
+    }
+
+    .knob-fill-circle {
+      fill: none;
+      stroke: var(--knob-fill);
+      stroke-width: 3;
+      stroke-linecap: round;
+      transition: stroke 0.2s ease;
+    }
+
+    .knob-container:hover .knob-fill-circle,
+    .knob-container.active .knob-fill-circle {
+      stroke: var(--accent-warm);
+    }
+
+    .knob-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #f0ece6, #e4dfD8);
+      box-shadow: 
+        2px 3px 8px var(--shadow-medium),
+        -1px -1px 4px rgba(255, 255, 255, 0.7);
+    }
+
+    .knob-indicator {
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 2px;
+      height: 10px;
+      border-radius: 1px;
+      background: var(--knob-fill);
+      transition: background 0.2s ease;
+    }
+
+    .knob-container:hover .knob-indicator,
+    .knob-container.active .knob-indicator {
+      background: var(--accent-warm);
+    }
+
+    .knob-label {
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .knob-value {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--text);
+      letter-spacing: 0.5px;
+      min-width: 36px;
+      text-align: center;
+    }
+
+    /* Meter */
+    .meter-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      max-width: 260px;
+    }
+
+    .meter-bar {
+      width: 100%;
+      height: 3px;
+      background: var(--knob-track);
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .meter-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--knob-fill), var(--accent-warm));
+      border-radius: 2px;
+      transition: width 0.1s ease;
+    }
+
+    .meter-label {
+      font-size: 8px;
+      font-weight: 400;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    /* Bypass Button */
+    .bypass-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1.5px solid var(--knob-track);
+      background: var(--bg);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.25s ease;
+    }
+
+    .bypass-btn:hover {
+      border-color: var(--knob-fill);
+    }
+
+    .bypass-btn.active {
+      background: var(--accent-warm);
+      border-color: var(--accent-warm);
+    }
+
+    .bypass-btn.active .bypass-icon {
+      stroke: #fff;
+    }
+
+    .bypass-icon {
+      stroke: var(--text-muted);
+      stroke-width: 1.5;
+      fill: none;
+      transition: stroke 0.25s ease;
+    }
+
+    /* Animations */
+    .plugin.bypassed .reel {
+      animation-play-state: paused;
+    }
+
+    .plugin.bypassed .meter-fill {
+      width: 0% !important;
+      opacity: 0.3;
+    }
+
+    .plugin.bypassed .knob-fill-circle {
+      opacity: 0.3;
+    }
+  </style>
+</head>
+<body>
+  <div class="plugin" id="plugin">
+    <!-- Header -->
+    <div class="header">
+      <h1>Mellow Tape</h1>
+      <span class="subtitle">Tape Saturation</span>
+    </div>
+
+    <!-- Tape Reel Visual -->
+    <div class="tape-visual">
+      <div class="reel">
+        <div class="reel-spoke"></div>
+        <div class="reel-spoke"></div>
+        <div class="reel-spoke"></div>
+        <div class="reel-inner"></div>
+      </div>
+      <div class="tape-line"></div>
+      <div class="reel">
+        <div class="reel-spoke"></div>
+        <div class="reel-spoke"></div>
+        <div class="reel-spoke"></div>
+        <div class="reel-inner"></div>
+      </div>
+    </div>
+
+    <!-- Knob Controls -->
+    <div class="controls">
+      <!-- Warmth Knob -->
+      <div class="knob-group">
+        <div class="knob-container" id="knob-warmth" data-param="warmth" data-value="0.5" data-min="0" data-max="1" data-default="0.5">
+          <svg class="knob-svg" viewBox="0 0 88 88">
+            <circle class="knob-track-circle" cx="44" cy="44" r="38" 
+              stroke-dasharray="179" stroke-dashoffset="0" />
+            <circle class="knob-fill-circle" cx="44" cy="44" r="38" 
+              stroke-dasharray="179" stroke-dashoffset="89.5" />
+          </svg>
+          <div class="knob-center" id="knob-warmth-center">
+            <div class="knob-indicator"></div>
+          </div>
+        </div>
+        <span class="knob-value" id="value-warmth">50%</span>
+        <span class="knob-label">Warmth</span>
+      </div>
+
+      <!-- Mix Knob -->
+      <div class="knob-group">
+        <div class="knob-container" id="knob-mix" data-param="mix" data-value="0.5" data-min="0" data-max="1" data-default="0.5">
+          <svg class="knob-svg" viewBox="0 0 88 88">
+            <circle class="knob-track-circle" cx="44" cy="44" r="38" 
+              stroke-dasharray="179" stroke-dashoffset="0" />
+            <circle class="knob-fill-circle" cx="44" cy="44" r="38" 
+              stroke-dasharray="179" stroke-dashoffset="89.5" />
+          </svg>
+          <div class="knob-center" id="knob-mix-center">
+            <div class="knob-indicator"></div>
+          </div>
+        </div>
+        <span class="knob-value" id="value-mix">50%</span>
+        <span class="knob-label">Mix</span>
+      </div>
+    </div>
+
+    <!-- Meter -->
+    <div class="meter-section">
+      <div class="meter-bar">
+        <div class="meter-fill" id="meter-fill"></div>
+      </div>
+      <span class="meter-label">Saturation</span>
+    </div>
+
+    <!-- Bypass -->
+    <button class="bypass-btn active" id="bypass-btn" aria-label="Bypass">
+      <svg class="bypass-icon" width="16" height="16" viewBox="0 0 16 16">
+        <circle cx="8" cy="8" r="5" />
+        <line x1="8" y1="3" x2="8" y2="1" />
+      </svg>
+    </button>
+  </div>
+
+  <script>
+    // Knob interaction
+    const ARC_TOTAL = 179;
+    const ROTATION_RANGE = 270;
+
+    document.querySelectorAll('.knob-container').forEach(knob => {
+      let isDragging = false;
+      let startY = 0;
+      let startValue = 0;
+
+      function updateKnob(value) {
+        value = Math.max(0, Math.min(1, value));
+        knob.dataset.value = value;
+
+        // Update arc fill
+        const fillCircle = knob.querySelector('.knob-fill-circle');
+        const offset = ARC_TOTAL - (value * ARC_TOTAL);
+        fillCircle.setAttribute('stroke-dashoffset', offset);
+
+        // Update indicator rotation
+        const center = knob.querySelector('.knob-center');
+        const angle = -135 + (value * ROTATION_RANGE);
+        center.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+
+        // Update value display
+        const param = knob.dataset.param;
+        const display = document.getElementById(`value-${param}`);
+        display.textContent = Math.round(value * 100) + '%';
+
+        // Update meter based on warmth
+        updateMeter();
+
+        // Send to plugin
+        if (window.PluginUI) {
+          window.PluginUI.setParameterValue(param, value);
+        }
+      }
+
+      function onMouseDown(e) {
+        isDragging = true;
+        startY = e.clientY;
+        startValue = parseFloat(knob.dataset.value);
+        knob.classList.add('active');
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+        e.preventDefault();
+      }
+
+      function onMouseMove(e) {
+        if (!isDragging) return;
+        const delta = (startY - e.clientY) / 150;
+        updateKnob(startValue + delta);
+      }
+
+      function onMouseUp() {
+        isDragging = false;
+        knob.classList.remove('active');
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      }
+
+      // Double-click to reset
+      knob.addEventListener('dblclick', () => {
+        updateKnob(parseFloat(knob.dataset.default));
+      });
+
+      knob.addEventListener('mousedown', onMouseDown);
+
+      // Initialize
+      updateKnob(parseFloat(knob.dataset.value));
+    });
+
+    // Meter animation
+    function updateMeter() {
+      const warmth = parseFloat(document.getElementById('knob-warmth').dataset.value);
+      const mix = parseFloat(document.getElementById('knob-mix').dataset.value);
+      const meterFill = document.getElementById('meter-fill');
+      const level = warmth * mix * 100;
+      meterFill.style.width = level + '%';
+    }
+
+    // Simulated meter movement
+    let meterNoise = 0;
+    function animateMeter() {
+      const plugin = document.getElementById('plugin');
+      if (!plugin.classList.contains('bypassed')) {
+        const warmth = parseFloat(document.getElementById('knob-warmth').dataset.value);
+        const mix = parseFloat(document.getElementById('knob-mix').dataset.value);
+        const base = warmth * mix * 100;
+        meterNoise += (Math.random() - 0.5) * 6;
+        meterNoise *= 0.85;
+        const level = Math.max(0, Math.min(100, base + meterNoise));
+        document.getElementById('meter-fill').style.width = level + '%';
+      }
+      requestAnimationFrame(animateMeter);
+    }
+    animateMeter();
+
+    // Bypass button
+    const bypassBtn = document.getElementById('bypass-btn');
+    const plugin = document.getElementById('plugin');
+
+    bypassBtn.addEventListener('click', () => {
+      bypassBtn.classList.toggle('active');
+      plugin.classList.toggle('bypassed', !bypassBtn.classList.contains('active'));
+
+      if (window.PluginUI) {
+        window.PluginUI.setParameterValue('bypass', bypassBtn.classList.contains('active') ? 0 : 1);
+      }
+    });
+
+    // Listen for parameter updates from the plugin host
+    if (window.PluginUI) {
+      window.PluginUI.onParameterChange = function(paramId, value) {
+        const knob = document.querySelector(`[data-param="${paramId}"]`);
+        if (knob) {
+          const event = new CustomEvent('setValue', { detail: value });
+          knob.dispatchEvent(event);
+        }
+      };
+    }
+  </script>
+</body>
+</html>
