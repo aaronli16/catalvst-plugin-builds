@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GRIT MPC</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    :root {
+      --bg-dark: #0d0d0d;
+      --bg-panel: #1a1a1a;
+      --bg-inset: #111111;
+      --border-subtle: #2a2a2a;
+      --border-groove: #333333;
+      --text-primary: #d4c8b8;
+      --text-dim: #6b6258;
+      --text-label: #8a7e70;
+      --accent-orange: #e8722a;
+      --accent-glow: #ff8c42;
+      --accent-red: #c43e2a;
+      --knob-track: #2a2622;
+      --knob-fill: #e8722a;
+      --pad-off: #1e1c1a;
+      --pad-hit: #e8722a;
+      --shadow-deep: rgba(0,0,0,0.6);
+    }
+
+    body {
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      font-family: 'Courier New', 'Lucida Console', monospace;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Main Housing ── */
+    .plugin-shell {
+      width: 680px;
+      background: var(--bg-panel);
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+      box-shadow:
+        0 20px 60px rgba(0,0,0,0.8),
+        inset 0 1px 0 rgba(255,255,255,0.03);
+      padding: 24px;
+      position: relative;
+    }
+
+    .plugin-shell::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      border-radius: 10px;
+      background:
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0,0,0,0.015) 2px,
+          rgba(0,0,0,0.015) 4px
+        );
+      pointer-events: none;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .brand-name {
+      font-size: 22px;
+      font-weight: bold;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      color: var(--text-primary);
+    }
+
+    .brand-sub {
+      font-size: 9px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .led-meter {
+      display: flex;
+      gap: 3px;
+      align-items: flex-end;
+    }
+
+    .led-bar {
+      width: 4px;
+      background: var(--knob-track);
+      border-radius: 1px;
+      transition: background 0.1s;
+    }
+
+    .led-bar.active {
+      background: var(--accent-orange);
+      box-shadow: 0 0 4px rgba(232, 114, 42, 0.4);
+    }
+
+    .led-bar.hot {
+      background: var(--accent-red);
+      box-shadow: 0 0 4px rgba(196, 62, 42, 0.5);
+    }
+
+    /* ── Controls Section ── */
+    .controls-section {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .knob-bank {
+      flex: 1;
+      background: var(--bg-inset);
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+      padding: 20px 12px 16px;
+      display: flex;
+      justify-content: space-around;
+      gap: 8px;
+    }
+
+    /* ── Knob Styling ── */
+    .knob-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .knob-label {
+      font-size: 8px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-label);
+    }
+
+    .knob-container {
+      position: relative;
+      width: 56px;
+      height: 56px;
+      cursor: grab;
+    }
+
+    .knob-container:active {
+      cursor: grabbing;
+    }
+
+    .knob-svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .knob-track-path {
+      fill: none;
+      stroke: var(--knob-track);
+      stroke-width: 4;
+      stroke-linecap: round;
+    }
+
+    .knob-fill-path {
+      fill: none;
+      stroke: var(--knob-fill);
+      stroke-width: 4;
+      stroke-linecap: round;
+      filter: drop-shadow(0 0 3px rgba(232, 114, 42, 0.3));
+      transition: stroke 0.15s;
+    }
+
+    .knob-cap {
+      fill: var(--bg-panel);
+      stroke: var(--border-groove);
+      stroke-width: 1;
+    }
+
+    .knob-indicator {
+      stroke: var(--accent-orange);
+      stroke-width: 2;
+      stroke-linecap: round;
+      filter: drop-shadow(0 0 2px rgba(232, 114, 42, 0.5));
+    }
+
+    .knob-value {
+      font-size: 10px;
+      color: var(--accent-orange);
+      font-family: 'Courier New', monospace;
+      letter-spacing: 1px;
+      min-width: 32px;
+      text-align: center;
+    }
+
+    /* ── Pad Grid ── */
+    .pad-section {
+      background: var(--bg-inset);
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+      padding: 16px;
+    }
+
+    .pad-section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .pad-section-label {
+      font-size: 8px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .pad-bank-select {
+      display: flex;
+      gap: 6px;
+    }
+
+    .bank-btn {
+      width: 20px;
+      height: 16px;
+      background: var(--knob-track);
+      border: 1px solid var(--border-subtle);
+      border-radius: 2px;
+      color: var(--text-dim);
+      font-size: 7px;
+      font-family: 'Courier New', monospace;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .bank-btn.active {
+      background: var(--accent-orange);
+      color: var(--bg-dark);
+      border-color: var(--accent-orange);
+      box-shadow: 0 0 6px rgba(232, 114, 42, 0.3);
+    }
+
+    .pad-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .pad {
+      aspect-ratio: 1;
+      background: var(--pad-off);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.06s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .pad:active,
+    .pad.hit {
+      background: var(--accent-orange);
+      border-color: var(--accent-glow);
+      box-shadow:
+        0 0 12px rgba(232, 114, 42, 0.4),
+        inset 0 0 8px rgba(232, 114, 42, 0.2);
+      transform: scale(0.96);
+    }
+
+    .pad:active .pad-label,
+    .pad.hit .pad-label {
+      color: var(--bg-dark);
+    }
+
+    .pad:active .pad-number,
+    .pad.hit .pad-number {
+      color: rgba(0,0,0,0.4);
+    }
+
+    .pad-number {
+      font-size: 7px;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+      position: absolute;
+      top: 6px;
+      left: 8px;
+    }
+
+    .pad-label {
+      font-size: 8px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-label);
+      margin-top: 6px;
+    }
+
+    /* ── Output Strip ── */
+    .output-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .output-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .output-label {
+      font-size: 8px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .output-meter {
+      display: flex;
+      gap: 2px;
+      align-items: center;
+    }
+
+    .meter-seg {
+      width: 12px;
+      height: 6px;
+      background: var(--knob-track);
+      border-radius: 1px;
+      transition: background 0.08s;
+    }
+
+    .meter-seg.on {
+      background: var(--accent-orange);
+    }
+
+    .meter-seg.clip {
+      background: var(--accent-red);
+    }
+
+    .model-badge {
+      font-size: 8px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      border: 1px solid var(--border-subtle);
+      padding: 3px 10px;
+      border-radius: 3px;
+    }
+
+    /* ── Screw Details ── */
+    .screw {
+      width: 8px;
+      height: 8px;
+      background: radial-gradient(circle at 35% 35%, #3a3a3a, #1a1a1a);
+      border-radius: 50%;
+      border: 1px solid #2a2a2a;
+      position: absolute;
+    }
+
+    .screw-tl { top: 10px; left: 10px; }
+    .screw-tr { top: 10px; right: 10px; }
+    .screw-bl { bottom: 10px; left: 10px; }
+    .screw-br { bottom: 10px; right: 10px; }
+  </style>
+</head>
+<body>
+
+<div class="plugin-shell">
+  <!-- Corner Screws -->
+  <div class="screw screw-tl"></div>
+  <div class="screw screw-tr"></div>
+  <div class="screw screw-bl"></div>
+  <div class="screw screw-br"></div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="brand">
+      <div class="brand-name">GRIT MPC</div>
+      <div class="brand-sub">Analog Drum Machine</div>
+    </div>
+    <div class="led-meter" id="headerMeter">
+      <div class="led-bar" style="height:8px;"></div>
+      <div class="led-bar" style="height:12px;"></div>
+      <div class="led-bar" style="height:16px;"></div>
+      <div class="led-bar" style="height:20px;"></div>
+      <div class="led-bar" style="height:24px;"></div>
+      <div class="led-bar" style="height:18px;"></div>
+      <div class="led-bar" style="height:14px;"></div>
+      <div class="led-bar" style="height:10px;"></div>
+    </div>
+  </div>
+
+  <!-- Knob Controls -->
+  <div class="controls-section">
+    <div class="knob-bank">
+      <div class="knob-group">
+        <div class="knob-label">Drive</div>
+        <div class="knob-container" data-param="drive" data-value="0.35" data-min="0" data-max="1" data-default="0.35">
+          <svg class="knob-svg" viewBox="0 0 56 56"></svg>
+        </div>
+        <div class="knob-value" data-display="drive">35%</div>
+      </div>
+
+      <div class="knob-group">
+        <div class="knob-label">Tone</div>
+        <div class="knob-container" data-param="tone" data-value="0.5" data-min="0" data-max="1" data-default="0.5">
+          <svg class="knob-svg" viewBox="0 0 56 56"></svg>
+        </div>
+        <div class="knob-value" data-display="tone">50%</div>
+      </div>
+
+      <div class="knob-group">
+        <div class="knob-label">Punch</div>
+        <div class="knob-container" data-param="punch" data-value="0.6" data-min="0" data-max="1" data-default="0.6">
+          <svg class="knob-svg" viewBox="0 0 56 56"></svg>
+        </div>
+        <div class="knob-value" data-display="punch">60%</div>
+      </div>
+
+      <div class="knob-group">
+        <div class="knob-label">Decay</div>
+        <div class="knob-container" data-param="decay" data-value="0.45" data-min="0" data-max="1" data-default="0.45">
+          <svg class="knob-svg" viewBox="0 0 56 56"></svg>
+        </div>
+        <div class="knob-value" data-display="decay">45%</div>
+      </div>
+
+      <div class="knob-group">
+        <div class="knob-label">Level</div>
+        <div class="knob-container" data-param="level" data-value="0.75" data-min="0" data-max="1" data-default="0.75">
+          <svg class="knob-svg" viewBox="0 0 56 56"></svg>
+        </div>
+        <div class="knob-value" data-display="level">75%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pad Grid -->
+  <div class="pad-section">
+    <div class="pad-section-header">
+      <div class="pad-section-label">Pads</div>
+      <div class="pad-bank-select">
+        <div class="bank-btn active" data-bank="A">A</div>
+        <div class="bank-btn" data-bank="B">B</div>
+        <div class="bank-btn" data-bank="C">C</div>
+        <div class="bank-btn" data-bank="D">D</div>
+      </div>
+    </div>
+    <div class="pad-grid">
+      <div class="pad" data-pad="13"><span class="pad-number">13</span><span class="pad-label">Kick</span></div>
+      <div class="pad" data-pad="14"><span class="pad-number">14</span><span class="pad-label">Snare</span></div>
+      <div class="pad" data-pad="15"><span class="pad-number">15</span><span class="pad-label">Clap</span></div>
+      <div class="pad" data-pad="16"><span class="pad-number">16</span><span class="pad-label">Rim</span></div>
+      <div class="pad" data-pad="9"><span class="pad-number">9</span><span class="pad-label">C.Hat</span></div>
+      <div class="pad" data-pad="10"><span class="pad-number">10</span><span class="pad-label">O.Hat</span></div>
+      <div class="pad" data-pad="11"><span class="pad-number">11</span><span class="pad-label">Tom</span></div>
+      <div class="pad" data-pad="12"><span class="pad-number">12</span><span class="pad-label">Perc</span></div>
+      <div class="pad" data-pad="5"><span class="pad-number">5</span><span class="pad-label">Conga</span></div>
+      <div class="pad" data-pad="6"><span class="pad-number">6</span><span class="pad-label">Cowbl</span></div>
+      <div class="pad" data-pad="7"><span class="pad-number">7</span><span class="pad-label">Tamb</span></div>
+      <div class="pad" data-pad="8"><span class="pad-number">8</span><span class="pad-label">Cymbl</span></div>
+      <div class="pad" data-pad="1"><span class="pad-number">1</span><span class="pad-label">Shaker</span></div>
+      <div class="pad" data-pad="2"><span class="pad-number">2</span><span class="pad-label">Snap</span></div>
+      <div class="pad" data-pad="3"><span class="pad-number">3</span><span class="pad-label">Click</span></div>
+      <div class="pad" data-pad="4"><span class="pad-number">4</span><span class="pad-label">FX</span></div>
+    </div>
+  </div>
+
+  <!-- Output Strip -->
+  <div class="output-strip">
+    <div class="output-left">
+      <div class="output-label">Output</div>
+      <div class="output-meter" id="outputMeter">
+        <div class="meter-seg"></div>
+        <div class="meter-seg"></div>
+        <div class="meter-seg"></div>
+        <div class="meter-seg"></div>
+        <div class="meter-seg"></div>
+        <div class="meter-seg"></div>
+        <div class="meter-seg"></div>
+        <div class="meter-seg"></div>
+        <div class="meter-seg"></div>
+        <div class="meter-seg"></div>
+        <div class="meter-seg"></div>
+        <div class="meter-seg"></div>
+      </div>
+    </div>
+    <div class="model-badge">MK-II</div>
+  </div>
+</div>
+
+<script>
+  // ── Knob Rendering & Interaction ──
+  const ARC_START = 135;
+  const ARC_END = 405;
+  const ARC_RANGE = ARC_END - ARC_START;
+  const CX = 28, CY = 28, R = 22, CAP_R = 14;
+
+  function polarToCart(cx, cy, r, angleDeg) {
+    const rad = (angleDeg - 90) * Math.PI / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }
+
+  function describeArc(cx, cy, r, startAngle, endAngle) {
+    const s = polarToCart(cx, cy, r, startAngle);
+    const e = polarToCart(cx, cy, r, endAngle);
+    const largeArc = (endAngle - startAngle) > 180 ? 1 : 0;
+    return `M ${s.x} ${s.y} A ${r} ${r} 0 ${largeArc} 1 ${e.x} ${e.y}`;
+  }
+
+  function renderKnob(container) {
+    const svg = container.querySelector('.knob-svg');
+    const value = parseFloat(container.dataset.value);
+    const angle = ARC_START + value * ARC_RANGE;
+
+    const indicatorEnd = polarToCart(CX, CY, CAP_R - 2, angle);
+    const indicatorStart = polarToCart(CX, CY, CAP_R - 8, angle);
+
+    svg.innerHTML = `
+      <path class="knob-track-path" d="${describeArc(CX, CY, R, ARC_START, ARC_END)}" />
+      ${value > 0.005 ? `<path class="knob-fill-path" d="${describeArc(CX, CY, R, ARC_START, angle)}" />` : ''}
+      <circle class="knob-cap" cx="${CX}" cy="${CY}" r="${CAP_R}" />
+      <line class="knob-indicator" x1="${indicatorStart.x}" y1="${indicatorStart.y}" x2="${indicatorEnd.x}" y2="${indicatorEnd.y}" />
+    `;
+  }
+
+  function updateDisplay(param, value) {
+    const display = document.querySelector(`[data-display="${param}"]`);
+    if (display) {
+      display.textContent = Math.round(value * 100) + '%';
+    }
+  }
+
+  // Initialize all knobs
+  const knobs = document.querySelectorAll('.knob-container');
+  knobs.forEach(k => {
+    renderKnob(k);
+    updateDisplay(k.dataset.param, parseFloat(k.dataset.value));
+  });
+
+  // Knob drag interaction
+  let activeKnob = null;
+  let startY = 0;
+  let startValue = 0;
+
+  document.addEventListener('mousedown', (e) => {
+    const knob = e.target.closest('.knob-container');
+    if (!knob) return;
+    activeKnob = knob;
+    startY = e.clientY;
+    startValue = parseFloat(knob.dataset.value);
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!activeKnob) return;
+    const dy = startY - e.clientY;
+    const sensitivity = e.shiftKey ? 600 : 200;
+    let newValue = startValue + dy / sensitivity;
+    newValue = Math.max(0, Math.min(1, newValue));
+    activeKnob.dataset.value = newValue;
+    renderKnob(activeKnob);
+    updateDisplay(activeKnob.dataset.param, newValue);
+  });
+
+  document.addEventListener('mouseup', () => {
+    activeKnob = null;
+  });
+
+  // Double-click to reset
+  document.addEventListener('dblclick', (e) => {
+    const knob = e.target.closest('.knob-container');
+    if (!knob) return;
+    knob.dataset.value = knob.dataset.default;
+    renderKnob(knob);
+    updateDisplay(knob.dataset.param, parseFloat(knob.dataset.default));
+  });
+
+  // ── Pad Interaction ──
+  const pads = document.querySelectorAll('.pad');
+  pads.forEach(pad => {
+    pad.addEventListener('mousedown', () => {
+      pad.classList.add('hit');
+      triggerMeter();
+      setTimeout(() => pad.classList.remove('hit'), 120);
+    });
+  });
+
+  // ── Bank Selection ──
+  const bankBtns = document.querySelectorAll('.bank-btn');
+  bankBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      bankBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  // ── Meter Animation ──
+  function triggerMeter() {
+    const headerBars = document.querySelectorAll('#headerMeter .led-bar');
+    const outputSegs = document.querySelectorAll('#outputMeter .meter-seg');
+    const level = parseFloat(document.querySelector('[data-param="level"]').dataset.value);
+    const drive = parseFloat(document.querySelector('[data-param="drive"]').dataset.value);
+    const intensity = Math.min(1, level + drive * 0.3);
+
+    const activeBars = Math.floor(intensity * headerBars.length);
+    headerBars.forEach((bar, i) => {
+      if (i < activeBars) {
+        bar.classList.add(i >= headerBars.length - 2 ? 'hot' : 'active');
+      }
+    });
+
+    const activeSegs = Math.floor(intensity * outputSegs.length);
+    outputSegs.forEach((seg, i) => {
+      if (i < activeSegs) {
+        seg.classList.add(i >= outputSegs.length - 2 ? 'clip' : 'on');
+      }
+    });
+
+    setTimeout(() => {
+      headerBars.forEach(bar => { bar.classList.remove('active', 'hot'); });
+      outputSegs.forEach(seg => { seg.classList.remove('on', 'clip'); });
+    }, 180);
+  }
+</script>
+
+</body>
+</html>
