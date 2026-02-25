@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Endless Buildup</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Russo+One&family=Exo+2:wght@400;700;900&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 500px;
+    height: 580px;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #1a0a2e;
+    font-family: 'Exo 2', sans-serif;
+  }
+
+  .plugin-root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: linear-gradient(180deg, #1a0a2e 0%, #0d0618 100%);
+    user-select: none;
+  }
+
+  /* ===== HEADER ===== */
+  .header {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 0 6px;
+  }
+
+  .plugin-title {
+    font-family: 'Russo One', sans-serif;
+    font-size: 22px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #ff6b6b);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: titleShimmer 4s linear infinite;
+  }
+
+  @keyframes titleShimmer {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+  }
+
+  .plugin-subtitle {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: #7a6b9a;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* ===== PRESET TABS ===== */
+  .preset-tabs {
+    display: flex;
+    gap: 6px;
+    margin: 12px 0 8px;
+    padding: 0 20px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .preset-tab {
+    flex: 1;
+    max-width: 150px;
+    padding: 8px 6px;
+    border: 2px solid #2a1a4a;
+    border-radius: 8px;
+    background: rgba(20, 10, 40, 0.8);
+    color: #6a5a8a;
+    font-family: 'Russo One', sans-serif;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .preset-tab:hover {
+    border-color: #4a3a6a;
+    color: #9a8aba;
+  }
+
+  .preset-tab.active {
+    border-color: var(--tab-color);
+    color: #ffffff;
+    box-shadow: 0 0 15px var(--tab-glow), inset 0 0 15px rgba(0,0,0,0.3);
+  }
+
+  .preset-tab.active::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--tab-color);
+    box-shadow: 0 0 8px var(--tab-color);
+  }
+
+  .preset-tab[data-preset="liftoff"] { --tab-color: #6bcb77; --tab-glow: rgba(107,203,119,0.3); }
+  .preset-tab[data-preset="stratosphere"] { --tab-color: #4d96ff; --tab-glow: rgba(77,150,255,0.3); }
+  .preset-tab[data-preset="dada"] { --tab-color: #ff6b6b; --tab-glow: rgba(255,107,107,0.3); }
+
+  .preset-label {
+    display: block;
+    font-size: 11px;
+    margin-bottom: 2px;
+  }
+
+  .preset-desc {
+    display: block;
+    font-family: 'Exo 2', sans-serif;
+    font-size: 7.5px;
+    letter-spacing: 0.5px;
+    opacity: 0.6;
+    font-weight: 400;
+  }
+
+  /* ===== SMILEY FACE ===== */
+  .smiley-container {
+    width: 100px;
+    height: 100px;
+    margin: 8px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .smiley-face {
+    transition: filter 0.3s ease;
+  }
+
+  .smiley-bg {
+    transition: fill 0.5s ease;
+  }
+
+  .smiley-eye {
+    transition: all 0.4s ease;
+  }
+
+  .smiley-mouth {
+    transition: all 0.4s ease;
+  }
+
+  .smiley-cheek {
+    transition: opacity 0.4s ease;
+  }
+
+  /* ===== KNOB AREA ===== */
+  .knob-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 4px 0;
+  }
+
+  .knob-label {
+    font-family: 'Russo One', sans-serif;
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: #9a8aba;
+    margin-bottom: 8px;
+  }
+
+  .knob-container {
+    width: 200px;
+    height: 200px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+  }
+
+  .knob-container:active { cursor: grabbing; }
+
+  .knob-svg {
+    width: 200px;
+    height: 200px;
+  }
+
+  .knob-track {
+    fill: none;
+    stroke: #2a1a4a;
+    stroke-width: 8;
+    stroke-linecap: round;
+  }
+
+  .knob-fill {
+    fill: none;
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke 0.3s ease;
+    filter: drop-shadow(0 0 6px var(--knob-glow));
+  }
+
+  .knob-body {
+    fill: radial-gradient(circle, #2a1a4a, #1a0a2e);
+  }
+
+  .knob-ticks text {
+    font-family: 'Exo 2', sans-serif;
+    font-size: 9px;
+    fill: #5a4a7a;
+  }
+
+  .knob-value-text {
+    font-family: 'Russo One', sans-serif;
+    font-size: 28px;
+    fill: #ffffff;
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+
+  .knob-percent {
+    font-family: 'Exo 2', sans-serif;
+    font-size: 12px;
+    fill: #7a6b9a;
+    text-anchor: middle;
+  }
+
+  .knob-indicator {
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke 0.3s ease;
+  }
+
+  /* ===== INTENSITY METER ===== */
+  .meter-section {
+    width: 80%;
+    max-width: 360px;
+    margin: 8px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .meter-bar-bg {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: #1a0a2e;
+    border: 1px solid #2a1a4a;
+    overflow: hidden;
+  }
+
+  .meter-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.15s ease, background 0.3s ease;
+  }
+
+  .meter-labels {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 2px;
+  }
+
+  .meter-label {
+    font-size: 7px;
+    letter-spacing: 1px;
+    color: #4a3a6a;
+    text-transform: uppercase;
+  }
+
+  /* ===== EFFECTS READOUT ===== */
+  .effects-readout {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px 8px;
+    padding: 6px 20px;
+    max-width: 100%;
+  }
+
+  .effect-tag {
+    font-size: 7.5px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 10px;
+    background: rgba(20, 10, 40, 0.6);
+    border: 1px solid #2a1a4a;
+    color: #4a3a6a;
+    transition: all 0.4s ease;
+    white-space: nowrap;
+  }
+
+  .effect-tag.active {
+    border-color: var(--tag-color);
+    color: var(--tag-color);
+    box-shadow: 0 0 8px var(--tag-glow);
+    background: var(--tag-bg);
+  }
+
+  /* ===== FOOTER ===== */
+  .footer {
+    margin-top: auto;
+    padding: 8px 0 10px;
+    text-align: center;
+  }
+
+  .footer-text {
+    font-size: 7px;
+    letter-spacing: 2px;
+    color: #3a2a5a;
+    text-transform: uppercase;
+  }
+
+  /* ===== GLOW EFFECTS ===== */
+  .outer-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 220px;
+    height: 220px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s ease, box-shadow 0.4s ease;
+  }
+
+  /* ===== PARTICLES ===== */
+  .particle-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .plugin-root > *:not(.particle-canvas) {
+    z-index: 1;
+    position: relative;
+  }
+
+</style>
+</head>
+<body>
+<div class="plugin-root" id="pluginRoot">
+  <canvas class="particle-canvas" id="particleCanvas"></canvas>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="plugin-title">Endless Buildup</div>
+    <div class="plugin-subtitle">Multi-FX Tension Builder</div>
+  </div>
+
+  <!-- PRESET TABS -->
+  <div class="preset-tabs">
+    <div class="preset-tab active" data-preset="liftoff" data-paramId="preset_mode" data-paramValue="0">
+      <span class="preset-label">Lift Off</span>
+      <span class="preset-desc">Soft / Medium</span>
+    </div>
+    <div class="preset-tab" data-preset="stratosphere" data-paramId="preset_mode" data-paramValue="1">
+      <span class="preset-label">Stratosphere</span>
+      <span class="preset-desc">Hard</span>
+    </div>
+    <div class="preset-tab" data-preset="dada" data-paramId="preset_mode" data-paramValue="2">
+      <span class="preset-label">Dada Dynamite</span>
+      <span class="preset-desc">Extreme</span>
+    </div>
+  </div>
+
+  <!-- SMILEY FACE -->
+  <div class="smiley-container">
+    <svg class="smiley-face" id="smileyFace" viewBox="0 0 100 100" width="90" height="90">
+      <defs>
+        <radialGradient id="smileyGrad" cx="50%" cy="40%" r="50%">
+          <stop offset="0%" id="smileyGradStart" stop-color="#ffe066"/>
+          <stop offset="100%" id="smileyGradEnd" stop-color="#f0c030"/>
+        </radialGradient>
+      </defs>
+      <circle class="smiley-bg" cx="50" cy="50" r="44" fill="url(#smileyGrad)" stroke="#e0a800" stroke-width="2"/>
+      <!-- Left eye -->
+      <ellipse class="smiley-eye" id="eyeLeft" cx="35" cy="40" rx="5" ry="5.5" fill="#1a0a2e"/>
+      <!-- Right eye -->
+      <ellipse class="smiley-eye" id="eyeRight" cx="65" cy="40" rx="5" ry="5.5" fill="#1a0a2e"/>
+      <!-- Mouth -->
+      <path class="smiley-mouth" id="smileyMouth" d="M 30 58 Q 50 62 70 58" fill="none" stroke="#1a0a2e" stroke-width="3" stroke-linecap="round"/>
+      <!-- Cheeks -->
+      <circle class="smiley-cheek" id="cheekLeft" cx="24" cy="55" r="7" fill="#ff9999" opacity="0"/>
+      <circle class="smiley-cheek" id="cheekRight" cx="76" cy="55" r="7" fill="#ff9999" opacity="0"/>
+      <!-- Sweat drop (for extreme) -->
+      <g id="sweatDrop" opacity="0">
+        <ellipse cx="78" cy="30" rx="3" ry="4.5" fill="#88ccff"/>
+        <ellipse cx="78" cy="28" rx="1.5" ry="1" fill="#ffffff" opacity="0.6"/>
+      </g>
+      <!-- Star eyes (for extreme high) -->
+      <g id="starEyes" opacity="0">
+        <polygon id="starLeft" points="35,40 37,36 39,40 37,44 33,40 37,36" fill="#ff6b6b" transform="rotate(0,35,40)"/>
+        <polygon id="starRight" points="65,40 67,36 69,40 67,44 63,40 67,36" fill="#ff6b6b" transform="rotate(0,65,40)"/>
+      </g>
+    </svg>
+  </div>
+
+  <!-- KNOB -->
+  <div class="knob-section">
+    <div class="knob-label">Intensity</div>
+    <div class="knob-container" id="knobContainer" data-paramId="intensity">
+      <svg class="knob-svg" viewBox="0 0 200 200">
+        <defs>
+          <linearGradient id="knobGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#2a1a4a"/>
+            <stop offset="100%" stop-color="#1a0a2e"/>
+          </linearGradient>
+          <filter id="knobShadow">
+            <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.5"/>
+          </filter>
+          <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" id="arcStart" stop-color="#6bcb77"/>
+            <stop offset="100%" id="arcEnd" stop-color="#6bcb77"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Tick marks -->
+        <g class="knob-ticks" id="knobTicks"></g>
+
+        <!-- Track arc -->
+        <path id="knobTrack" class="knob-track" d=""/>
+
+        <!-- Fill arc -->
+        <path id="knobFill" class="knob-fill" d="" stroke="url(#arcGrad)" style="--knob-glow: rgba(107,203,119,0.4);"/>
+
+        <!-- Knob body -->
+        <circle cx="100" cy="100" r="58" fill="url(#knobGrad)" filter="url(#knobShadow)"/>
+        <circle cx="100" cy="100" r="55" fill="none" stroke="#3a2a5a" stroke-width="1" opacity="0.5"/>
+
+        <!-- Indicator line -->
+        <line id="knobIndicator" class="knob-indicator" x1="100" y1="100" x2="100" y2="52" stroke="#6bcb77"/>
+
+        <!-- Value display -->
+        <text class="knob-value-text" id="knobValueText" x="100" y="96">0</text>
+        <text class="knob-percent" x="100" y="114">%</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- METER -->
+  <div class="meter-section">
+    <div class="meter-bar-bg">
+      <div class="meter-bar-fill" id="meterFill"></div>
+    </div>
+    <div class="meter-labels">
+      <span class="meter-label">Calm</span>
+      <span class="meter-label">Building</span>
+      <span class="meter-label">Peak</span>
+      <span class="meter-label">Explode</span>
+    </div>
+  </div>
+
+  <!-- EFFECTS READOUT -->
+  <div class="effects-readout" id="effectsReadout">
+    <span class="effect-tag" data-fx="hpf" style="--tag-color:#6bcb77;--tag-glow:rgba(107,203,119,0.2);--tag-bg:rgba(107,203,119,0.1);">HPF Sweep</span>
+    <span class="effect-tag" data-fx="reverb" style="--tag-color:#4dd4ff;--tag-glow:rgba(77,212,255,0.2);--tag-bg:rgba(77,212,255,0.1);">Reverb</span>
+    <span class="effect-tag" data-fx="stereo" style="--tag-color:#a78bfa;--tag-glow:rgba(167,139,250,0.2);--tag-bg:rgba(167,139,250,0.1);">Stereo Wide</span>
+    <span class="effect-tag" data-fx="delay" style="--tag-color:#4d96ff;--tag-glow:rgba(77,150,255,0.2);--tag-bg:rgba(77,150,255,0.1);">Delay</span>
+    <span class="effect-tag" data-fx="noise" style="--tag-color:#ffd93d;--tag-glow:rgba(255,217,61,0.2);--tag-bg:rgba(255,217,61,0.1);">Noise</span>
+    <span class="effect-tag" data-fx="phaser" style="--tag-color:#7dd3fc;--tag-glow:rgba(125,211,252,0.2);--tag-bg:rgba(125,211,252,0.1);">Phaser</span>
+    <span class="effect-tag" data-fx="riser" style="--tag-color:#ff6b6b;--tag-glow:rgba(255,107,107,0.2);--tag-bg:rgba(255,107,107,0.1);">Riser</span>
+    <span class="effect-tag" data-fx="bitcrush" style="--tag-color:#f472b6;--tag-glow:rgba(244,114,182,0.2);--tag-bg:rgba(244,114,182,0.1);">Bitcrush</span>
+    <span class="effect-tag" data-fx="saturate" style="--tag-color:#fb923c;--tag-glow:rgba(251,146,60,0.2);--tag-bg:rgba(251,146,60,0.1);">Saturate</span>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-text">Designed for Automation — Sweep 0 to 110% Over 8-16 Bars</div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // ===== STATE =====
+  let intensity = 0;          // 0–110
+  let activePreset = 'liftoff'; // liftoff | stratosphere | dada
+  let isDragging = false;
+  let dragStartY = 0;
+  let dragStartValue = 0;
+
+  // ===== ARC GEOMETRY =====
+  const ARC_RADIUS = 80;
+  const ARC_CX = 100;
+  const ARC_CY = 100;
+  const START_ANGLE = 135;    // degrees
+  const END_ANGLE = 405;      // degrees (135 + 270)
+  const ANGLE_RANGE = 270;
+
+  function degToRad(deg) { return (deg * Math.PI) / 180; }
+
+  function polarToCart(cx, cy, r, angleDeg) {
+    const rad = degToRad(angleDeg);
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }
+
+  function describeArc(cx, cy, r, startAngle, endAngle) {
+    const start = polarToCart(cx, cy, r, endAngle);
+    const end = polarToCart(cx, cy, r, startAngle);
+    const largeArc = (endAngle - startAngle) > 180 ? 1 : 0;
+    return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 0 ${end.x} ${end.y}`;
+  }
+
+  // ===== INIT KNOB ARCS =====
+  const trackPath = document.getElementById('knobTrack');
+  const fillPath = document.getElementById('knobFill');
+  const knobIndicator = document.getElementById('knobIndicator');
+  const knobValueText = document.getElementById('knobValueText');
+  const meterFill = document.getElementById('meterFill');
+
+  trackPath.setAttribute('d', describeArc(ARC_CX, ARC_CY, ARC_RADIUS, START_ANGLE, END_ANGLE));
+
+  // Create tick marks
+  const ticksGroup = document.getElementById('knobTicks');
+  const tickValues = [0, 25, 50, 75, 100, 110];
+  tickValues.forEach(val => {
+    const norm = val / 110;
+    const angle = START_ANGLE + norm * ANGLE_RANGE;
+    const outerP = polarToCart(ARC_CX, ARC_CY, ARC_RADIUS + 8, angle);
+    const innerP = polarToCart(ARC_CX, ARC_CY, ARC_RADIUS + 3, angle);
+    const textP = polarToCart(ARC_CX, ARC_CY, ARC_RADIUS + 16, angle);
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', innerP.x);
+    line.setAttribute('y1', innerP.y);
+    line.setAttribute('x2', outerP.x);
+    line.setAttribute('y2', outerP.y);
+    line.setAttribute('stroke', '#3a2a5a');
+    line.setAttribute('stroke-width', val === 0 || val === 110 ? '2' : '1');
+    ticksGroup.appendChild(line);
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', textP.x);
+    text.setAttribute('y', textP.y);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('dominant-baseline', 'central');
+    text.setAttribute('font-size', '8');
+    text.setAttribute('fill', '#5a4a7a');
+    text.setAttribute('font-family', 'Exo 2, sans-serif');
+    text.textContent = val;
+    ticksGroup.appendChild(text);
+  });
+
+  // ===== PRESET COLORS =====
+  const presetColors = {
+    liftoff: {
+      start: '#6bcb77', end: '#ffd93d',
+      glow: 'rgba(107,203,119,0.4)',
+      tabColor: '#6bcb77'
+    },
+    stratosphere: {
+      start: '#4d96ff', end: '#a78bfa',
+      glow: 'rgba(77,150,255,0.4)',
+      tabColor: '#4d96ff'
+    },
+    dada: {
+      start: '#ff6b6b', end: '#ff2e63',
+      glow: 'rgba(255,107,107,0.4)',
+      tabColor: '#ff6b6b'
+    }
+  };
+
+  // ===== EFFECTS PER PRESET =====
+  const presetEffects = {
+    liftoff: {
+      hpf:      { start: 0,  end: 100 },
+      reverb:   { start: 0,  end: 100 },
+      stereo:   { start: 10, end: 100 }
+    },
+    stratosphere: {
+      hpf:      { start: 0,  end: 100 },
+      reverb:   { start: 0,  end: 100 },
+      stereo:   { start: 10, end: 100 },
+      delay:    { start: 5,  end: 100 },
+      noise:    { start: 60, end: 110 },
+      phaser:   { start: 20, end: 100 }
+    },
+    dada: {
+      hpf:      { start: 0,  end: 100 },
+      reverb:   { start: 0,  end: 100 },
+      stereo:   { start: 10, end: 100 },
+      delay:    { start: 5,  end: 100 },
+      noise:    { start: 50, end: 110 },
+      phaser:   { start: 20, end: 100 },
+      riser:    { start: 10, end: 110 },
+      bitcrush: { start: 80, end: 110 },
+      saturate: { start: 40, end: 110 }
+    }
+  };
+
+  // ===== UPDATE UI =====
+  function updateUI() {
+    const norm = intensity / 110;
+    const colors = presetColors[activePreset];
+
+    // Exponential curve for visual feedback
+    const expNorm = Math.pow(norm, 1.8);
+
+    // Arc fill
+    if (intensity > 0.1) {
+      const endAngle = START_ANGLE + norm * ANGLE_RANGE;
+      fillPath.setAttribute('d', describeArc(ARC_CX, ARC_CY, ARC_RADIUS, START_ANGLE, endAngle));
+      fillPath.style.display = '';
+    } else {
+      fillPath.style.display = 'none';
+    }
+
+    // Arc colors
+    const arcStart = document.getElementById('arcStart');
+    const arcEnd = document.getElementById('arcEnd');
+    arcStart.setAttribute('stop-color', colors.start);
+    arcEnd.setAttribute('stop-color', norm > 0.5 ? colors.end : colors.start);
+    fillPath.style.setProperty('--knob-glow', colors.glow);
+
+    // Indicator
+    const indicatorAngle = START_ANGLE + norm * ANGLE_RANGE;
+    const indEnd = polarToCart(ARC_CX, ARC_CY, 48, indicatorAngle);
+    const indStart = polarToCart(ARC_CX, ARC_CY, 30, indicatorAngle);
+    knobIndicator.setAttribute('x1', indStart.x);
+    knobIndicator.setAttribute('y1', indStart.y);
+    knobIndicator.setAttribute('x2', indEnd.x);
+    knobIndicator.setAttribute('y2', indEnd.y);
+    knobIndicator.setAttribute('stroke', colors.start);
+
+    // Value text
+    knobValueText.textContent = Math.round(intensity);
+
+    // Meter bar
+    const meterPercent = Math.min(100, (intensity / 110) * 100);
+    meterFill.style.width = meterPercent + '%';
+    if (norm < 0.3) {
+      meterFill.style.background = `linear-gradient(90deg, ${colors.start}, ${colors.start})`;
+    } else if (norm < 0.7) {
+      meterFill.style.background = `linear-gradient(90deg, ${colors.start}, ${colors.end})`;
+    } else {
+      meterFill.style.background = `linear-gradient(90deg, ${colors.start}, ${colors.end}, #ff2e63)`;
+    }
+
+    // Effects readout
+    const effects = presetEffects[activePreset];
+    document.querySelectorAll('.effect-tag').forEach(tag => {
+      const fx = tag.dataset.fx;
+      if (effects[fx]) {
+        const fxRange = effects[fx];
+        const isActive = intensity >= fxRange.start && intensity <= fxRange.end && intensity > 0;
+        tag.classList.toggle('active', isActive);
+        tag.style.display = '';
+      } else {
+        tag.classList.remove('active');
+        tag.style.display = 'none';
+      }
+    });
+
+    // Smiley face
+    updateSmiley(norm, expNorm);
+
+    // Particles
+    particleIntensity = expNorm;
+
+    // Background pulse at high intensity
+    const root = document.getElementById('pluginRoot');
+    if (norm > 0.8) {
+      const pulseOpacity = (norm - 0.8) / 0.2 * 0.15;
+      root.style.background = `radial-gradient(ellipse at center 60%, ${hexToRgba(colors.end, pulseOpacity)} 0%, #0d0618 70%)`;
+    } else {
+      root.style.background = '';
+    }
+  }
+
+  function hexToRgba(hex, alpha) {
+    const r = parseInt(hex.slice(1,3), 16);
+    const g = parseInt(hex.slice(3,5), 16);
+    const b = parseInt(hex.slice(5,7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  // ===== SMILEY =====
+  function updateSmiley(norm, expNorm) {
+    const eyeL = document.getElementById('eyeLeft');
+    const eyeR = document.getElementById('eyeRight');
+    const mouth = document.getElementById('smileyMouth');
+    const cheekL = document.getElementById('cheekLeft');
+    const cheekR = document.getElementById('cheekRight');
+    const sweat = document.getElementById('sweatDrop');
+    const starEyesG = document.getElementById('starEyes');
+    const smileyBg = document.querySelector('.smiley-bg');
+    const gradStart = document.getElementById('smileyGradStart');
+    const gradEnd = document.getElementById('smileyGradEnd');
+
+    if (norm < 0.2) {
+      // Neutral / slightly curious
+      eyeL.setAttribute('rx', '5'); eyeL.setAttribute('ry', 5.5);
+      eyeR.setAttribute('rx', '5'); eyeR.setAttribute('ry', 5.5);
+      eyeL.style.opacity = '1'; eyeR.style.opacity = '1';
+      mouth.setAttribute('d', `M 30 58 Q 50 ${62 + norm * 15} 70 58`);
+      mouth.setAttribute('fill', 'none');
+      mouth.setAttribute('stroke-width', '3');
+      cheekL.setAttribute('opacity', '0'); cheekR.setAttribute('opacity', '0');
+      sweat.setAttribute('opacity', '0');
+      starEyesG.setAttribute('opacity', '0');
+      gradStart.setAttribute('stop-color', '#ffe066');
+      gradEnd.setAttribute('stop-color', '#f0c030');
+    } else if (norm < 0.5) {
+      // Happy
+      const t = (norm - 0.2) / 0.3;
+      eyeL.setAttribute('rx', 5 - t); eyeL.setAttribute('ry', 5.5 + t * 0.5);
+      eyeR.setAttribute('rx', 5 - t); eyeR.setAttribute('ry', 5.5 + t * 0.5);
+      eyeL.style.opacity = '1'; eyeR.style.opacity = '1';
+      const smileDepth = 65 + t * 10;
+      mouth.setAttribute('d', `M 30 56 Q 50 ${smileDepth} 70 56`);
+      mouth.setAttribute('fill', 'none');
+      mouth.setAttribute('stroke-width', '3');
+      cheekL.setAttribute('opacity', t * 0.3); cheekR.setAttribute('opacity', t * 0.3);
+      sweat.setAttribute('opacity', '0');
+      starEyesG.setAttribute('opacity', '0');
+      gradStart.setAttribute('stop-color', '#ffe066');
+      gradEnd.setAttribute('stop-color', '#ffb830');
+    } else if (norm < 0.8) {
+      // Big grin
+      const t = (norm - 0.5) / 0.3;
+      eyeL.setAttribute('rx', 4 + t); eyeL.setAttribute('ry', 3.5 - t * 1.5);
+      eyeR.setAttribute('rx', 4 + t); eyeR.setAttribute('ry', 3.5 - t * 1.5);
+      eyeL.style.opacity = '1'; eyeR.style.opacity = '1';
+      mouth.setAttribute('d', `M 25 54 Q 50 ${78 + t * 5} 75 54`);
+      mouth.setAttribute('fill', '#1a0a2e');
+      mouth.setAttribute('stroke-width', '2.5');
+      cheekL.setAttribute('opacity', 0.3 + t * 0.4); cheekR.setAttribute('opacity', 0.3 + t * 0.4);
+      sweat.setAttribute('opacity', '0');
+      starEyesG.setAttribute('opacity', '0');
+      gradStart.setAttribute('stop-color', '#ffdd44');
+      gradEnd.setAttribute('stop-color', '#ffaa00');
+    } else {
+      // Ecstatic / Crazy
+      const t = (norm - 0.8) / 0.2;
+      eyeL.style.opacity = 1 - t;
+      eyeR.style.opacity = 1 - t;
+      starEyesG.setAttribute('opacity', t);
+      mouth.setAttribute('d', `M 22 52 Q 50 ${85 + t * 5} 78 52`);
+      mouth.setAttribute('fill', '#1a0a2e');
+      mouth.setAttribute('stroke-width', '2');
+      cheekL.setAttribute('opacity', 0.7 + t * 0.3); cheekR.setAttribute('opacity', 0.7 + t * 0.3);
+      cheekL.setAttribute('fill', activePreset === 'dada' ? '#ff6b6b' : '#ff9999');
+      cheekR.setAttribute('fill', activePreset === 'dada' ? '#ff6b6b' : '#ff9999');
+      sweat.setAttribute('opacity', activePreset === 'dada' ? t : '0');
+      gradStart.setAttribute('stop-color', activePreset === 'dada' ? '#ff8844' : '#ffcc22');
+      gradEnd.setAttribute('stop-color', activePreset === 'dada' ? '#ff4422' : '#ff9900');
+    }
+
+    // Wobble at extreme
+    const smiley = document.getElementById('smileyFace');
+    if (norm > 0.9) {
+      const wobble = (norm - 0.9) / 0.1 * 3;
+      smiley.style.filter = `drop-shadow(0 0 ${norm * 10}px ${presetColors[activePreset].start})`;
+      smiley.style.transform = `rotate(${Math.sin(Date.now() / 100) * wobble}deg)`;
+    } else {
+      smiley.style.filter = '';
+      smiley.style.transform = '';
+    }
+  }
+
+  // ===== KNOB INTERACTION =====
+  const knobContainer = document.getElementById('knobContainer');
+
+  knobContainer.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    dragStartY = e.clientY;
+    dragStartValue = intensity;
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    const dy = dragStartY - e.clientY;
+    const sensitivity = 0.5;
+    let newValue = dragStartValue + dy * sensitivity;
+    newValue = Math.max(0, Math.min(110, newValue));
+    intensity = newValue;
+    updateUI();
+    sendParam('intensity', intensity / 110);
+  });
+
+  window.addEventListener('mouseup', () => {
+    isDragging = false;
+  });
+
+  // Double-click reset
+  knobContainer.addEventListener('dblclick', () => {
+    intensity = 0;
+    updateUI();
+    sendParam('intensity', 0);
+  });
+
+  // Mouse wheel
+  knobContainer.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -2 : 2;
+    intensity = Math.max(0, Math.min(110, intensity + delta));
+    updateUI();
+    sendParam('intensity', intensity / 110);
+  }, { passive: false });
+
+  // ===== PRESET TABS =====
+  document.querySelectorAll('.preset-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.preset-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      activePreset = tab.dataset.preset;
+      updateUI();
+      sendParam('preset_mode', parseFloat(tab.dataset.paramValue));
+    });
+  });
+
+  // ===== DAW COMMUNICATION =====
+  function sendParam(paramId, value) {
+    try {
+      if (window.JUCE) {
+        window.JUCE.postMessage(JSON.stringify({ type: 'paramChange', paramId: paramId, value: value }));
+      }
+    } catch(e) {}
+  }
+
+  // Listen for DAW parameter updates
+  window.addEventListener('message', (e) => {
+    try {
+      const msg = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+      if (msg.type === 'paramUpdate') {
+        if (msg.paramId === 'intensity') {
+          intensity = msg.value * 110;
+          updateUI();
+        } else if (msg.paramId === 'preset_mode') {
+          const presets = ['liftoff', 'stratosphere', 'dada'];
+          activePreset = presets[Math.round(msg.value)] || 'liftoff';
+          document.querySelectorAll('.preset-tab').forEach(t => {
+            t.classList.toggle('active', t.dataset.preset === activePreset);
+          });
+          updateUI();
+        }
+      }
+    } catch(e) {}
+  });
+
+  // ===== PARTICLE SYSTEM =====
+  let particleIntensity = 0;
+  const canvas = document.getElementById('particleCanvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+
+  function resizeCanvas() {
+    canvas.width = 500;
+    canvas.height = 580;
+  }
+  resizeCanvas();
+
+  class Particle {
+    constructor() {
+      this.reset();
+    }
+    reset() {
+      this.x = Math.random() * canvas.width;
+      this.y = canvas.height + 10;
+      this.size = Math.random() * 3 + 1;
+      this.speedY = -(Math.random() * 2 + 0.5);
+      this.speedX = (Math.random() - 0.5) * 0.8;
+      this.opacity = Math.random() * 0.6 + 0.2;
+      this.life = 1;
+      this.decay = Math.random() * 0.008 + 0.003;
+      const colors = presetColors[activePreset];
+      this.color = Math.random() > 0.5 ? colors.start : colors.end;
+    }
+    update() {
+      this.x += this.speedX;
+      this.y += this.speedY * (1 + particleIntensity * 2);
+      this.life -= this.decay;
+      if (this.life <= 0) this.reset();
+    }
+    draw() {
+      ctx.globalAlpha = this.opacity * this.life * particleIntensity;
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  for (let i = 0; i < 50; i++) {
+    const p = new Particle();
+    p.y = Math.random() * canvas.height;
+    p.life = Math.random();
+    particles.push(p);
+  }
+
+  function animateParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (particleIntensity > 0.01) {
+      particles.forEach(p => { p.update(); p.draw(); });
+    }
+    // Update smiley wobble for extreme values
+    if (intensity / 110 > 0.9) {
+      updateSmiley(intensity / 110, Math.pow(intensity / 110, 1.8));
+    }
+    requestAnimationFrame(animateParticles);
+  }
+  animateParticles();
+
+  // ===== INITIAL RENDER =====
+  updateUI();
+
+})();
+</script>
+</body>
+</html>
