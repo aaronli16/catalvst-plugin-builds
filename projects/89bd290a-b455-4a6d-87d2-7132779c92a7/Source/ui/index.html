@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pendulum</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg-dark: #0d0f13;
+    --bg-panel: #151820;
+    --bg-knob: #1c2029;
+    --accent: #e8a44a;
+    --accent-dim: #c4863a;
+    --accent-glow: rgba(232, 164, 74, 0.25);
+    --text-primary: #e8e4df;
+    --text-secondary: #7a7d85;
+    --text-dim: #4a4d55;
+    --border: #252830;
+    --active-btn: #e8a44a;
+    --inactive-btn: #252830;
+  }
+
+  html, body {
+    width: 600px;
+    height: 440px;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    background: var(--bg-dark);
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  .plugin-root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 24px 28px 20px;
+  }
+
+  /* ── Header ── */
+  .header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 28px;
+    height: 28px;
+    position: relative;
+  }
+
+  .logo-icon svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .plugin-title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--text-primary);
+  }
+
+  .bpm-display {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+  }
+
+  .bpm-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .bpm-label {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* ── Time Division Selector ── */
+  .time-section {
+    width: 100%;
+    margin-bottom: 22px;
+  }
+
+  .section-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+  }
+
+  .time-buttons {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .time-btn {
+    flex: 1;
+    padding: 10px 4px;
+    border: 1px solid var(--inactive-btn);
+    border-radius: 8px;
+    background: var(--bg-panel);
+    color: var(--text-secondary);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: center;
+    line-height: 1;
+  }
+
+  .time-btn:hover {
+    border-color: var(--accent-dim);
+    color: var(--text-primary);
+  }
+
+  .time-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg-dark);
+    font-weight: 600;
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+
+  .time-btn .note-dot {
+    font-size: 8px;
+    vertical-align: super;
+    margin-left: 1px;
+  }
+
+  /* ── Delay Time Readout ── */
+  .delay-readout {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+    gap: 6px;
+  }
+
+  .delay-ms {
+    font-size: 28px;
+    font-weight: 300;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.5px;
+  }
+
+  .delay-ms-unit {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+  }
+
+  /* ── Knob Row ── */
+  .knob-row {
+    width: 100%;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 40px;
+    margin-bottom: 24px;
+  }
+
+  .knob-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .knob-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  .knob-container {
+    width: 80px;
+    height: 80px;
+    position: relative;
+    cursor: grab;
+  }
+
+  .knob-container:active {
+    cursor: grabbing;
+  }
+
+  .knob-svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .knob-track {
+    fill: none;
+    stroke: var(--bg-knob);
+    stroke-width: 5;
+    stroke-linecap: round;
+  }
+
+  .knob-fill {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 5;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.08s ease;
+    filter: drop-shadow(0 0 4px var(--accent-glow));
+  }
+
+  .knob-indicator {
+    fill: var(--accent);
+    transition: transform 0.08s ease;
+  }
+
+  .knob-center {
+    fill: var(--bg-panel);
+    stroke: var(--border);
+    stroke-width: 1;
+  }
+
+  .knob-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Pendulum Visualizer ── */
+  .visualizer {
+    width: 100%;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    min-height: 80px;
+  }
+
+  .viz-canvas {
+    width: 100%;
+    height: 100%;
+  }
+</style>
+</head>
+<body>
+<div class="plugin-root">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-icon">
+        <svg viewBox="0 0 28 28" fill="none">
+          <line x1="14" y1="2" x2="7" y2="22" stroke="#e8a44a" stroke-width="2" stroke-linecap="round"/>
+          <line x1="14" y1="2" x2="21" y2="22" stroke="#e8a44a" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
+          <circle cx="7" cy="22" r="3.5" fill="#e8a44a"/>
+          <circle cx="21" cy="22" r="3.5" fill="#e8a44a" opacity="0.35"/>
+        </svg>
+      </div>
+      <div class="plugin-title">Pendulum</div>
+    </div>
+    <div class="bpm-display">
+      <span class="bpm-value" id="bpmValue">120.0</span>
+      <span class="bpm-label">BPM</span>
+    </div>
+  </div>
+
+  <!-- Time Division -->
+  <div class="time-section">
+    <div class="section-label">Sync Division</div>
+    <div class="time-buttons">
+      <button class="time-btn" data-division="1/16">1/16</button>
+      <button class="time-btn" data-division="1/8d">1/8<span class="note-dot">.</span></button>
+      <button class="time-btn active" data-division="1/8">1/8</button>
+      <button class="time-btn" data-division="1/4d">1/4<span class="note-dot">.</span></button>
+      <button class="time-btn" data-division="1/4">1/4</button>
+      <button class="time-btn" data-division="1/2">1/2</button>
+      <button class="time-btn" data-division="1/1">1/1</button>
+    </div>
+  </div>
+
+  <!-- Delay Time Readout -->
+  <div class="delay-readout">
+    <span class="delay-ms" id="delayMs">250</span>
+    <span class="delay-ms-unit">ms</span>
+  </div>
+
+  <!-- Knob Row -->
+  <div class="knob-row">
+    <!-- Feedback Knob -->
+    <div class="knob-group">
+      <div class="knob-label">Feedback</div>
+      <div class="knob-container" id="feedbackKnob" data-param="feedback" data-value="0.4" data-min="0" data-max="0.95">
+        <svg class="knob-svg" viewBox="0 0 80 80">
+          <path class="knob-track" d="M 18 62 A 30 30 0 1 1 62 62"/>
+          <path class="knob-fill" id="feedbackArc" d="M 18 62 A 30 30 0 1 1 62 62"/>
+          <circle class="knob-center" cx="40" cy="40" r="20"/>
+          <circle class="knob-indicator" id="feedbackDot" cx="40" cy="14" r="3"/>
+        </svg>
+      </div>
+      <div class="knob-value" id="feedbackValue">40%</div>
+    </div>
+
+    <!-- Mix Knob -->
+    <div class="knob-group">
+      <div class="knob-label">Mix</div>
+      <div class="knob-container" id="mixKnob" data-param="mix" data-value="0.35" data-min="0" data-max="1">
+        <svg class="knob-svg" viewBox="0 0 80 80">
+          <path class="knob-track" d="M 18 62 A 30 30 0 1 1 62 62"/>
+          <path class="knob-fill" id="mixArc" d="M 18 62 A 30 30 0 1 1 62 62"/>
+          <circle class="knob-center" cx="40" cy="40" r="20"/>
+          <circle class="knob-indicator" id="mixDot" cx="40" cy="14" r="3"/>
+        </svg>
+      </div>
+      <div class="knob-value" id="mixValue">35%</div>
+    </div>
+
+    <!-- Damping Knob -->
+    <div class="knob-group">
+      <div class="knob-label">Damping</div>
+      <div class="knob-container" id="dampingKnob" data-param="damping" data-value="0.3" data-min="0" data-max="1">
+        <svg class="knob-svg" viewBox="0 0 80 80">
+          <path class="knob-track" d="M 18 62 A 30 30 0 1 1 62 62"/>
+          <path class="knob-fill" id="dampingArc" d="M 18 62 A 30 30 0 1 1 62 62"/>
+          <circle class="knob-center" cx="40" cy="40" r="20"/>
+          <circle class="knob-indicator" id="dampingDot" cx="40" cy="14" r="3"/>
+        </svg>
+      </div>
+      <div class="knob-value" id="dampingValue">30%</div>
+    </div>
+  </div>
+
+  <!-- Visualizer -->
+  <div class="visualizer">
+    <canvas class="viz-canvas" id="vizCanvas"></canvas>
+  </div>
+
+</div>
+
+<script type="module">
+  import { getSliderState } from './js/juce/index.js';
+
+  // ── JUCE Parameter States ──
+  const divisionState = getSliderState("DIVISION");
+  const feedbackState = getSliderState("FEEDBACK");
+  const mixState      = getSliderState("MIX");
+  const dampingState  = getSliderState("DAMPING");
+
+  // ── Division Map ──
+  // Index order matches AudioParameterChoice: 0=1/16, 1=1/8d, 2=1/8, 3=1/4d, 4=1/4, 5=1/2, 6=1/1
+  const divisionNames = ['1/16', '1/8d', '1/8', '1/4d', '1/4', '1/2', '1/1'];
+  const divisionBeats = { '1/16': 0.25, '1/8d': 0.75, '1/8': 0.5, '1/4d': 1.5, '1/4': 1.0, '1/2': 2.0, '1/1': 4.0 };
+
+  let currentBPM = 120;
+  let currentDivision = '1/8';
+  let animFrame = null;
+
+  // ── Knob arc geometry ──
+  const ARC_START_ANGLE = 130;
+  const ARC_END_ANGLE = 410;
+  const ARC_RANGE = ARC_END_ANGLE - ARC_START_ANGLE;
+  const CX = 40, CY = 40, R = 30, DOT_R = 26;
+
+  function degToRad(d) { return d * Math.PI / 180; }
+
+  function getArcPath(startDeg, endDeg, cx, cy, r) {
+    const s = degToRad(startDeg - 90);
+    const e = degToRad(endDeg - 90);
+    const x1 = cx + r * Math.cos(s);
+    const y1 = cy + r * Math.sin(s);
+    const x2 = cx + r * Math.cos(e);
+    const y2 = cy + r * Math.sin(e);
+    const large = (endDeg - startDeg) > 180 ? 1 : 0;
+    return `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`;
+  }
+
+  function updateKnobVisualFromNorm(param, norm) {
+    // Arc
+    const arcEnd = ARC_START_ANGLE + norm * ARC_RANGE;
+    const arcPath = getArcPath(ARC_START_ANGLE, Math.max(ARC_START_ANGLE + 1, arcEnd), CX, CY, R);
+    document.getElementById(param + 'Arc').setAttribute('d', arcPath);
+
+    // Dot
+    const dotAngle = degToRad(arcEnd - 90);
+    const dotX = CX + DOT_R * Math.cos(dotAngle);
+    const dotY = CY + DOT_R * Math.sin(dotAngle);
+    document.getElementById(param + 'Dot').setAttribute('cx', dotX);
+    document.getElementById(param + 'Dot').setAttribute('cy', dotY);
+
+    // Value label
+    document.getElementById(param + 'Value').textContent = Math.round(norm * 100) + '%';
+  }
+
+  // ── Knob Interaction (relative drag) ──
+  function initKnob(knobEl, paramState) {
+    const param = knobEl.dataset.param;
+    let dragging = false;
+    let lastY = 0;
+
+    const onDown = (e) => {
+      dragging = true;
+      lastY = e.clientY || e.touches[0].clientY;
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+      document.addEventListener('touchmove', onMove);
+      document.addEventListener('touchend', onUp);
+      e.preventDefault();
+    };
+
+    const onMove = (e) => {
+      if (!dragging) return;
+      const y = e.clientY !== undefined ? e.clientY : e.touches[0].clientY;
+      const deltaY = lastY - y;
+      lastY = y;
+
+      let norm = paramState.getNormalisedValue();
+      norm += deltaY * 0.005;
+      norm = Math.max(0, Math.min(1, norm));
+      paramState.setNormalisedValue(norm);
+    };
+
+    const onUp = () => {
+      dragging = false;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onUp);
+    };
+
+    knobEl.addEventListener('mousedown', onDown);
+    knobEl.addEventListener('touchstart', onDown);
+
+    // Listen for value changes from C++ (automation, preset recall)
+    paramState.valueChangedEvent.addListener(() => {
+      const norm = paramState.getNormalisedValue();
+      updateKnobVisualFromNorm(param, norm);
+    });
+
+    // Set initial visual from current state
+    const initNorm = paramState.getNormalisedValue();
+    updateKnobVisualFromNorm(param, initNorm);
+  }
+
+  // ── Time Buttons ──
+  const timeButtons = document.querySelectorAll('.time-btn');
+
+  function updateDivisionUI(divIndex) {
+    const divName = divisionNames[divIndex];
+    currentDivision = divName;
+    timeButtons.forEach(b => {
+      b.classList.toggle('active', b.dataset.division === divName);
+    });
+    updateDelayTime();
+  }
+
+  timeButtons.forEach((btn, _) => {
+    btn.addEventListener('click', () => {
+      const divName = btn.dataset.division;
+      const divIndex = divisionNames.indexOf(divName);
+      if (divIndex >= 0) {
+        // Normalised value for choice: index / (numChoices - 1)
+        divisionState.setNormalisedValue(divIndex / 6.0);
+      }
+    });
+  });
+
+  // Listen for division changes from C++
+  divisionState.valueChangedEvent.addListener(() => {
+    const norm = divisionState.getNormalisedValue();
+    const divIndex = Math.round(norm * 6);
+    updateDivisionUI(divIndex);
+  });
+
+  // Initialize division from current state
+  {
+    const norm = divisionState.getNormalisedValue();
+    const divIndex = Math.round(norm * 6);
+    updateDivisionUI(divIndex);
+  }
+
+  function calcDelayMs(bpm, division) {
+    const beatMs = 60000 / bpm;
+    return beatMs * divisionBeats[division];
+  }
+
+  function updateDelayTime() {
+    const ms = calcDelayMs(currentBPM, currentDivision);
+    document.getElementById('delayMs').textContent = Math.round(ms);
+  }
+
+  // ── Visualizer (Pendulum animation) ──
+  function initVisualizer() {
+    const canvas = document.getElementById('vizCanvas');
+    const ctx = canvas.getContext('2d');
+    const container = canvas.parentElement;
+
+    function resize() {
+      canvas.width = container.clientWidth * 2;
+      canvas.height = container.clientHeight * 2;
+      canvas.style.width = container.clientWidth + 'px';
+      canvas.style.height = container.clientHeight + 'px';
+      ctx.scale(2, 2);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    const echoes = [];
+    let lastTick = 0;
+
+    function draw(timestamp) {
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      ctx.setTransform(2, 0, 0, 2, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      const delayMs = calcDelayMs(currentBPM, currentDivision);
+      const feedback = feedbackState.getNormalisedValue() * 0.95;
+      const mix = mixState.getNormalisedValue();
+      const damping = dampingState.getNormalisedValue();
+
+      // Spawn echo ticks
+      if (timestamp - lastTick > delayMs) {
+        lastTick = timestamp;
+        echoes.push({ born: timestamp, x: w * 0.12 });
+      }
+
+      // Draw center line
+      ctx.strokeStyle = 'rgba(232,164,74,0.08)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(w / 2, 0);
+      ctx.lineTo(w / 2, h);
+      ctx.stroke();
+
+      // Draw echo ripples
+      const spacing = (w * 0.76) / 6;
+      for (let i = echoes.length - 1; i >= 0; i--) {
+        const echo = echoes[i];
+        const age = (timestamp - echo.born) / 1000;
+        const idx = echoes.length - 1 - i;
+        const decay = Math.pow(feedback / 0.95, idx + 1);
+        const dampDecay = Math.max(0, 1 - damping * idx * 0.15);
+        const alpha = decay * dampDecay * mix;
+
+        if (alpha < 0.02) {
+          echoes.splice(i, 1);
+          continue;
+        }
+
+        const x = w * 0.12 + idx * spacing;
+        if (x > w * 0.92) {
+          echoes.splice(i, 1);
+          continue;
+        }
+
+        // Vertical wave
+        const waveAmp = h * 0.3 * alpha;
+        const freq = 2 + damping * 3;
+        ctx.strokeStyle = `rgba(232,164,74,${alpha * 0.8})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let py = 0; py <= h; py += 2) {
+          const normalY = (py - h / 2) / (h / 2);
+          const envelope = Math.exp(-normalY * normalY * 2);
+          const wave = Math.sin(normalY * freq + age * 4) * waveAmp * envelope;
+          if (py === 0) ctx.moveTo(x + wave, py);
+          else ctx.lineTo(x + wave, py);
+        }
+        ctx.stroke();
+
+        // Glow dot at center
+        const centerWave = Math.sin(age * 4) * waveAmp * 0.3;
+        ctx.beginPath();
+        ctx.arc(x + centerWave, h / 2, 3 * alpha + 1, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(232,164,74,${alpha})`;
+        ctx.fill();
+      }
+
+      // Pendulum arm from top center
+      const swingPeriod = delayMs / 1000;
+      const swingAngle = Math.sin(timestamp / 1000 * Math.PI / swingPeriod) * 0.4;
+      const armLen = h * 0.7;
+      const pivotX = w / 2;
+      const pivotY = -5;
+      const bobX = pivotX + Math.sin(swingAngle) * armLen;
+      const bobY = pivotY + Math.cos(swingAngle) * armLen;
+
+      // Arm line
+      ctx.strokeStyle = 'rgba(232,164,74,0.2)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(pivotX, pivotY);
+      ctx.lineTo(bobX, bobY);
+      ctx.stroke();
+
+      // Bob
+      ctx.beginPath();
+      ctx.arc(bobX, bobY, 5, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(232,164,74,0.35)';
+      ctx.fill();
+
+      animFrame = requestAnimationFrame(draw);
+    }
+
+    animFrame = requestAnimationFrame(draw);
+  }
+
+  // ── Init Knobs ──
+  initKnob(document.getElementById('feedbackKnob'), feedbackState);
+  initKnob(document.getElementById('mixKnob'), mixState);
+  initKnob(document.getElementById('dampingKnob'), dampingState);
+
+  updateDelayTime();
+  initVisualizer();
+</script>
+</body>
+</html>
