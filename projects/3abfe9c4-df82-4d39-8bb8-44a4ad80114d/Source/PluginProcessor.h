@@ -59,9 +59,6 @@ private:
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> shimmerDelay { 44100 * 2 };
     juce::AudioBuffer<float> dryBuffer;
 
-    // Smoothed values for real-time parameter changes
-    juce::SmoothedValue<float> mixSmoothed;
-
     // Lowpass filter for dark character
     juce::dsp::IIR::Filter<float> darkFilterL;
     juce::dsp::IIR::Filter<float> darkFilterR;

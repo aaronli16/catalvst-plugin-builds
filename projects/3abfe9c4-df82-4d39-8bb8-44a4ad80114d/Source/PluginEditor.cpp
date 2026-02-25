@@ -23,7 +23,7 @@ MarinersAudioProcessorEditor::MarinersAudioProcessorEditor(MarinersAudioProcesso
     // --------------------------------------------------------------------------
     sizeRelay = std::make_unique<juce::WebSliderRelay>("SIZE");
     decayRelay = std::make_unique<juce::WebSliderRelay>("DECAY");
-    mixRelay = std::make_unique<juce::WebSliderRelay>("MIX");
+    mixRelay = std::make_unique<juce::WebSliderRelay>("DRYWET");
     shimmerRelay = std::make_unique<juce::WebSliderRelay>("SHIMMER");
 
     // --------------------------------------------------------------------------
@@ -56,7 +56,7 @@ MarinersAudioProcessorEditor::MarinersAudioProcessorEditor(MarinersAudioProcesso
     decayAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
         *processorRef.parameters.getParameter("DECAY"), *decayRelay, nullptr);
     mixAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
-        *processorRef.parameters.getParameter("MIX"), *mixRelay, nullptr);
+        *processorRef.parameters.getParameter("DRYWET"), *mixRelay, nullptr);
     shimmerAttachment = std::make_unique<juce::WebSliderParameterAttachment>(
         *processorRef.parameters.getParameter("SHIMMER"), *shimmerRelay, nullptr);
 

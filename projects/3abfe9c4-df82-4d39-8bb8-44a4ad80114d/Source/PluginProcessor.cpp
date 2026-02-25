@@ -27,8 +27,8 @@ MarinersAudioProcessor::createParameterLayout()
     ));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID { "MIX", 1 },
-        "Mix",
+        juce::ParameterID { "DRYWET", 1 },
+        "Dry/Wet",
         juce::NormalisableRange<float>(0.0f, 100.0f, 0.01f),
         40.0f,
         "%"
@@ -88,9 +88,6 @@ void MarinersAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
     // Pre-allocate dry buffer
     dryBuffer.setSize(static_cast<int>(spec.numChannels), samplesPerBlock);
 
-    // Smoothed values
-    mixSmoothed.reset(sampleRate, 0.05);
-
     // Dark character lowpass filter at ~3kHz
     auto coeffs = juce::dsp::IIR::Coefficients<float>::makeLowPass(sampleRate, 3000.0f, 0.7f);
     darkFilterL.coefficients = coeffs;
@@ -123,23 +120,27 @@ void MarinersAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     juce::ignoreUnused(midiMessages);
 
     // Read parameters once per block
-    auto sizeVal = parameters.getRawParameterValue("SIZE")->load() / 100.0f;
-    auto decayVal = parameters.getRawParameterValue("DECAY")->load() / 100.0f;
-    auto mixVal = parameters.getRawParameterValue("MIX")->load() / 100.0f;
+    auto sizeRaw = parameters.getRawParameterValue("SIZE")->load() / 100.0f;
+    auto decayRaw = parameters.getRawParameterValue("DECAY")->load() / 100.0f;
+    auto mixVal = parameters.getRawParameterValue("DRYWET")->load() / 100.0f;
     auto shimmerOn = parameters.getRawParameterValue("SHIMMER")->load() >= 0.5f;
+
+    // Scale size to a tamer range (0.2 to 0.85) so it doesn't overwhelm
+    float sizeVal = 0.2f + sizeRaw * 0.65f;
+    // Scale damping so higher decay = less damping (longer tail)
+    float dampVal = 0.6f - decayRaw * 0.45f;
 
     // Configure reverb parameters once per block
     juce::dsp::Reverb::Parameters reverbParams;
     reverbParams.roomSize = sizeVal;
-    reverbParams.damping = 1.0f - decayVal;
-    reverbParams.wetLevel = 1.0f;
-    reverbParams.dryLevel = 0.0f;
+    reverbParams.damping = dampVal;
+    reverbParams.wetLevel = 1.0f;   // Always fully wet — DryWetMixer controls blend
+    reverbParams.dryLevel = 0.0f;   // Always zero — DryWetMixer controls blend
     reverbParams.width = 1.0f;
     reverb.setParameters(reverbParams);
 
     // Set dry/wet mix proportion
-    mixSmoothed.setTargetValue(mixVal);
-    dryWetMixer.setWetMixProportion(mixSmoothed.getNextValue());
+    dryWetMixer.setWetMixProportion(mixVal);
 
     // Save dry signal into the DryWetMixer
     juce::dsp::AudioBlock<float> block(buffer);
@@ -167,8 +168,8 @@ void MarinersAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // Shimmer processing: adds ethereal octave-up feedback into the wet signal
     if (shimmerOn)
     {
-        const float shimmerFeedback = 0.4f;
-        const float shimmerGain = 0.35f;
+        const float shimmerFeedback = 0.35f;
+        const float shimmerGain = 0.3f;
 
         for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
         {
@@ -218,7 +219,7 @@ void MarinersAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     }
 
     // DryWetMixer blends the saved dry signal with the current buffer (wet + shimmer)
-    // At mix = 0, output is 100% dry. At mix = 1, output is 100% wet.
+    // At mix = 0, output is 100% dry (no reverb). At mix = 1, output is 100% wet.
     dryWetMixer.mixWetSamples(block);
 }
 

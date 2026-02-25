@@ -409,13 +409,13 @@
       <div class="shimmer-status" id="shimmerStatus">Off</div>
     </div>
 
-    <!-- Mix Knob -->
+    <!-- Dry/Wet Knob -->
     <div class="knob-group">
-      <div class="knob-label">Mix</div>
-      <div class="knob-wrapper" data-param="mix" data-min="0" data-max="100" data-value="40">
+      <div class="knob-label">Dry/Wet</div>
+      <div class="knob-wrapper" data-param="drywet" data-min="0" data-max="100" data-value="40">
         <svg class="knob-svg" viewBox="0 0 90 90"></svg>
       </div>
-      <div class="knob-value" id="mixValue">40%</div>
+      <div class="knob-value" id="drywetValue">40%</div>
     </div>
 
   </div>
@@ -435,14 +435,14 @@
   // ===== JUCE PARAMETER STATES =====
   const sizeState = getSliderState("SIZE");
   const decayState = getSliderState("DECAY");
-  const mixState = getSliderState("MIX");
+  const mixState = getSliderState("DRYWET");
   const shimmerState = getSliderState("SHIMMER");
 
   // Map param names to JUCE states
   const paramStates = {
     size: sizeState,
     decay: decayState,
-    mix: mixState
+    drywet: mixState
   };
 
   // ===== KNOB SYSTEM =====
@@ -525,7 +525,7 @@
 
     wrapper.addEventListener('dblclick', (e) => {
       e.preventDefault();
-      const defaults = { size: 65, decay: 50, mix: 40 };
+      const defaults = { size: 65, decay: 50, drywet: 40 };
       wrapper.dataset.value = defaults[param];
       renderKnob(wrapper);
       updateValueDisplay(wrapper);
@@ -650,7 +650,7 @@
 
     const sizeNorm = getKnobNorm('size');
     const decayNorm = getKnobNorm('decay');
-    const mixNorm = getKnobNorm('mix');
+    const mixNorm = getKnobNorm('drywet');
 
     // Background gradient
     const bgGrad = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W * 0.5);
