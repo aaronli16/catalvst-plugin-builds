@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VENOM BASS</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-dark: #0a0a0c;
+    --bg-panel: #111116;
+    --bg-section: #16161d;
+    --border: #1e1e28;
+    --accent: #8b00ff;
+    --accent-glow: #a033ff;
+    --accent-dim: #5a00a8;
+    --red: #ff2244;
+    --red-glow: #ff4466;
+    --cyan: #00e5ff;
+    --text: #c8c8d4;
+    --text-dim: #6a6a7a;
+    --text-bright: #eeeef4;
+    --knob-track: #222230;
+  }
+
+  body {
+    font-family: 'Segoe UI', 'Inter', Arial, sans-serif;
+    background: var(--bg-dark);
+    color: var(--text);
+    width: 900px;
+    height: 560px;
+    overflow: hidden;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background: linear-gradient(180deg, #111118 0%, #0d0d12 100%);
+    border-bottom: 1px solid var(--border);
+    height: 48px;
+    flex-shrink: 0;
+  }
+
+  .logo {
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--red) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+  }
+
+  .preset-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .preset-name {
+    background: var(--bg-section);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 14px;
+    color: var(--text);
+    font-size: 12px;
+    min-width: 140px;
+    text-align: center;
+  }
+
+  .preset-arrow {
+    background: var(--bg-section);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-dim);
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.15s;
+  }
+
+  .preset-arrow:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ── MAIN LAYOUT ── */
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 6px;
+    padding: 8px;
+    flex: 1;
+  }
+
+  /* ── SECTIONS ── */
+  .section {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .section-title {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-title.accent { color: var(--accent); border-bottom-color: var(--accent-dim); }
+  .section-title.red { color: var(--red); border-bottom-color: #661122; }
+  .section-title.cyan { color: var(--cyan); border-bottom-color: #005566; }
+
+  /* OSC section spans 2 cols */
+  .section-osc { grid-column: 1 / 3; }
+  .section-filter { grid-column: 3 / 4; }
+  .section-amp { grid-column: 4 / 5; }
+  .section-lfo { grid-column: 1 / 2; grid-row: 2; }
+  .section-distortion { grid-column: 2 / 3; grid-row: 2; }
+  .section-fx { grid-column: 3 / 4; grid-row: 2; }
+  .section-output { grid-column: 4 / 5; grid-row: 2; }
+
+  /* ── KNOBS ── */
+  .knob-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    flex: 1;
+  }
+
+  .knob-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 56px;
+  }
+
+  .knob-container {
+    position: relative;
+    width: 48px;
+    height: 48px;
+  }
+
+  .knob-svg {
+    width: 48px;
+    height: 48px;
+  }
+
+  .knob-track-bg {
+    fill: none;
+    stroke: var(--knob-track);
+    stroke-width: 3.5;
+    stroke-linecap: round;
+  }
+
+  .knob-track-fill {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 3.5;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.06s;
+    filter: drop-shadow(0 0 3px var(--accent));
+  }
+
+  .knob-track-fill.red { stroke: var(--red); filter: drop-shadow(0 0 3px var(--red)); }
+  .knob-track-fill.cyan { stroke: var(--cyan); filter: drop-shadow(0 0 3px var(--cyan)); }
+
+  .knob-pointer {
+    fill: none;
+    stroke: var(--text-bright);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .knob-center {
+    fill: var(--bg-section);
+    stroke: #2a2a38;
+    stroke-width: 1;
+  }
+
+  .knob-label {
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .knob-value {
+    font-size: 9px;
+    color: var(--text);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    min-height: 12px;
+  }
+
+  /* ── WAVEFORM SELECTOR ── */
+  .wave-selector {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+
+  .wave-btn {
+    flex: 1;
+    background: var(--bg-section);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-dim);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 5px 0;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+
+  .wave-btn:hover {
+    border-color: var(--accent-dim);
+    color: var(--text);
+  }
+
+  .wave-btn.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--text-bright);
+    box-shadow: 0 0 8px rgba(139, 0, 255, 0.3);
+  }
+
+  /* ── FILTER TYPE SELECTOR ── */
+  .filter-selector {
+    display: flex;
+    gap: 3px;
+    margin-bottom: 8px;
+  }
+
+  .filter-btn {
+    flex: 1;
+    background: var(--bg-section);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text-dim);
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 4px 0;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+
+  .filter-btn:hover {
+    border-color: #005566;
+    color: var(--text);
+  }
+
+  .filter-btn.active {
+    background: #003344;
+    border-color: var(--cyan);
+    color: var(--cyan);
+    box-shadow: 0 0 6px rgba(0, 229, 255, 0.2);
+  }
+
+  /* ── DISTORTION TYPE ── */
+  .dist-selector {
+    display: flex;
+    gap: 3px;
+    margin-bottom: 8px;
+  }
+
+  .dist-btn {
+    flex: 1;
+    background: var(--bg-section);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text-dim);
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 4px 0;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+
+  .dist-btn:hover {
+    border-color: #661122;
+    color: var(--text);
+  }
+
+  .dist-btn.active {
+    background: #331118;
+    border-color: var(--red);
+    color: var(--red);
+    box-shadow: 0 0 6px rgba(255, 34, 68, 0.2);
+  }
+
+  /* ── OUTPUT METER ── */
+  .meter-container {
+    display: flex;
+    gap: 6px;
+    align-items: flex-end;
+    justify-content: center;
+    flex: 1;
+    padding-bottom: 4px;
+  }
+
+  .meter-bar-wrap {
+    width: 14px;
+    height: 100%;
+    max-height: 140px;
+    background: var(--bg-section);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .meter-bar {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    background: linear-gradient(0deg, var(--accent) 0%, var(--red) 100%);
+    border-radius: 2px;
+    transition: height 0.1s;
+  }
+
+  .meter-label {
+    font-size: 8px;
+    color: var(--text-dim);
+    text-align: center;
+    margin-top: 4px;
+  }
+
+  /* ── VISUALIZER (small waveform) ── */
+  .visualizer {
+    width: 100%;
+    height: 42px;
+    background: var(--bg-section);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+
+  .vis-canvas {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 20px;
+    background: var(--bg-dark);
+    border-top: 1px solid var(--border);
+    height: 24px;
+    flex-shrink: 0;
+  }
+
+  .footer-text {
+    font-size: 8px;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+  }
+
+  /* ── GLOBAL GLOW EFFECTS ── */
+  .section:hover {
+    border-color: #2a2a38;
+    transition: border-color 0.3s;
+  }
+
+  /* ── INTERACTIVE STATES ── */
+  .knob-container { cursor: grab; }
+  .knob-container:active { cursor: grabbing; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">Venom Bass</div>
+  <div class="preset-bar">
+    <div class="preset-arrow" id="preset-prev">&#9664;</div>
+    <div class="preset-name" id="preset-name">Sub Destroyer</div>
+    <div class="preset-arrow" id="preset-next">&#9654;</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- OSCILLATOR -->
+  <div class="section section-osc">
+    <div class="section-title accent">Oscillator</div>
+    <div class="wave-selector">
+      <div class="wave-btn active" data-wave="sine" data-param="osc_waveform" data-value="0">SIN</div>
+      <div class="wave-btn" data-wave="saw" data-param="osc_waveform" data-value="1">SAW</div>
+      <div class="wave-btn" data-wave="square" data-param="osc_waveform" data-value="2">SQR</div>
+      <div class="wave-btn" data-wave="triangle" data-param="osc_waveform" data-value="3">TRI</div>
+    </div>
+    <div class="visualizer">
+      <canvas class="vis-canvas" id="oscVisualizer"></canvas>
+    </div>
+    <div class="knob-row">
+      <div class="knob-group">
+        <div class="knob-container" data-param="osc_coarse" data-min="-24" data-max="24" data-value="0" data-unit="st">
+          <svg class="knob-svg" viewBox="0 0 48 48"></svg>
+        </div>
+        <div class="knob-value">0 st</div>
+        <div class="knob-label">Coarse</div>
+      </div>
+      <div class="knob-group">
+        <div class="knob-container" data-param="osc_fine" data-min="-100" data-max="100" data-value="0" data-unit="ct">
+          <svg class="knob-svg" viewBox="0 0 48 48"></svg>
+        </div>
+        <div class="knob-value">0 ct</div>
+        <div class="knob-label">Fine</div>
+      </div>
+      <div class="knob-group">
+        <div class="knob-container" data-param="osc_sub" data-min="0" data-max="100" data-value="60" data-unit="%">
+          <svg class="knob-svg" viewBox="0 0 48 48"></svg>
+        </div>
+        <div class="knob-value">60%</div>
+        <div class="knob-label">Sub</div>
+      </div>
+      <div class="knob-group">
+        <div class="knob-container" data-param="osc_noise" data-min="0" data-max="100" data-value="0" data-unit="%">
+          <svg class="knob-svg" viewBox="0 0 48 48"></svg>
+        </div>
+        <div class="knob-value">0%</div>
+        <div class="knob-label">Noise</div>
+      </div>
+      <div class="knob-group">
+        <div class="knob-container" data-param="osc_unison" data-min="1" data-max="8" data-value="1" data-unit="" data-step="1">
+          <svg class="knob-svg" viewBox="0 0 48 48"></svg>
+        </div>
+        <div class="knob-value">1</div>
+        <div class="knob-label">Unison</div>
+      </div>
+      <div class="knob-group">
+        <div class="knob-container" data-param="osc_detune" data-min="0" data-max="100" data-value="20" data-unit="%">
+          <svg class="knob-svg" viewBox="0 0 48 48"></svg>
+        </div>
+        <div class="knob-value">20%</div>
+        <div class="knob-label">Detune</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILTER -->
+  <div class="section section-filter">
+    <div class="section-title cyan">Filter</div>
+    <div class="filter-selector">
+      <div class="filter-btn active" data-param="filter_type" data-value="0">LP</div>
+      <div class="filter-btn" data-param="filter_type" data-value="1">BP</div>
+      <div class="filter-btn" data-param="filter_type" data-value="2">HP</div>
+    </div>
+    <div class="knob-row">
+      <div class="knob-group">
+        <div class="knob-container" data-param="filter_cutoff" data-min="20" data-max="20000" data-value="800" data-unit="Hz" data-color="cyan" data-log="true">
+          <svg class="knob-svg" viewBox="0 0 48 48"></svg>
+        </div>
+        <div class="knob-value">800 Hz</div>
+        <div class="knob-label">Cutoff</div>
+      </div>
+      <div class="knob-group">
+        <div class="knob-container" data-param="filter_reso" data-min="0" data-max="100" data-value="30" data-unit="%" data-color="cyan">
+          <svg class="knob-svg" viewBox="0 0 48 48"></svg>
+        </div>
+        <div class="knob-value">30%</div>
+        <div class="knob-label">Reso</div>
+      </div>
+      <div class="knob-group">
+        <div class="knob-container" data-param="filter_env" data-min="0" data-max="100" data-value="50" data-unit="%" data-color="cyan">
+          <svg class="knob-svg" viewBox="0 0 48 48"></svg>
+        </div>
+        <div class="knob-value">50%</div>
+        <div class="knob-label">Env</div>
+      </div>
+      <div class="knob-group">
+        <div class="knob-container" data-param="filter_drive" data-min="0" data-max="100" data-value="0" data-unit="%" data-color="cyan">
+          <svg class="knob-svg" viewBox="0 0 48 48"></svg>
+        </div>
+        <div class="knob-value">0%</div>
+        <div class="knob-label">Drive</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AMP ENVELOPE -->
+  <div class="section section-amp">
+    <div class="section-title">Amp Envelope</div>
+    <div class="knob-row">
+      <div class="knob-group">
+        <div class="knob-container" data-param="amp_attack" data-min="0" data-max="2000" data-value="5" data-unit="ms">
+          <svg class="knob-svg" viewBox="0 0 48 48"></svg>
+        </div>
+        <div class="knob-value">5 ms</div>
+        <div class="knob-label">Attack</div>
+      </div>
+      <div class="knob-group">
+        <div class="knob-container" data-param="amp_decay" data-min="0" data-max="5000" data-value="200" data-unit="ms">
+          <svg class="knob-svg" viewBox="0 0 48 48"></svg>
+        </div>
+        <div class="knob-value">200 ms</div>
+        <div class="knob-label">Decay</div>
+      </div>
+      <div class="knob-group">
+        <div class="knob-container" data-param="amp_sustain" data-min="0" data-max="100" data-value="80" data-unit="%">
+          <svg class="knob-svg" viewBox="0 0 48 48"></svg>
+        </div>
+        <div class="knob-value">80%</div>
+        <div class="knob-label">Sustain</div>
+      </div>
+      <div class="knob-group">
+        <div class="knob-container" data-param="amp_release" data-min="0" data-max="5000" data-value="150" data-unit="ms">
+          <svg class="knob-svg" viewBox="0 0 48 48"></svg>
+        </div>
+        <div class="knob-value">150 ms</div>
+        <div class="knob-label">Release</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LFO -->
+  <div class="section section-lfo">
+    <div class="section-title accent">LFO / Wobble</div>
+    <div class="wave-selector" id="lfo-wave-selector">
+      <div class="wave-btn active" data-param="lfo_shape" data-value="0">SIN</div>
+      <div class="wave-btn" data-param="lfo_shape" data-value="1">SAW</div>
+      <div class="wave-btn" data-param="lfo_shape" data-value="2">SQR</div>
+      <div class="wave-btn" data-param="lfo_shape" data-value="3">TRI</div>
+    </div>
+    <div class="knob-row">
+      <div class="knob-group">
+        <div class="knob-container" data-param="lfo_rate" data-min="0.1" data-max="20" data-value="4" data-unit="Hz" data-decimals="1">
+          <svg class="knob-svg" viewBox="0 0 48 48"></svg>
+        </div>
+        <div class="knob-value">4.0 Hz</div>
+        <div class="knob-label">Rate</div>
+      </div>
+      <div class="knob-group">
+        <div class="knob-container" data-param="lfo_depth" data-min="0" data-max="100" data-value="50" data-unit="%">
+          <svg class="knob-svg" viewBox="0 0 48 48"></svg>
+        </div>
+        <div class="knob-value">50%</div>
+        <div class="knob-label">Depth</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DISTORTION -->
+  <div class="section section-distortion">
+    <div class="section-title red">Distortion</div>
+    <div class="dist-selector">
+      <div class="dist-btn active" data-param="dist_type" data-value="0">SOFT</div>
+      <div class="dist-btn" data-param="dist_type" data-value="1">HARD</div>
+      <div class="dist-btn" data-param="dist_type" data-value="2">FOLD</div>
+    </div>
+    <div class="knob-row">
+      <div class="knob-group">
+        <div class="knob-container" data-param="dist_amount" data-min="0" data-max="100" data-value="30" data-unit="%" data-color="red">
+          <svg class="knob-svg" viewBox="0 0 48 48"></svg>
+        </div>
+        <div class="knob-value">30%</div>
+        <div class="knob-label">Amount</div>
+      </div>
+      <div class="knob-group">
+        <div class="knob-container" data-param="dist_mix" data-min="0" data-max="100" data-value="50" data-unit="%" data-color="red">
+          <svg class="knob-svg" viewBox="0 0 48 48"></svg>
+        </div>
+        <div class="knob-value">50%</div>
+        <div class="knob-label">Mix</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FX -->
+  <div class="section section-fx">
+    <div class="section-title">Effects</div>
+    <div class="knob-row">
+      <div class="knob-group">
+        <div class="knob-container" data-param="fx_chorus" data-min="0" data-max="100" data-value="0" data-unit="%">
+          <svg class="knob-svg" viewBox="0 0 48 48"></svg>
+        </div>
+        <div class="knob-value">0%</div>
+        <div class="knob-label">Chorus</div>
+      </div>
+      <div class="knob-group">
+        <div class="knob-container" data-param="fx_reverb" data-min="0" data-max="100" data-value="10" data-unit="%">
+          <svg class="knob-svg" viewBox="0 0 48 48"></svg>
+        </div>
+        <div class="knob-value">10%</div>
+        <div class="knob-label">Reverb</div>
+      </div>
+      <div class="knob-group">
+        <div class="knob-container" data-param="fx_delay" data-min="0" data-max="100" data-value="0" data-unit="%">
+          <svg class="knob-svg" viewBox="0 0 48 48"></svg>
+        </div>
+        <div class="knob-value">0%</div>
+        <div class="knob-label">Delay</div>
+      </div>
+      <div class="knob-group">
+        <div class="knob-container" data-param="fx_compress" data-min="0" data-max="100" data-value="40" data-unit="%">
+          <svg class="knob-svg" viewBox="0 0 48 48"></svg>
+        </div>
+        <div class="knob-value">40%</div>
+        <div class="knob-label">Crush</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OUTPUT -->
+  <div class="section section-output">
+    <div class="section-title">Output</div>
+    <div class="knob-row" style="justify-content: center; gap: 12px;">
+      <div class="knob-group">
+        <div class="knob-container" data-param="output_gain" data-min="-24" data-max="6" data-value="0" data-unit="dB" data-decimals="1">
+          <svg class="knob-svg" viewBox="0 0 48 48"></svg>
+        </div>
+        <div class="knob-value">0.0 dB</div>
+        <div class="knob-label">Gain</div>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; max-width:60px;">
+        <div class="meter-container">
+          <div class="meter-bar-wrap">
+            <div class="meter-bar" id="meter-l" style="height:35%"></div>
+          </div>
+          <div class="meter-bar-wrap">
+            <div class="meter-bar" id="meter-r" style="height:30%"></div>
+          </div>
+        </div>
+        <div class="meter-label">L &nbsp; R</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div class="footer-text">VENOM BASS v1.0</div>
+  <div class="footer-text" id="param-readout">Ready</div>
+</div>
+
+<script>
+(function() {
+  // ── SVG KNOB RENDERING ──
+  const ARC_START = 225;
+  const ARC_END = -45;
+  const ARC_RANGE = 270;
+  const R = 18;
+  const CX = 24, CY = 24;
+
+  function polarToCart(cx, cy, r, deg) {
+    const rad = (deg - 90) * Math.PI / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }
+
+  function describeArc(cx, cy, r, startAngle, endAngle) {
+    const s = polarToCart(cx, cy, r, startAngle);
+    const e = polarToCart(cx, cy, r, endAngle);
+    const diff = startAngle - endAngle;
+    const large = Math.abs(diff) > 180 ? 1 : 0;
+    return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 0 ${e.x} ${e.y}`;
+  }
+
+  function renderKnob(container) {
+    const svg = container.querySelector('.knob-svg');
+    const min = parseFloat(container.dataset.min);
+    const max = parseFloat(container.dataset.max);
+    const val = parseFloat(container.dataset.value);
+    const color = container.dataset.color || 'accent';
+    const norm = (val - min) / (max - min);
+
+    const bgPath = describeArc(CX, CY, R, ARC_START, ARC_END);
+    const valAngle = ARC_START - (norm * ARC_RANGE);
+    const valPath = norm > 0.003 ? describeArc(CX, CY, R, ARC_START, valAngle) : '';
+
+    const pointerAngle = ARC_START - (norm * ARC_RANGE);
+    const pInner = polarToCart(CX, CY, 10, pointerAngle);
+    const pOuter = polarToCart(CX, CY, 15.5, pointerAngle);
+
+    const colorClass = color !== 'accent' ? color : '';
+
+    svg.innerHTML = `
+      <path class="knob-track-bg" d="${bgPath}" />
+      ${valPath ? `<path class="knob-track-fill ${colorClass}" d="${valPath}" />` : ''}
+      <circle class="knob-center" cx="${CX}" cy="${CY}" r="13" />
+      <line class="knob-pointer" x1="${pInner.x}" y1="${pInner.y}" x2="${pOuter.x}" y2="${pOuter.y}" />
+    `;
+  }
+
+  function formatValue(container) {
+    const val = parseFloat(container.dataset.value);
+    const unit = container.dataset.unit || '';
+    const decimals = parseInt(container.dataset.decimals) || 0;
+    const step = parseFloat(container.dataset.step);
+
+    if (step && step === 1) return `${Math.round(val)}${unit ? ' ' + unit : ''}`;
+    if (container.dataset.log === 'true') {
+      if (val >= 1000) return `${(val / 1000).toFixed(1)} kHz`;
+      return `${Math.round(val)} ${unit}`;
+    }
+    if (decimals > 0) return `${val.toFixed(decimals)} ${unit}`;
+    return `${Math.round(val)}${unit ? (unit === '%' || unit === 'st' || unit === 'ct' ? '' : ' ') + unit : ''}`;
+  }
+
+  function updateKnobDisplay(container) {
+    renderKnob(container);
+    const group = container.closest('.knob-group');
+    if (group) {
+      const valEl = group.querySelector('.knob-value');
+      if (valEl) valEl.textContent = formatValue(container);
+    }
+  }
+
+  // ── KNOB INTERACTION ──
+  let activeKnob = null;
+  let startY = 0;
+  let startVal = 0;
+
+  function onKnobDown(e) {
+    e.preventDefault();
+    const container = e.target.closest('.knob-container');
+    if (!container) return;
+
+    activeKnob = container;
+    startY = e.clientY || (e.touches && e.touches[0].clientY);
+    startVal = parseFloat(container.dataset.value);
+
+    document.addEventListener('mousemove', onKnobMove);
+    document.addEventListener('mouseup', onKnobUp);
+    document.addEventListener('touchmove', onKnobMove, { passive: false });
+    document.addEventListener('touchend', onKnobUp);
+  }
+
+  function onKnobMove(e) {
+    if (!activeKnob) return;
+    e.preventDefault();
+
+    const y = e.clientY || (e.touches && e.touches[0].clientY);
+    const delta = startY - y;
+    const min = parseFloat(activeKnob.dataset.min);
+    const max = parseFloat(activeKnob.dataset.max);
+    const range = max - min;
+    const step = parseFloat(activeKnob.dataset.step) || 0;
+    const sensitivity = range / 200;
+
+    let newVal;
+    if (activeKnob.dataset.log === 'true') {
+      const logMin = Math.log(min);
+      const logMax = Math.log(max);
+      const logStart = Math.log(Math.max(startVal, min));
+      const logRange = logMax - logMin;
+      const logDelta = (delta / 200) * logRange;
+      newVal = Math.exp(Math.min(logMax, Math.max(logMin, logStart + logDelta)));
+    } else {
+      newVal = startVal + delta * sensitivity;
+    }
+
+    newVal = Math.max(min, Math.min(max, newVal));
+    if (step === 1) newVal = Math.round(newVal);
+
+    activeKnob.dataset.value = newVal;
+    updateKnobDisplay(activeKnob);
+
+    // Update readout
+    const label = activeKnob.closest('.knob-group')?.querySelector('.knob-label')?.textContent || '';
+    document.getElementById('param-readout').textContent = `${label}: ${formatValue(activeKnob)}`;
+
+    // Send to backend
+    if (window.sendParameterChange) {
+      const param = activeKnob.dataset.param;
+      const norm = (newVal - min) / (max - min);
+      window.sendParameterChange(param, norm);
+    }
+  }
+
+  function onKnobUp() {
+    activeKnob = null;
+    document.removeEventListener('mousemove', onKnobMove);
+    document.removeEventListener('mouseup', onKnobUp);
+    document.removeEventListener('touchmove', onKnobMove);
+    document.removeEventListener('touchend', onKnobUp);
+  }
+
+  // Double-click to reset
+  function onKnobDblClick(e) {
+    const container = e.target.closest('.knob-container');
+    if (!container) return;
+    const defaultVal = container.getAttribute('data-value');
+    // Reset not implemented — would need a separate default store
+  }
+
+  // ── SELECTOR BUTTONS ──
+  function initSelectors() {
+    // Wave selectors (osc)
+    document.querySelectorAll('.wave-selector:not(#lfo-wave-selector) .wave-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        btn.parentElement.querySelectorAll('.wave-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (window.sendParameterChange) {
+          window.sendParameterChange(btn.dataset.param, parseFloat(btn.dataset.value) / 3);
+        }
+        drawOscWaveform(btn.dataset.wave);
+      });
+    });
+
+    // LFO wave selector
+    document.querySelectorAll('#lfo-wave-selector .wave-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        btn.parentElement.querySelectorAll('.wave-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (window.sendParameterChange) {
+          window.sendParameterChange(btn.dataset.param, parseFloat(btn.dataset.value) / 3);
+        }
+      });
+    });
+
+    // Filter type
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        btn.parentElement.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (window.sendParameterChange) {
+          window.sendParameterChange(btn.dataset.param, parseFloat(btn.dataset.value) / 2);
+        }
+      });
+    });
+
+    // Distortion type
+    document.querySelectorAll('.dist-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        btn.parentElement.querySelectorAll('.dist-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (window.sendParameterChange) {
+          window.sendParameterChange(btn.dataset.param, parseFloat(btn.dataset.value) / 2);
+        }
+      });
+    });
+  }
+
+  // ── OSC WAVEFORM VISUALIZER ──
+  function drawOscWaveform(type) {
+    const canvas = document.getElementById('oscVisualizer');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width = canvas.offsetWidth * 2;
+    const h = canvas.height = canvas.offsetHeight * 2;
+    ctx.clearRect(0, 0, w, h);
+
+    ctx.strokeStyle = '#8b00ff';
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = '#8b00ff';
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+
+    const cycles = 3;
+    for (let i = 0; i <= w; i++) {
+      const t = (i / w) * cycles * Math.PI * 2;
+      let y;
+      switch (type) {
+        case 'sine': y = Math.sin(t); break;
+        case 'saw': y = 1 - 2 * ((t / (2 * Math.PI)) % 1); break;
+        case 'square': y = Math.sin(t) >= 0 ? 1 : -1; break;
+        case 'triangle': y = (2 / Math.PI) * Math.asin(Math.sin(t)); break;
+        default: y = Math.sin(t);
+      }
+      const py = h / 2 - y * (h * 0.35);
+      i === 0 ? ctx.moveTo(i, py) : ctx.lineTo(i, py);
+    }
+    ctx.stroke();
+
+    // Subtle sub layer
+    ctx.strokeStyle = 'rgba(139, 0, 255, 0.15)';
+    ctx.lineWidth = 6;
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    for (let i = 0; i <= w; i++) {
+      const t = (i / w) * cycles * Math.PI * 2;
+      let y;
+      switch (type) {
+        case 'sine': y = Math.sin(t); break;
+        case 'saw': y = 1 - 2 * ((t / (2 * Math.PI)) % 1); break;
+        case 'square': y = Math.sin(t) >= 0 ? 1 : -1; break;
+        case 'triangle': y = (2 / Math.PI) * Math.asin(Math.sin(t)); break;
+        default: y = Math.sin(t);
+      }
+      const py = h / 2 - y * (h * 0.35);
+      i === 0 ? ctx.moveTo(i, py) : ctx.lineTo(i, py);
+    }
+    ctx.stroke();
+  }
+
+  // ── METER ANIMATION ──
+  function animateMeters() {
+    const mL = document.getElementById('meter-l');
+    const mR = document.getElementById('meter-r');
+    if (mL && mR) {
+      const baseL = 25 + Math.random() * 20;
+      const baseR = 25 + Math.random() * 20;
+      mL.style.height = baseL + '%';
+      mR.style.height = baseR + '%';
+    }
+    requestAnimationFrame(animateMeters);
+  }
+
+  // ── INIT ──
+  function init() {
+    document.querySelectorAll('.knob-container').forEach(k => {
+      renderKnob(k);
+      k.addEventListener('mousedown', onKnobDown);
+      k.addEventListener('touchstart', onKnobDown, { passive: false });
+    });
+
+    initSelectors();
+    drawOscWaveform('sine');
+    animateMeters();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+</body>
+</html>
