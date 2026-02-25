@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mariners Reverb</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@400;700&display=swap');
+
+  :root {
+    --bg-deep: #0a0a10;
+    --bg-dark: #111118;
+    --bg-panel: #16161f;
+    --bg-knob: #1c1c28;
+    --accent-gold: #4a8ec9;
+    --accent-gold-dim: #34628a;
+    --accent-shimmer: #6fa0cf;
+    --accent-shimmer-bright: #8ec4f0;
+    --text-primary: #b8ccd4;
+    --text-dim: #5e6a6e;
+    --text-label: #748a8a;
+    --shadow-glow: rgba(74, 142, 201, 0.15);
+    --shimmer-glow: rgba(111, 160, 207, 0.25);
+  }
+
+  html, body {
+    width: 800px;
+    height: 540px;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    background: var(--bg-deep);
+    font-family: 'Cinzel', serif;
+    color: var(--text-primary);
+    user-select: none;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  .plugin-root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 20px 30px;
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 10%, rgba(74, 142, 201, 0.04) 0%, transparent 70%),
+      radial-gradient(ellipse 80% 50% at 50% 100%, rgba(10, 10, 16, 1) 0%, transparent 70%),
+      linear-gradient(180deg, #0e0e16 0%, #111118 40%, #0a0a10 100%);
+    position: relative;
+  }
+
+  /* Gothic arch decorative border */
+  .plugin-root::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border: 1px solid rgba(74, 142, 201, 0.12);
+    border-radius: 4px;
+    pointer-events: none;
+  }
+
+  .plugin-root::after {
+    content: '';
+    position: absolute;
+    top: 4px; left: 4px; right: 4px; bottom: 4px;
+    border: 1px solid rgba(74, 142, 201, 0.06);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+
+  /* ===== HEADER ===== */
+  .header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 10px;
+    z-index: 1;
+  }
+
+  .header-ornament {
+    width: 200px;
+    height: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .ornament-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-gold-dim), transparent);
+  }
+
+  .ornament-diamond {
+    width: 6px;
+    height: 6px;
+    background: var(--accent-gold-dim);
+    transform: rotate(45deg);
+  }
+
+  .title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    background: linear-gradient(180deg, #a0d4f5 0%, #5a9fd6 40%, #3678b0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    line-height: 1.2;
+  }
+
+  .subtitle {
+    font-size: 9px;
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  /* ===== CATHEDRAL VISUALIZATION ===== */
+  .viz-section {
+    width: 100%;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    min-height: 0;
+  }
+
+  .viz-container {
+    width: 720px;
+    height: 180px;
+    background: var(--bg-dark);
+    border: 1px solid rgba(74, 142, 201, 0.08);
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .viz-container canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* ===== CONTROLS SECTION ===== */
+  .controls-section {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 50px;
+    margin-bottom: 10px;
+    z-index: 1;
+  }
+
+  /* ===== KNOB ===== */
+  .knob-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .knob-label {
+    font-size: 9px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--text-label);
+  }
+
+  .knob-wrapper {
+    width: 90px;
+    height: 90px;
+    position: relative;
+    cursor: grab;
+  }
+
+  .knob-wrapper:active {
+    cursor: grabbing;
+  }
+
+  .knob-svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .knob-track {
+    fill: none;
+    stroke: rgba(74, 142, 201, 0.1);
+    stroke-width: 3;
+    stroke-linecap: round;
+  }
+
+  .knob-arc {
+    fill: none;
+    stroke: var(--accent-gold);
+    stroke-width: 3;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 4px var(--shadow-glow));
+    transition: stroke 0.3s;
+  }
+
+  .knob-body {
+    fill: var(--bg-knob);
+    stroke: rgba(74, 142, 201, 0.15);
+    stroke-width: 1;
+  }
+
+  .knob-indicator {
+    stroke: var(--accent-gold);
+    stroke-width: 2;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 3px var(--shadow-glow));
+    transition: stroke 0.3s;
+  }
+
+  .knob-value {
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    color: var(--text-primary);
+    text-align: center;
+    min-width: 50px;
+    letter-spacing: 1px;
+  }
+
+  /* ===== SHIMMER TOGGLE ===== */
+  .shimmer-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .shimmer-label {
+    font-size: 9px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--text-label);
+  }
+
+  .shimmer-toggle {
+    width: 90px;
+    height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .shimmer-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--bg-knob);
+    border: 1px solid rgba(111, 160, 207, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.4s ease;
+    position: relative;
+  }
+
+  .shimmer-btn::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 1px solid rgba(111, 160, 207, 0);
+    transition: border-color 0.4s ease;
+  }
+
+  .shimmer-btn.active {
+    background: rgba(111, 160, 207, 0.12);
+    border-color: rgba(111, 160, 207, 0.4);
+    box-shadow: 0 0 20px var(--shimmer-glow), inset 0 0 15px rgba(111, 160, 207, 0.08);
+  }
+
+  .shimmer-btn.active::before {
+    border-color: rgba(111, 160, 207, 0.15);
+  }
+
+  .shimmer-icon {
+    width: 28px;
+    height: 28px;
+    opacity: 0.3;
+    transition: opacity 0.4s ease, filter 0.4s ease;
+  }
+
+  .shimmer-btn.active .shimmer-icon {
+    opacity: 1;
+    filter: drop-shadow(0 0 6px var(--shimmer-glow));
+  }
+
+  .shimmer-status {
+    font-size: 13px;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    transition: color 0.4s ease;
+    min-width: 50px;
+    text-align: center;
+  }
+
+  .shimmer-status.active {
+    color: var(--accent-shimmer-bright);
+  }
+
+  /* Shimmer-active knob color override */
+  .shimmer-active .knob-arc {
+    stroke: var(--accent-shimmer);
+  }
+
+  .shimmer-active .knob-indicator {
+    stroke: var(--accent-shimmer);
+  }
+
+  /* ===== FOOTER ===== */
+  .footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    z-index: 1;
+  }
+
+  .footer-line {
+    width: 60px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(74, 142, 201, 0.15), transparent);
+  }
+
+  .footer-text {
+    font-size: 8px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    opacity: 0.5;
+  }
+</style>
+</head>
+<body>
+
+<div class="plugin-root" id="pluginRoot">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-ornament">
+      <span class="ornament-line"></span>
+      <span class="ornament-diamond"></span>
+      <span class="ornament-line"></span>
+    </div>
+    <div class="title">Mariners</div>
+    <div class="subtitle">Reverb</div>
+  </div>
+
+  <!-- Visualization -->
+  <div class="viz-section">
+    <div class="viz-container">
+      <canvas id="vizCanvas"></canvas>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls-section">
+
+    <!-- Size Knob -->
+    <div class="knob-group">
+      <div class="knob-label">Size</div>
+      <div class="knob-wrapper" data-param="size" data-min="0" data-max="100" data-value="65">
+        <svg class="knob-svg" viewBox="0 0 90 90"></svg>
+      </div>
+      <div class="knob-value" id="sizeValue">65%</div>
+    </div>
+
+    <!-- Decay Knob -->
+    <div class="knob-group">
+      <div class="knob-label">Decay</div>
+      <div class="knob-wrapper" data-param="decay" data-min="0" data-max="100" data-value="50">
+        <svg class="knob-svg" viewBox="0 0 90 90"></svg>
+      </div>
+      <div class="knob-value" id="decayValue">50%</div>
+    </div>
+
+    <!-- Shimmer Toggle -->
+    <div class="shimmer-section">
+      <div class="shimmer-label">Shimmer</div>
+      <div class="shimmer-toggle" id="shimmerToggle">
+        <div class="shimmer-btn" id="shimmerBtn">
+          <svg class="shimmer-icon" viewBox="0 0 28 28" fill="none">
+            <path d="M14 2 L16 10 L24 10 L17.5 15 L20 24 L14 18.5 L8 24 L10.5 15 L4 10 L12 10 Z"
+                  fill="var(--accent-shimmer-bright)" />
+          </svg>
+        </div>
+      </div>
+      <div class="shimmer-status" id="shimmerStatus">Off</div>
+    </div>
+
+    <!-- Mix Knob -->
+    <div class="knob-group">
+      <div class="knob-label">Mix</div>
+      <div class="knob-wrapper" data-param="mix" data-min="0" data-max="100" data-value="40">
+        <svg class="knob-svg" viewBox="0 0 90 90"></svg>
+      </div>
+      <div class="knob-value" id="mixValue">40%</div>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span class="footer-line"></span>
+    <span class="footer-text">Mariners Audio</span>
+    <span class="footer-line"></span>
+  </div>
+
+</div>
+
+<script type="module">
+  import { getSliderState } from './js/juce/index.js';
+
+  // ===== JUCE PARAMETER STATES =====
+  const sizeState = getSliderState("SIZE");
+  const decayState = getSliderState("DECAY");
+  const mixState = getSliderState("MIX");
+  const shimmerState = getSliderState("SHIMMER");
+
+  // Map param names to JUCE states
+  const paramStates = {
+    size: sizeState,
+    decay: decayState,
+    mix: mixState
+  };
+
+  // ===== KNOB SYSTEM =====
+  const ARC_START = 0.75 * Math.PI;  // 135 degrees
+  const ARC_END = 2.25 * Math.PI;    // 405 degrees
+  const ARC_RANGE = ARC_END - ARC_START;
+  const CX = 45, CY = 45, R = 38, KNOB_R = 28;
+
+  const knobs = document.querySelectorAll('.knob-wrapper');
+  let activeKnob = null;
+  let lastY = 0;
+  let shimmerActive = false;
+
+  function polarToCart(cx, cy, r, angle) {
+    return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+  }
+
+  function describeArc(cx, cy, r, startAngle, endAngle) {
+    const start = polarToCart(cx, cy, r, endAngle);
+    const end = polarToCart(cx, cy, r, startAngle);
+    const large = endAngle - startAngle > Math.PI ? 1 : 0;
+    return `M ${start.x} ${start.y} A ${r} ${r} 0 ${large} 0 ${end.x} ${end.y}`;
+  }
+
+  function renderKnob(wrapper) {
+    const svg = wrapper.querySelector('.knob-svg');
+    const value = parseFloat(wrapper.dataset.value);
+    const min = parseFloat(wrapper.dataset.min);
+    const max = parseFloat(wrapper.dataset.max);
+    const norm = (value - min) / (max - min);
+    const angle = ARC_START + norm * ARC_RANGE;
+
+    const ind = polarToCart(CX, CY, KNOB_R - 4, angle);
+    const indInner = polarToCart(CX, CY, KNOB_R - 14, angle);
+
+    svg.innerHTML = `
+      <path class="knob-track" d="${describeArc(CX, CY, R, ARC_START, ARC_END)}" />
+      ${norm > 0.005 ? `<path class="knob-arc" d="${describeArc(CX, CY, R, ARC_START, angle)}" />` : ''}
+      <circle class="knob-body" cx="${CX}" cy="${CY}" r="${KNOB_R}" />
+      <line class="knob-indicator" x1="${indInner.x}" y1="${indInner.y}" x2="${ind.x}" y2="${ind.y}" />
+    `;
+  }
+
+  function updateValueDisplay(wrapper) {
+    const param = wrapper.dataset.param;
+    const value = Math.round(parseFloat(wrapper.dataset.value));
+    const el = document.getElementById(param + 'Value');
+    if (el) el.textContent = value + '%';
+  }
+
+  function setKnobFromNorm(wrapper, norm) {
+    const min = parseFloat(wrapper.dataset.min);
+    const max = parseFloat(wrapper.dataset.max);
+    wrapper.dataset.value = min + norm * (max - min);
+    renderKnob(wrapper);
+    updateValueDisplay(wrapper);
+  }
+
+  knobs.forEach(wrapper => {
+    const param = wrapper.dataset.param;
+    const state = paramStates[param];
+
+    renderKnob(wrapper);
+    updateValueDisplay(wrapper);
+
+    // Sync initial value from C++
+    if (state) {
+      setKnobFromNorm(wrapper, state.getNormalisedValue());
+      state.valueChangedEvent.addListener(() => {
+        setKnobFromNorm(wrapper, state.getNormalisedValue());
+      });
+    }
+
+    wrapper.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      activeKnob = wrapper;
+      lastY = e.clientY;
+      document.body.style.cursor = 'grabbing';
+    });
+
+    wrapper.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      const defaults = { size: 65, decay: 50, mix: 40 };
+      wrapper.dataset.value = defaults[param];
+      renderKnob(wrapper);
+      updateValueDisplay(wrapper);
+      // Send default to C++
+      if (state) {
+        const min = parseFloat(wrapper.dataset.min);
+        const max = parseFloat(wrapper.dataset.max);
+        state.setNormalisedValue((defaults[param] - min) / (max - min));
+      }
+    });
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!activeKnob) return;
+    const deltaY = lastY - e.clientY;
+    lastY = e.clientY;
+    const sensitivity = 0.5;
+    const min = parseFloat(activeKnob.dataset.min);
+    const max = parseFloat(activeKnob.dataset.max);
+    let newVal = parseFloat(activeKnob.dataset.value) + deltaY * sensitivity;
+    newVal = Math.max(min, Math.min(max, newVal));
+    activeKnob.dataset.value = newVal;
+    renderKnob(activeKnob);
+    updateValueDisplay(activeKnob);
+
+    // Send to C++
+    const param = activeKnob.dataset.param;
+    const state = paramStates[param];
+    if (state) {
+      state.setNormalisedValue((newVal - min) / (max - min));
+    }
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (activeKnob) {
+      activeKnob = null;
+      document.body.style.cursor = '';
+    }
+  });
+
+  // ===== SHIMMER TOGGLE =====
+  const shimmerToggle = document.getElementById('shimmerToggle');
+  const shimmerBtn = document.getElementById('shimmerBtn');
+  const shimmerStatus = document.getElementById('shimmerStatus');
+  const pluginRoot = document.getElementById('pluginRoot');
+
+  function updateShimmerVisual(active) {
+    shimmerActive = active;
+    shimmerBtn.classList.toggle('active', active);
+    shimmerStatus.classList.toggle('active', active);
+    shimmerStatus.textContent = active ? 'On' : 'Off';
+    pluginRoot.classList.toggle('shimmer-active', active);
+  }
+
+  // Sync initial shimmer state from C++
+  updateShimmerVisual(shimmerState.getNormalisedValue() >= 0.5);
+
+  shimmerState.valueChangedEvent.addListener(() => {
+    updateShimmerVisual(shimmerState.getNormalisedValue() >= 0.5);
+  });
+
+  shimmerToggle.addEventListener('click', () => {
+    const newVal = shimmerActive ? 0.0 : 1.0;
+    shimmerState.setNormalisedValue(newVal);
+    updateShimmerVisual(newVal >= 0.5);
+  });
+
+  // ===== VISUALIZATION =====
+  const canvas = document.getElementById('vizCanvas');
+  const ctx = canvas.getContext('2d');
+
+  function resizeCanvas() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * window.devicePixelRatio;
+    canvas.height = rect.height * window.devicePixelRatio;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  }
+  resizeCanvas();
+
+  const W = 720;
+  const H = 180;
+
+  // Particles for ambient atmosphere
+  const particles = [];
+  for (let i = 0; i < 60; i++) {
+    particles.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.2,
+      vy: -Math.random() * 0.3 - 0.05,
+      size: Math.random() * 1.5 + 0.5,
+      alpha: Math.random() * 0.3 + 0.05,
+      phase: Math.random() * Math.PI * 2
+    });
+  }
+
+  // Reverb tail lines
+  const reverbLines = [];
+  for (let i = 0; i < 8; i++) {
+    reverbLines.push({
+      phase: (i / 8) * Math.PI * 2,
+      speed: 0.3 + Math.random() * 0.4,
+      amplitude: 10 + Math.random() * 20,
+      yOffset: 40 + (i / 8) * 100
+    });
+  }
+
+  let time = 0;
+
+  function getKnobNorm(param) {
+    const el = document.querySelector(`[data-param="${param}"]`);
+    if (!el) return 0.5;
+    const val = parseFloat(el.dataset.value);
+    const min = parseFloat(el.dataset.min);
+    const max = parseFloat(el.dataset.max);
+    return (val - min) / (max - min);
+  }
+
+  function drawViz() {
+    time += 0.016;
+    ctx.clearRect(0, 0, W, H);
+
+    const sizeNorm = getKnobNorm('size');
+    const decayNorm = getKnobNorm('decay');
+    const mixNorm = getKnobNorm('mix');
+
+    // Background gradient
+    const bgGrad = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W * 0.5);
+    bgGrad.addColorStop(0, 'rgba(28, 28, 40, 0.3)');
+    bgGrad.addColorStop(1, 'rgba(10, 10, 16, 0)');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Gothic arch silhouette
+    const archWidth = 120 + sizeNorm * 200;
+    const archHeight = 60 + sizeNorm * 80;
+    const archCx = W / 2;
+    const archBase = H - 10;
+
+    ctx.beginPath();
+    ctx.moveTo(archCx - archWidth / 2, archBase);
+    ctx.lineTo(archCx - archWidth / 2, archBase - archHeight * 0.5);
+    // Gothic pointed arch
+    ctx.quadraticCurveTo(archCx - archWidth / 4, archBase - archHeight * 1.1, archCx, archBase - archHeight);
+    ctx.quadraticCurveTo(archCx + archWidth / 4, archBase - archHeight * 1.1, archCx + archWidth / 2, archBase - archHeight * 0.5);
+    ctx.lineTo(archCx + archWidth / 2, archBase);
+
+    const archAlpha = 0.04 + mixNorm * 0.06;
+    const archColor = shimmerActive
+      ? `rgba(142, 196, 240, ${archAlpha})`
+      : `rgba(74, 142, 201, ${archAlpha})`;
+    ctx.fillStyle = archColor;
+    ctx.fill();
+
+    // Arch outline
+    ctx.strokeStyle = shimmerActive
+      ? `rgba(142, 196, 240, ${0.08 + mixNorm * 0.12})`
+      : `rgba(74, 142, 201, ${0.08 + mixNorm * 0.12})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Reverb wave lines
+    const lineCount = Math.floor(3 + decayNorm * 5);
+    for (let i = 0; i < lineCount; i++) {
+      const rl = reverbLines[i % reverbLines.length];
+      const amp = rl.amplitude * (0.3 + sizeNorm * 0.7) * (0.5 + mixNorm * 0.5);
+      const decay = 1 - (i / lineCount) * (1 - decayNorm * 0.6);
+      const alpha = (0.06 + mixNorm * 0.12) * decay;
+
+      ctx.beginPath();
+      for (let x = 0; x <= W; x += 3) {
+        const xNorm = x / W;
+        const envelope = Math.sin(xNorm * Math.PI);
+        const y = rl.yOffset + Math.sin(xNorm * Math.PI * 2 * (1 + i * 0.3) + time * rl.speed + rl.phase) * amp * envelope;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+
+      if (shimmerActive) {
+        ctx.strokeStyle = `rgba(142, 196, 240, ${alpha})`;
+      } else {
+        ctx.strokeStyle = `rgba(74, 142, 201, ${alpha})`;
+      }
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // Particles
+    const particleColor = shimmerActive ? [142, 196, 240] : [74, 142, 201];
+    particles.forEach(p => {
+      p.x += p.vx + Math.sin(time * 0.5 + p.phase) * 0.1 * sizeNorm;
+      p.y += p.vy * (0.5 + decayNorm * 0.5);
+      p.phase += 0.01;
+
+      if (p.y < -5) { p.y = H + 5; p.x = Math.random() * W; }
+      if (p.x < -5) p.x = W + 5;
+      if (p.x > W + 5) p.x = -5;
+
+      const flickerAlpha = p.alpha * (0.5 + 0.5 * Math.sin(time * 2 + p.phase)) * (0.3 + mixNorm * 0.7);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${particleColor[0]}, ${particleColor[1]}, ${particleColor[2]}, ${flickerAlpha})`;
+      ctx.fill();
+
+      // Shimmer sparkle effect
+      if (shimmerActive && Math.random() < 0.02) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(142, 196, 240, ${flickerAlpha * 0.3})`;
+        ctx.fill();
+      }
+    });
+
+    // Center glow pulse
+    const pulseSize = 80 + sizeNorm * 120 + Math.sin(time * 0.8) * 10;
+    const glowGrad = ctx.createRadialGradient(W / 2, H * 0.4, 0, W / 2, H * 0.4, pulseSize);
+    if (shimmerActive) {
+      glowGrad.addColorStop(0, `rgba(142, 196, 240, ${0.03 + mixNorm * 0.04})`);
+    } else {
+      glowGrad.addColorStop(0, `rgba(74, 142, 201, ${0.03 + mixNorm * 0.04})`);
+    }
+    glowGrad.addColorStop(1, 'rgba(10, 10, 16, 0)');
+    ctx.fillStyle = glowGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    requestAnimationFrame(drawViz);
+  }
+
+  drawViz();
+</script>
+
+</body>
+</html>
