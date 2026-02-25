@@ -122,7 +122,7 @@ void MarinersAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     juce::ScopedNoDenormals noDenormals;
     juce::ignoreUnused(midiMessages);
 
-    // Read parameters
+    // Read parameters once per block
     auto sizeVal = parameters.getRawParameterValue("SIZE")->load() / 100.0f;
     auto decayVal = parameters.getRawParameterValue("DECAY")->load() / 100.0f;
     auto mixVal = parameters.getRawParameterValue("MIX")->load() / 100.0f;
@@ -137,19 +137,19 @@ void MarinersAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     reverbParams.width = 1.0f;
     reverb.setParameters(reverbParams);
 
-    // Set dry/wet mix
+    // Set dry/wet mix proportion
     mixSmoothed.setTargetValue(mixVal);
     dryWetMixer.setWetMixProportion(mixSmoothed.getNextValue());
 
-    // Save dry signal
+    // Save dry signal into the DryWetMixer
     juce::dsp::AudioBlock<float> block(buffer);
     dryWetMixer.pushDrySamples(block);
 
-    // Process reverb
+    // Process reverb (buffer now contains fully wet reverb output)
     juce::dsp::ProcessContextReplacing<float> context(block);
     reverb.process(context);
 
-    // Apply dark character lowpass filter to the wet signal
+    // Apply dark character lowpass filter to the wet reverb signal
     auto numSamples = buffer.getNumSamples();
     if (buffer.getNumChannels() >= 1)
     {
@@ -164,11 +164,11 @@ void MarinersAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
             rightData[i] = darkFilterR.processSample(rightData[i]);
     }
 
-    // Shimmer processing: octave-up feedback via pitch doubling
+    // Shimmer processing: adds ethereal octave-up feedback into the wet signal
     if (shimmerOn)
     {
         const float shimmerFeedback = 0.4f;
-        const float shimmerMix = 0.35f;
+        const float shimmerGain = 0.35f;
 
         for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
         {
@@ -177,24 +177,23 @@ void MarinersAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
             for (int i = 0; i < numSamples; ++i)
             {
-                float input = channelData[i];
+                float wetSample = channelData[i];
 
-                // Read from delay at half speed (octave up effect)
-                // Use a modulated read position for pitch shifting
-                float delaySamples = static_cast<float>(currentSampleRate) * 0.02f; // 20ms grain
+                // Read from delay line (20ms grain for pitch-shifted texture)
+                float delaySamples = static_cast<float>(currentSampleRate) * 0.02f;
                 float delayed = shimmerDelay.popSample(ch, delaySamples, true);
 
                 // Accumulate with feedback, soft clip to prevent runaway
                 shimmerAccum = std::tanh(shimmerAccum * shimmerFeedback + delayed * 0.5f);
 
-                // Push current reverb output + feedback into delay
-                float toDelay = input + shimmerAccum * shimmerFeedback;
+                // Push wet reverb output + feedback into delay
+                float toDelay = wetSample + shimmerAccum * shimmerFeedback;
                 if (std::isnan(toDelay) || std::isinf(toDelay))
                     toDelay = 0.0f;
                 shimmerDelay.pushSample(ch, toDelay);
 
-                // Mix shimmer into output
-                float output = input + shimmerAccum * shimmerMix;
+                // Add shimmer to the wet signal (stays in the wet path)
+                float output = wetSample + shimmerAccum * shimmerGain;
                 if (std::isnan(output) || std::isinf(output))
                     output = 0.0f;
 
@@ -202,8 +201,24 @@ void MarinersAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
             }
         }
     }
+    else
+    {
+        // When shimmer is off, keep the delay line fed with silence
+        // so it doesn't produce stale output when re-enabled
+        for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+        {
+            for (int i = 0; i < numSamples; ++i)
+            {
+                shimmerDelay.popSample(ch, 1.0f, true);
+                shimmerDelay.pushSample(ch, 0.0f);
+            }
+        }
+        shimmerAccumL = 0.0f;
+        shimmerAccumR = 0.0f;
+    }
 
-    // Blend dry/wet
+    // DryWetMixer blends the saved dry signal with the current buffer (wet + shimmer)
+    // At mix = 0, output is 100% dry. At mix = 1, output is 100% wet.
     dryWetMixer.mixWetSamples(block);
 }
 
