@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ASTRO VOX</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    @font-face {
+      font-family: 'PluginFont';
+      src: local('Arial Black'), local('Helvetica Neue Bold'), local('sans-serif');
+    }
+
+    :root {
+      --neon-pink: #ff2d95;
+      --neon-purple: #b026ff;
+      --deep-purple: #1a0833;
+      --dark-bg: #0d0418;
+      --panel-bg: rgba(26, 8, 51, 0.85);
+      --knob-track: rgba(255, 255, 255, 0.08);
+      --text-primary: #f0e6ff;
+      --text-dim: rgba(240, 230, 255, 0.5);
+      --glow-pink: 0 0 20px rgba(255, 45, 149, 0.5);
+      --glow-purple: 0 0 20px rgba(176, 38, 255, 0.5);
+      --accent-gradient: linear-gradient(135deg, var(--neon-pink), var(--neon-purple));
+    }
+
+    body {
+      background: var(--dark-bg);
+      color: var(--text-primary);
+      font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    /* =================== BACKGROUND ANIMATION =================== */
+    .bg-canvas {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .bg-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.3;
+      animation: orbFloat 12s ease-in-out infinite alternate;
+    }
+
+    .bg-orb.orb1 {
+      width: 400px; height: 400px;
+      background: var(--neon-pink);
+      top: -100px; left: -100px;
+      animation-delay: 0s;
+    }
+
+    .bg-orb.orb2 {
+      width: 350px; height: 350px;
+      background: var(--neon-purple);
+      bottom: -80px; right: -80px;
+      animation-delay: -4s;
+    }
+
+    .bg-orb.orb3 {
+      width: 250px; height: 250px;
+      background: var(--neon-pink);
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      animation-delay: -8s;
+      opacity: 0.15;
+    }
+
+    @keyframes orbFloat {
+      0% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(30px, -20px) scale(1.05); }
+      66% { transform: translate(-20px, 30px) scale(0.95); }
+      100% { transform: translate(15px, 15px) scale(1.02); }
+    }
+
+    /* =================== MAIN CONTAINER =================== */
+    .plugin-container {
+      position: relative;
+      z-index: 1;
+      width: 820px;
+      background: var(--panel-bg);
+      border: 1px solid rgba(176, 38, 255, 0.2);
+      border-radius: 20px;
+      backdrop-filter: blur(30px);
+      padding: 28px 32px 32px;
+      box-shadow: 0 0 60px rgba(176, 38, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    /* =================== HEADER =================== */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(176, 38, 255, 0.15);
+    }
+
+    .logo-group {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    .logo {
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: 4px;
+      background: var(--accent-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-transform: uppercase;
+      text-shadow: none;
+      filter: drop-shadow(0 0 12px rgba(255, 45, 149, 0.4));
+    }
+
+    .logo-sub {
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .preset-selector {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .preset-arrow {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: 1px solid rgba(176, 38, 255, 0.3);
+      background: rgba(176, 38, 255, 0.08);
+      color: var(--text-primary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .preset-arrow:hover {
+      background: rgba(176, 38, 255, 0.2);
+      border-color: var(--neon-purple);
+      box-shadow: var(--glow-purple);
+    }
+
+    .preset-name {
+      font-size: 12px;
+      letter-spacing: 1.5px;
+      color: var(--text-primary);
+      text-transform: uppercase;
+      min-width: 140px;
+      text-align: center;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(176, 38, 255, 0.2);
+      background: rgba(176, 38, 255, 0.05);
+    }
+
+    /* =================== VISUALIZER =================== */
+    .visualizer {
+      width: 100%;
+      height: 80px;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(176, 38, 255, 0.1);
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .visualizer canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .visualizer-label {
+      position: absolute;
+      top: 8px;
+      left: 12px;
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    /* =================== SECTIONS =================== */
+    .sections-row {
+      display: grid;
+      grid-template-columns: 1fr 1.4fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .section {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(176, 38, 255, 0.12);
+      border-radius: 14px;
+      padding: 18px 16px 20px;
+    }
+
+    .section-title {
+      font-size: 9px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--neon-pink);
+      margin-bottom: 16px;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .section.reverb .section-title {
+      color: var(--neon-purple);
+    }
+
+    .section.delay .section-title {
+      color: var(--neon-pink);
+    }
+
+    /* =================== KNOB GRID =================== */
+    .knobs-row {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .knob-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .knob-container {
+      position: relative;
+      width: 56px;
+      height: 56px;
+    }
+
+    .knob-svg {
+      width: 56px;
+      height: 56px;
+      transform: rotate(-135deg);
+    }
+
+    .knob-track-bg {
+      fill: none;
+      stroke: var(--knob-track);
+      stroke-width: 4;
+      stroke-linecap: round;
+    }
+
+    .knob-track-fill {
+      fill: none;
+      stroke-width: 4;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.1s ease;
+    }
+
+    .knob-track-fill.pink {
+      stroke: url(#pinkGrad);
+      filter: drop-shadow(0 0 4px rgba(255, 45, 149, 0.6));
+    }
+
+    .knob-track-fill.purple {
+      stroke: url(#purpleGrad);
+      filter: drop-shadow(0 0 4px rgba(176, 38, 255, 0.6));
+    }
+
+    .knob-center {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #2a1248, #1a0833);
+      border: 1px solid rgba(176, 38, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      transition: border-color 0.2s;
+    }
+
+    .knob-center:hover {
+      border-color: rgba(176, 38, 255, 0.5);
+    }
+
+    .knob-center:active {
+      cursor: grabbing;
+    }
+
+    .knob-indicator {
+      width: 2px;
+      height: 10px;
+      background: var(--neon-pink);
+      border-radius: 1px;
+      transform-origin: bottom center;
+      box-shadow: 0 0 6px rgba(255, 45, 149, 0.8);
+      position: absolute;
+      top: 5px;
+    }
+
+    .knob-group.purple-knob .knob-indicator {
+      background: var(--neon-purple);
+      box-shadow: 0 0 6px rgba(176, 38, 255, 0.8);
+    }
+
+    .knob-value {
+      font-size: 10px;
+      color: var(--text-primary);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .knob-label {
+      font-size: 8px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      text-align: center;
+    }
+
+    /* =================== BOTTOM CONTROLS =================== */
+    .bottom-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .mix-section {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex: 1;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(176, 38, 255, 0.12);
+      border-radius: 14px;
+      padding: 14px 20px;
+    }
+
+    .slider-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .slider-label {
+      font-size: 8px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      min-width: 40px;
+    }
+
+    .slider-track {
+      flex: 1;
+      height: 4px;
+      background: var(--knob-track);
+      border-radius: 2px;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .slider-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--accent-gradient);
+      box-shadow: 0 0 8px rgba(255, 45, 149, 0.4);
+      position: absolute;
+      top: 0; left: 0;
+    }
+
+    .slider-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--text-primary);
+      border: 2px solid var(--neon-pink);
+      box-shadow: 0 0 10px rgba(255, 45, 149, 0.5);
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      cursor: grab;
+      transition: box-shadow 0.2s;
+    }
+
+    .slider-thumb:hover {
+      box-shadow: 0 0 16px rgba(255, 45, 149, 0.8);
+    }
+
+    .slider-value {
+      font-size: 10px;
+      font-weight: 600;
+      min-width: 32px;
+      text-align: right;
+    }
+
+    /* =================== TOGGLE BUTTONS =================== */
+    .toggle-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .toggle-btn {
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(176, 38, 255, 0.25);
+      background: rgba(176, 38, 255, 0.06);
+      color: var(--text-dim);
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.25s;
+      font-family: inherit;
+    }
+
+    .toggle-btn:hover {
+      border-color: rgba(176, 38, 255, 0.5);
+      color: var(--text-primary);
+    }
+
+    .toggle-btn.active {
+      background: rgba(176, 38, 255, 0.2);
+      border-color: var(--neon-purple);
+      color: var(--text-primary);
+      box-shadow: var(--glow-purple);
+    }
+
+    .toggle-btn.active.pink-toggle {
+      background: rgba(255, 45, 149, 0.2);
+      border-color: var(--neon-pink);
+      box-shadow: var(--glow-pink);
+    }
+
+    /* =================== POWER / BYPASS =================== */
+    .power-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 2px solid rgba(176, 38, 255, 0.3);
+      background: rgba(0, 0, 0, 0.3);
+      color: var(--text-dim);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s;
+    }
+
+    .power-btn.active {
+      border-color: var(--neon-purple);
+      color: var(--neon-purple);
+      box-shadow: var(--glow-purple), inset 0 0 12px rgba(176, 38, 255, 0.15);
+    }
+
+    .power-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* =================== TOOLTIP =================== */
+    .tooltip {
+      position: fixed;
+      background: rgba(26, 8, 51, 0.95);
+      border: 1px solid var(--neon-purple);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 11px;
+      color: var(--text-primary);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 100;
+      box-shadow: var(--glow-purple);
+    }
+
+    .tooltip.visible {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background glow orbs -->
+  <div class="bg-canvas">
+    <div class="bg-orb orb1"></div>
+    <div class="bg-orb orb2"></div>
+    <div class="bg-orb orb3"></div>
+  </div>
+
+  <!-- SVG Gradients (shared) -->
+  <svg width="0" height="0" style="position:absolute">
+    <defs>
+      <linearGradient id="pinkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#ff2d95"/>
+        <stop offset="100%" stop-color="#ff6eb4"/>
+      </linearGradient>
+      <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#b026ff"/>
+        <stop offset="100%" stop-color="#d580ff"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <!-- Tooltip element -->
+  <div class="tooltip" id="tooltip"></div>
+
+  <!-- Main Plugin -->
+  <div class="plugin-container">
+
+    <!-- ===== HEADER ===== -->
+    <div class="header">
+      <div class="logo-group">
+        <span class="logo">Astro Vox</span>
+        <span class="logo-sub">Vocal Processor</span>
+      </div>
+      <div class="preset-selector">
+        <button class="preset-arrow" id="presetPrev">&#9664;</button>
+        <div class="preset-name" id="presetName">Stargazing</div>
+        <button class="preset-arrow" id="presetNext">&#9654;</button>
+      </div>
+      <button class="power-btn active" id="powerBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <path d="M12 2v8"/>
+          <path d="M17.66 6.34A8 8 0 1 1 6.34 6.34"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- ===== VISUALIZER ===== -->
+    <div class="visualizer">
+      <span class="visualizer-label">Signal</span>
+      <canvas id="vizCanvas"></canvas>
+    </div>
+
+    <!-- ===== THREE SECTIONS ===== -->
+    <div class="sections-row">
+
+      <!-- PITCH SECTION -->
+      <div class="section pitch">
+        <div class="section-title">Pitch Correction</div>
+        <div class="knobs-row">
+          <div class="knob-group" data-param="pitchSpeed" data-min="0" data-max="100" data-value="42" data-unit="%">
+            <div class="knob-container">
+              <svg class="knob-svg" viewBox="0 0 56 56">
+                <circle class="knob-track-bg" cx="28" cy="28" r="24"/>
+                <circle class="knob-track-fill pink" cx="28" cy="28" r="24"/>
+              </svg>
+              <div class="knob-center"><div class="knob-indicator"></div></div>
+            </div>
+            <div class="knob-value">42%</div>
+            <div class="knob-label">Speed</div>
+          </div>
+          <div class="knob-group" data-param="pitchAmount" data-min="0" data-max="100" data-value="65" data-unit="%">
+            <div class="knob-container">
+              <svg class="knob-svg" viewBox="0 0 56 56">
+                <circle class="knob-track-bg" cx="28" cy="28" r="24"/>
+                <circle class="knob-track-fill pink" cx="28" cy="28" r="24"/>
+              </svg>
+              <div class="knob-center"><div class="knob-indicator"></div></div>
+            </div>
+            <div class="knob-value">65%</div>
+            <div class="knob-label">Amount</div>
+          </div>
+          <div class="knob-group" data-param="pitchGlide" data-min="0" data-max="100" data-value="55" data-unit="%">
+            <div class="knob-container">
+              <svg class="knob-svg" viewBox="0 0 56 56">
+                <circle class="knob-track-bg" cx="28" cy="28" r="24"/>
+                <circle class="knob-track-fill pink" cx="28" cy="28" r="24"/>
+              </svg>
+              <div class="knob-center"><div class="knob-indicator"></div></div>
+            </div>
+            <div class="knob-value">55%</div>
+            <div class="knob-label">Glide</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- REVERB SECTION -->
+      <div class="section reverb">
+        <div class="section-title">Reverb</div>
+        <div class="knobs-row">
+          <div class="knob-group purple-knob" data-param="reverbSize" data-min="0" data-max="100" data-value="60" data-unit="%">
+            <div class="knob-container">
+              <svg class="knob-svg" viewBox="0 0 56 56">
+                <circle class="knob-track-bg" cx="28" cy="28" r="24"/>
+                <circle class="knob-track-fill purple" cx="28" cy="28" r="24"/>
+              </svg>
+              <div class="knob-center"><div class="knob-indicator"></div></div>
+            </div>
+            <div class="knob-value">60%</div>
+            <div class="knob-label">Size</div>
+          </div>
+          <div class="knob-group purple-knob" data-param="reverbDecay" data-min="0" data-max="100" data-value="50" data-unit="%">
+            <div class="knob-container">
+              <svg class="knob-svg" viewBox="0 0 56 56">
+                <circle class="knob-track-bg" cx="28" cy="28" r="24"/>
+                <circle class="knob-track-fill purple" cx="28" cy="28" r="24"/>
+              </svg>
+              <div class="knob-center"><div class="knob-indicator"></div></div>
+            </div>
+            <div class="knob-value">50%</div>
+            <div class="knob-label">Decay</div>
+          </div>
+          <div class="knob-group purple-knob" data-param="reverbDamp" data-min="0" data-max="100" data-value="45" data-unit="%">
+            <div class="knob-container">
+              <svg class="knob-svg" viewBox="0 0 56 56">
+                <circle class="knob-track-bg" cx="28" cy="28" r="24"/>
+                <circle class="knob-track-fill purple" cx="28" cy="28" r="24"/>
+              </svg>
+              <div class="knob-center"><div class="knob-indicator"></div></div>
+            </div>
+            <div class="knob-value">45%</div>
+            <div class="knob-label">Damp</div>
+          </div>
+          <div class="knob-group purple-knob" data-param="reverbWidth" data-min="0" data-max="100" data-value="70" data-unit="%">
+            <div class="knob-container">
+              <svg class="knob-svg" viewBox="0 0 56 56">
+                <circle class="knob-track-bg" cx="28" cy="28" r="24"/>
+                <circle class="knob-track-fill purple" cx="28" cy="28" r="24"/>
+              </svg>
+              <div class="knob-center"><div class="knob-indicator"></div></div>
+            </div>
+            <div class="knob-value">70%</div>
+            <div class="knob-label">Width</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DELAY SECTION -->
+      <div class="section delay">
+        <div class="section-title">Delay</div>
+        <div class="knobs-row">
+          <div class="knob-group" data-param="delayTime" data-min="1" data-max="1000" data-value="320" data-unit="ms">
+            <div class="knob-container">
+              <svg class="knob-svg" viewBox="0 0 56 56">
+                <circle class="knob-track-bg" cx="28" cy="28" r="24"/>
+                <circle class="knob-track-fill pink" cx="28" cy="28" r="24"/>
+              </svg>
+              <div class="knob-center"><div class="knob-indicator"></div></div>
+            </div>
+            <div class="knob-value">320ms</div>
+            <div class="knob-label">Time</div>
+          </div>
+          <div class="knob-group" data-param="delayFeedback" data-min="0" data-max="100" data-value="35" data-unit="%">
+            <div class="knob-container">
+              <svg class="knob-svg" viewBox="0 0 56 56">
+                <circle class="knob-track-bg" cx="28" cy="28" r="24"/>
+                <circle class="knob-track-fill pink" cx="28" cy="28" r="24"/>
+              </svg>
+              <div class="knob-center"><div class="knob-indicator"></div></div>
+            </div>
+            <div class="knob-value">35%</div>
+            <div class="knob-label">Feedback</div>
+          </div>
+          <div class="knob-group" data-param="delayFilter" data-min="0" data-max="100" data-value="50" data-unit="%">
+            <div class="knob-container">
+              <svg class="knob-svg" viewBox="0 0 56 56">
+                <circle class="knob-track-bg" cx="28" cy="28" r="24"/>
+                <circle class="knob-track-fill pink" cx="28" cy="28" r="24"/>
+              </svg>
+              <div class="knob-center"><div class="knob-indicator"></div></div>
+            </div>
+            <div class="knob-value">50%</div>
+            <div class="knob-label">Filter</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== BOTTOM ROW ===== -->
+    <div class="bottom-row">
+      <div class="mix-section">
+        <div class="slider-group" data-param="dryWet" data-min="0" data-max="100" data-value="55">
+          <span class="slider-label">Dry/Wet</span>
+          <div class="slider-track">
+            <div class="slider-fill" style="width:55%"></div>
+            <div class="slider-thumb" style="left:55%"></div>
+          </div>
+          <span class="slider-value">55%</span>
+        </div>
+        <div class="slider-group" data-param="output" data-min="-24" data-max="6" data-value="0">
+          <span class="slider-label">Output</span>
+          <div class="slider-track">
+            <div class="slider-fill" style="width:80%"></div>
+            <div class="slider-thumb" style="left:80%"></div>
+          </div>
+          <span class="slider-value">0 dB</span>
+        </div>
+      </div>
+      <div class="toggle-group">
+        <button class="toggle-btn active pink-toggle" id="togglePitch">Pitch</button>
+        <button class="toggle-btn active" id="toggleReverb">Reverb</button>
+        <button class="toggle-btn active pink-toggle" id="toggleDelay">Delay</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===================== CONFIGURATION =====================
+    const ARC_RANGE = 270; // degrees of knob rotation
+    const presets = [
+      { name: 'Stargazing', values: { pitchSpeed: 42, pitchAmount: 65, pitchGlide: 55, reverbSize: 60, reverbDecay: 50, reverbDamp: 45, reverbWidth: 70, delayTime: 320, delayFeedback: 35, delayFilter: 50, dryWet: 55, output: 0 }},
+      { name: 'Highest Room', values: { pitchSpeed: 30, pitchAmount: 80, pitchGlide: 70, reverbSize: 85, reverbDecay: 75, reverbDamp: 30, reverbWidth: 90, delayTime: 480, delayFeedback: 45, delayFilter: 60, dryWet: 65, output: -2 }},
+      { name: 'Antidote', values: { pitchSpeed: 60, pitchAmount: 50, pitchGlide: 35, reverbSize: 40, reverbDecay: 35, reverbDamp: 55, reverbWidth: 50, delayTime: 200, delayFeedback: 25, delayFilter: 40, dryWet: 40, output: 0 }},
+      { name: 'Goosebumps', values: { pitchSpeed: 50, pitchAmount: 72, pitchGlide: 60, reverbSize: 70, reverbDecay: 60, reverbDamp: 40, reverbWidth: 80, delayTime: 375, delayFeedback: 40, delayFilter: 55, dryWet: 60, output: -1 }},
+      { name: 'SICKO MODE', values: { pitchSpeed: 20, pitchAmount: 90, pitchGlide: 80, reverbSize: 95, reverbDecay: 85, reverbDamp: 20, reverbWidth: 100, delayTime: 500, delayFeedback: 55, delayFilter: 70, dryWet: 75, output: -3 }},
+    ];
+    let currentPreset = 0;
+
+    // ===================== KNOB LOGIC =====================
+    const knobGroups = document.querySelectorAll('.knob-group');
+    const tooltip = document.getElementById('tooltip');
+
+    function getArcLength(radius) {
+      return 2 * Math.PI * radius * (ARC_RANGE / 360);
+    }
+
+    function updateKnobVisual(group, value) {
+      const min = parseFloat(group.dataset.min);
+      const max = parseFloat(group.dataset.max);
+      const unit = group.dataset.unit || '';
+      const norm = (value - min) / (max - min);
+
+      // Update arc fill
+      const circle = group.querySelector('.knob-track-fill');
+      const radius = 24;
+      const totalArc = getArcLength(radius);
+      const circumference = 2 * Math.PI * radius;
+      circle.setAttribute('stroke-dasharray', `${totalArc} ${circumference}`);
+      circle.setAttribute('stroke-dashoffset', totalArc - (totalArc * norm));
+
+      // Update indicator rotation
+      const indicator = group.querySelector('.knob-indicator');
+      const angle = -135 + (norm * ARC_RANGE);
+      indicator.style.transform = `rotate(${angle}deg)`;
+
+      // Update value display
+      const valEl = group.querySelector('.knob-value');
+      if (unit === 'ms') {
+        valEl.textContent = `${Math.round(value)}ms`;
+      } else if (unit === 'dB') {
+        valEl.textContent = `${value > 0 ? '+' : ''}${Math.round(value)} dB`;
+      } else {
+        valEl.textContent = `${Math.round(value)}%`;
+      }
+
+      group.dataset.value = value;
+    }
+
+    function initKnobs() {
+      knobGroups.forEach(group => {
+        const value = parseFloat(group.dataset.value);
+        updateKnobVisual(group, value);
+
+        const center = group.querySelector('.knob-center');
+        let isDragging = false;
+        let startY, startValue;
+
+        function onPointerDown(e) {
+          isDragging = true;
+          startY = e.clientY;
+          startValue = parseFloat(group.dataset.value);
+          document.body.style.cursor = 'grabbing';
+          e.preventDefault();
+        }
+
+        function onPointerMove(e) {
+          if (!isDragging) return;
+          const min = parseFloat(group.dataset.min);
+          const max = parseFloat(group.dataset.max);
+          const delta = (startY - e.clientY) * ((max - min) / 200);
+          const newVal = Math.max(min, Math.min(max, startValue + delta));
+          updateKnobVisual(group, newVal);
+
+          // Show tooltip
+          tooltip.textContent = group.querySelector('.knob-value').textContent;
+          tooltip.style.left = e.clientX + 14 + 'px';
+          tooltip.style.top = e.clientY - 14 + 'px';
+          tooltip.classList.add('visible');
+
+          sendParam(group.dataset.param, newVal);
+        }
+
+        function onPointerUp() {
+          if (!isDragging) return;
+          isDragging = false;
+          document.body.style.cursor = '';
+          tooltip.classList.remove('visible');
+        }
+
+        center.addEventListener('pointerdown', onPointerDown);
+        document.addEventListener('pointermove', onPointerMove);
+        document.addEventListener('pointerup', onPointerUp);
+
+        // Double click to reset
+        center.addEventListener('dblclick', () => {
+          const defaultPreset = presets[currentPreset].values;
+          const param = group.dataset.param;
+          if (defaultPreset[param] !== undefined) {
+            updateKnobVisual(group, defaultPreset[param]);
+            sendParam(param, defaultPreset[param]);
+          }
+        });
+      });
+    }
+
+    // ===================== SLIDER LOGIC =====================
+    const sliderGroups = document.querySelectorAll('.slider-group');
+
+    function updateSliderVisual(group, normValue) {
+      const min = parseFloat(group.dataset.min);
+      const max = parseFloat(group.dataset.max);
+      const value = min + (normValue * (max - min));
+      const pct = normValue * 100;
+
+      group.querySelector('.slider-fill').style.width = pct + '%';
+      group.querySelector('.slider-thumb').style.left = pct + '%';
+
+      const param = group.dataset.param;
+      const valEl = group.querySelector('.slider-value');
+      if (param === 'output') {
+        valEl.textContent = `${value > 0 ? '+' : ''}${Math.round(value)} dB`;
+      } else {
+        valEl.textContent = `${Math.round(value)}%`;
+      }
+
+      group.dataset.value = value;
+    }
+
+    function initSliders() {
+      sliderGroups.forEach(group => {
+        const track = group.querySelector('.slider-track');
+        let isDragging = false;
+
+        function setFromEvent(e) {
+          const rect = track.getBoundingClientRect();
+          const norm = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+          updateSliderVisual(group, norm);
+          const min = parseFloat(group.dataset.min);
+          const max = parseFloat(group.dataset.max);
+          sendParam(group.dataset.param, min + (norm * (max - min)));
+        }
+
+        track.addEventListener('pointerdown', (e) => {
+          isDragging = true;
+          setFromEvent(e);
+          e.preventDefault();
+        });
+
+        document.addEventListener('pointermove', (e) => {
+          if (isDragging) setFromEvent(e);
+        });
+
+        document.addEventListener('pointerup', () => {
+          isDragging = false;
+        });
+
+        // Init visual
+        const min = parseFloat(group.dataset.min);
+        const max = parseFloat(group.dataset.max);
+        const val = parseFloat(group.dataset.value);
+        const norm = (val - min) / (max - min);
+        updateSliderVisual(group, norm);
+      });
+    }
+
+    // ===================== TOGGLE BUTTONS =====================
+    document.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        btn.classList.toggle('active');
+        const section = btn.textContent.toLowerCase();
+        sendParam(section + 'Enabled', btn.classList.contains('active') ? 1 : 0);
+      });
+    });
+
+    // ===================== POWER BUTTON =====================
+    const powerBtn = document.getElementById('powerBtn');
+    powerBtn.addEventListener('click', () => {
+      powerBtn.classList.toggle('active');
+      sendParam('bypass', powerBtn.classList.contains('active') ? 0 : 1);
+    });
+
+    // ===================== PRESETS =====================
+    function loadPreset(index) {
+      currentPreset = index;
+      const preset = presets[index];
+      document.getElementById('presetName').textContent = preset.name;
+
+      knobGroups.forEach(group => {
+        const param = group.dataset.param;
+        if (preset.values[param] !== undefined) {
+          updateKnobVisual(group, preset.values[param]);
+          sendParam(param, preset.values[param]);
+        }
+      });
+
+      sliderGroups.forEach(group => {
+        const param = group.dataset.param;
+        if (preset.values[param] !== undefined) {
+          const min = parseFloat(group.dataset.min);
+          const max = parseFloat(group.dataset.max);
+          const norm = (preset.values[param] - min) / (max - min);
+          updateSliderVisual(group, norm);
+          sendParam(param, preset.values[param]);
+        }
+      });
+    }
+
+    document.getElementById('presetPrev').addEventListener('click', () => {
+      loadPreset((currentPreset - 1 + presets.length) % presets.length);
+    });
+
+    document.getElementById('presetNext').addEventListener('click', () => {
+      loadPreset((currentPreset + 1) % presets.length);
+    });
+
+    // ===================== VISUALIZER =====================
+    const canvas = document.getElementById('vizCanvas');
+    const ctx = canvas.getContext('2d');
+    let vizPhase = 0;
+
+    function resizeCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width * window.devicePixelRatio;
+      canvas.height = rect.height * window.devicePixelRatio;
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    }
+
+    function drawVisualizer() {
+      const w = canvas.width / window.devicePixelRatio;
+      const h = canvas.height / window.devicePixelRatio;
+      ctx.clearRect(0, 0, w, h);
+
+      vizPhase += 0.02;
+
+      // Draw multiple waves
+      for (let wave = 0; wave < 3; wave++) {
+        ctx.beginPath();
+        const gradient = ctx.createLinearGradient(0, 0, w, 0);
+
+        if (wave === 0) {
+          gradient.addColorStop(0, 'rgba(255, 45, 149, 0.6)');
+          gradient.addColorStop(1, 'rgba(176, 38, 255, 0.6)');
+        } else if (wave === 1) {
+          gradient.addColorStop(0, 'rgba(176, 38, 255, 0.3)');
+          gradient.addColorStop(1, 'rgba(255, 45, 149, 0.3)');
+        } else {
+          gradient.addColorStop(0, 'rgba(255, 110, 180, 0.15)');
+          gradient.addColorStop(1, 'rgba(213, 128, 255, 0.15)');
+        }
+
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = wave === 0 ? 2 : 1;
+
+        const amp = (h * 0.25) / (wave + 1);
+        const freq = 0.008 + wave * 0.004;
+        const phaseOffset = wave * 1.2;
+
+        for (let x = 0; x <= w; x++) {
+          const y = h / 2 + Math.sin(x * freq + vizPhase + phaseOffset) * amp *
+            (0.7 + 0.3 * Math.sin(x * 0.003 + vizPhase * 0.5));
+          if (x === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      requestAnimationFrame(drawVisualizer);
+    }
+
+    // ===================== DAW COMMUNICATION =====================
+    function sendParam(name, value) {
+      try {
+        if (window.DISTRHO) {
+          window.DISTRHO.editParameter(name, true);
+          window.DISTRHO.setParameterValue(name, value);
+          window.DISTRHO.editParameter(name, false);
+        }
+      } catch (e) { /* standalone mode */ }
+    }
+
+    // ===================== INIT =====================
+    window.addEventListener('load', () => {
+      resizeCanvas();
+      initKnobs();
+      initSliders();
+      drawVisualizer();
+    });
+
+    window.addEventListener('resize', resizeCanvas);
+  </script>
+</body>
+</html>
