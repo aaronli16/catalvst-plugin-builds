@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ocean Reverb</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      width: 300px;
+      height: 400px;
+      overflow: hidden;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #0a1628;
+      position: relative;
+    }
+
+    /* Subtle animated background gradient */
+    .bg-gradient {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at 50% 80%, #0e2a4a 0%, #0a1628 70%);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Subtle wave texture overlay */
+    .wave-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 40%;
+      opacity: 0.06;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 8px,
+        rgba(100, 180, 255, 0.4) 8px,
+        rgba(100, 180, 255, 0.4) 9px
+      );
+      z-index: 1;
+      pointer-events: none;
+      animation: waveShift 8s ease-in-out infinite alternate;
+    }
+
+    @keyframes waveShift {
+      0% { transform: translateY(0); opacity: 0.06; }
+      100% { transform: translateY(-6px); opacity: 0.09; }
+    }
+
+    .container {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Plugin title */
+    .title {
+      font-size: 28px;
+      font-weight: 300;
+      letter-spacing: 10px;
+      text-transform: uppercase;
+      color: #c8ddf0;
+      margin-bottom: 4px;
+      text-shadow: 0 0 20px rgba(100, 180, 255, 0.2);
+    }
+
+    .subtitle {
+      font-size: 10px;
+      font-weight: 400;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: #4a6a8a;
+      margin-bottom: 24px;
+    }
+
+    /* Knob container */
+    .knob-wrapper {
+      position: relative;
+      width: 140px;
+      height: 140px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Outer glow ring */
+    .knob-glow {
+      position: absolute;
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(60, 140, 220, 0.08) 0%, transparent 70%);
+      transition: background 0.3s;
+      pointer-events: none;
+    }
+
+    .knob-wrapper:hover .knob-glow,
+    .knob-wrapper.active .knob-glow {
+      background: radial-gradient(circle, rgba(60, 140, 220, 0.15) 0%, transparent 70%);
+    }
+
+    /* SVG Knob */
+    .knob-svg {
+      width: 140px;
+      height: 140px;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    .knob-wrapper {
+      touch-action: none;
+    }
+
+    .knob-svg:active {
+      cursor: grabbing;
+    }
+
+    /* Track (background arc) */
+    .knob-track {
+      fill: none;
+      stroke: #1a2d45;
+      stroke-width: 4;
+      stroke-linecap: round;
+    }
+
+    /* Active arc */
+    .knob-arc {
+      fill: none;
+      stroke: url(#arcGradient);
+      stroke-width: 4;
+      stroke-linecap: round;
+      filter: drop-shadow(0 0 6px rgba(80, 160, 240, 0.4));
+      transition: filter 0.3s;
+    }
+
+    .knob-wrapper:hover .knob-arc,
+    .knob-wrapper.active .knob-arc {
+      filter: drop-shadow(0 0 10px rgba(80, 160, 240, 0.6));
+    }
+
+    /* Indicator dot */
+    .knob-indicator {
+      fill: #e0eeff;
+      filter: drop-shadow(0 0 4px rgba(180, 220, 255, 0.8));
+    }
+
+    /* Center circle */
+    .knob-center {
+      fill: #0f1f34;
+      stroke: #1a2d45;
+      stroke-width: 1;
+    }
+
+    /* Tick marks */
+    .knob-tick {
+      stroke: #2a3f5a;
+      stroke-width: 1;
+      stroke-linecap: round;
+    }
+
+    /* Value display */
+    .value-display {
+      font-size: 26px;
+      font-weight: 200;
+      color: #e0eeff;
+      letter-spacing: 2px;
+      margin-top: 16px;
+      font-variant-numeric: tabular-nums;
+      min-width: 80px;
+      text-align: center;
+    }
+
+    .value-unit {
+      font-size: 11px;
+      font-weight: 400;
+      color: #4a6a8a;
+      letter-spacing: 2px;
+    }
+
+    /* Label */
+    .knob-label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: #4a6a8a;
+      margin-top: 4px;
+    }
+
+    /* Min/Max labels */
+    .range-labels {
+      display: flex;
+      justify-content: space-between;
+      width: 160px;
+      margin-top: 20px;
+    }
+
+    .range-label {
+      font-size: 8px;
+      font-weight: 400;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #2e4560;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bg-gradient"></div>
+  <div class="wave-overlay"></div>
+
+  <div class="container">
+    <div class="title">Ocean</div>
+    <div class="subtitle">Reverb</div>
+
+    <div class="knob-wrapper" id="knobWrapper">
+      <div class="knob-glow"></div>
+      <svg class="knob-svg" id="knobSvg" viewBox="0 0 140 140">
+        <defs>
+          <linearGradient id="arcGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#3a7ec8" />
+            <stop offset="100%" style="stop-color:#5ab0f0" />
+          </linearGradient>
+        </defs>
+
+        <!-- Tick marks -->
+        <g id="ticks"></g>
+
+        <!-- Background track arc -->
+        <path class="knob-track" id="knobTrack" />
+
+        <!-- Active value arc -->
+        <path class="knob-arc" id="knobArc" />
+
+        <!-- Center circle -->
+        <circle class="knob-center" cx="70" cy="70" r="38" />
+
+        <!-- Indicator dot -->
+        <circle class="knob-indicator" id="knobIndicator" cx="70" cy="20" r="4" />
+      </svg>
+    </div>
+
+    <div class="value-display">
+      <span id="valueText">50</span><span class="value-unit">%</span>
+    </div>
+    <div class="knob-label">Depth</div>
+
+    <div class="range-labels">
+      <span class="range-label">Dry</span>
+      <span class="range-label">Wet</span>
+    </div>
+  </div>
+
+  <script>
+    // --- Knob Configuration ---
+    const PARAM_ID = 'depth';
+    const MIN_VAL = 0;
+    const MAX_VAL = 100;
+    const DEFAULT_VAL = 50;
+    const ARC_START_ANGLE = 135;   // degrees, from top (0=top, clockwise)
+    const ARC_END_ANGLE = 405;     // 135 + 270 = full sweep
+    const ARC_RADIUS = 56;
+    const CENTER = 70;
+    const NUM_TICKS = 21;
+
+    let currentValue = DEFAULT_VAL;
+    let isDragging = false;
+    let dragStartY = 0;
+    let dragStartValue = 0;
+
+    // --- Utility: Polar to Cartesian ---
+    function polarToCartesian(cx, cy, r, angleDeg) {
+      const angleRad = ((angleDeg - 90) * Math.PI) / 180;
+      return {
+        x: cx + r * Math.cos(angleRad),
+        y: cy + r * Math.sin(angleRad),
+      };
+    }
+
+    // --- Utility: SVG Arc Path ---
+    function describeArc(cx, cy, r, startAngle, endAngle) {
+      const start = polarToCartesian(cx, cy, r, endAngle);
+      const end = polarToCartesian(cx, cy, r, startAngle);
+      const largeArc = endAngle - startAngle <= 180 ? 0 : 1;
+      return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 0 ${end.x} ${end.y}`;
+    }
+
+    // --- Draw Tick Marks ---
+    function drawTicks() {
+      const ticksGroup = document.getElementById('ticks');
+      ticksGroup.innerHTML = '';
+      for (let i = 0; i < NUM_TICKS; i++) {
+        const angle = ARC_START_ANGLE + (i / (NUM_TICKS - 1)) * (ARC_END_ANGLE - ARC_START_ANGLE);
+        const innerR = 62;
+        const outerR = 66;
+        const p1 = polarToCartesian(CENTER, CENTER, innerR, angle);
+        const p2 = polarToCartesian(CENTER, CENTER, outerR, angle);
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', p1.x);
+        line.setAttribute('y1', p1.y);
+        line.setAttribute('x2', p2.x);
+        line.setAttribute('y2', p2.y);
+        line.setAttribute('class', 'knob-tick');
+        ticksGroup.appendChild(line);
+      }
+    }
+
+    // --- Update Knob Visuals ---
+    function updateKnob(value) {
+      const normalized = (value - MIN_VAL) / (MAX_VAL - MIN_VAL);
+      const currentAngle = ARC_START_ANGLE + normalized * (ARC_END_ANGLE - ARC_START_ANGLE);
+
+      // Track (full arc)
+      document.getElementById('knobTrack').setAttribute('d',
+        describeArc(CENTER, CENTER, ARC_RADIUS, ARC_START_ANGLE, ARC_END_ANGLE)
+      );
+
+      // Active arc
+      if (normalized > 0.005) {
+        document.getElementById('knobArc').setAttribute('d',
+          describeArc(CENTER, CENTER, ARC_RADIUS, ARC_START_ANGLE, currentAngle)
+        );
+      } else {
+        document.getElementById('knobArc').setAttribute('d', '');
+      }
+
+      // Indicator dot
+      const indicatorPos = polarToCartesian(CENTER, CENTER, ARC_RADIUS, currentAngle);
+      document.getElementById('knobIndicator').setAttribute('cx', indicatorPos.x);
+      document.getElementById('knobIndicator').setAttribute('cy', indicatorPos.y);
+
+      // Value text
+      document.getElementById('valueText').textContent = Math.round(value);
+    }
+
+    // --- Mouse / Touch Interaction ---
+    function onPointerDown(e) {
+      isDragging = true;
+      dragStartY = e.clientY;
+      dragStartValue = currentValue;
+      document.getElementById('knobWrapper').classList.add('active');
+      e.preventDefault();
+    }
+
+    function onPointerMove(e) {
+      if (!isDragging) return;
+      const clientY = e.clientY;
+      const delta = dragStartY - clientY;
+      const sensitivity = 0.5; // value units per pixel
+      let newValue = dragStartValue + delta * sensitivity;
+      newValue = Math.max(MIN_VAL, Math.min(MAX_VAL, newValue));
+      currentValue = newValue;
+      updateKnob(currentValue);
+      sendParam(PARAM_ID, currentValue / MAX_VAL);
+      e.preventDefault();
+    }
+
+    function onPointerUp() {
+      if (!isDragging) return;
+      isDragging = false;
+      document.getElementById('knobWrapper').classList.remove('active');
+    }
+
+    // Double-click to reset
+    function onDoubleClick(e) {
+      currentValue = DEFAULT_VAL;
+      updateKnob(currentValue);
+      sendParam(PARAM_ID, currentValue / MAX_VAL);
+      e.preventDefault();
+    }
+
+    // --- Host Communication ---
+    function sendParam(id, normalizedValue) {
+      if (window.sendParameterChange) {
+        window.sendParameterChange(id, normalizedValue);
+      }
+    }
+
+    // Called by host when parameter changes externally
+    window.onParameterChange = function(id, normalizedValue) {
+      if (id === PARAM_ID) {
+        currentValue = MIN_VAL + normalizedValue * (MAX_VAL - MIN_VAL);
+        updateKnob(currentValue);
+      }
+    };
+
+    // --- Event Binding ---
+    const knobEl = document.getElementById('knobWrapper');
+    knobEl.addEventListener('pointerdown', function(e) {
+      knobEl.setPointerCapture(e.pointerId);
+      onPointerDown(e);
+    });
+    knobEl.addEventListener('pointermove', function(e) {
+      onPointerMove(e);
+    });
+    knobEl.addEventListener('pointerup', function(e) {
+      onPointerUp(e);
+    });
+    knobEl.addEventListener('pointercancel', function(e) {
+      onPointerUp(e);
+    });
+    knobEl.addEventListener('dblclick', onDoubleClick);
+
+    // --- Init ---
+    drawTicks();
+    updateKnob(currentValue);
+  </script>
+</body>
+</html>
