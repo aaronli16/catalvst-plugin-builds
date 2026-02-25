@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Endless Buildup</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+  :root {
+    --bg: #1a1a1a;
+    --surface: #232323;
+    --surface-hover: #2a2a2a;
+    --border: #333;
+    --text: #e0e0e0;
+    --text-dim: #777;
+    --accent-lift: #5ec4e6;
+    --accent-strato: #a06ef0;
+    --accent-dada: #f04e4e;
+    --accent: var(--accent-lift);
+    --knob-track: #333;
+    --indicator-off: #2a2a2a;
+    --indicator-on: var(--accent);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 700px;
+    height: 380px;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: var(--text);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .plugin-root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 16px 24px 20px;
+    box-sizing: border-box;
+  }
+
+  /* ── Header ── */
+  .header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .logo {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .logo span { color: var(--accent); transition: color 0.4s; }
+
+  .version {
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+
+  /* ── Preset Tabs ── */
+  .preset-tabs {
+    display: flex;
+    gap: 2px;
+    width: 100%;
+    background: var(--surface);
+    border-radius: 6px;
+    padding: 3px;
+    margin-bottom: 16px;
+  }
+
+  .preset-tab {
+    flex: 1;
+    padding: 8px 4px;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    outline: none;
+  }
+
+  .preset-tab:hover { color: var(--text); background: var(--surface-hover); }
+
+  .preset-tab.active {
+    color: #fff;
+    background: var(--accent);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    transition: all 0.35s ease;
+  }
+
+  .preset-tab[data-mode="lift"] { --tab-accent: var(--accent-lift); }
+  .preset-tab[data-mode="strato"] { --tab-accent: var(--accent-strato); }
+  .preset-tab[data-mode="dada"] { --tab-accent: var(--accent-dada); }
+
+  .preset-tab.active[data-mode="lift"] { background: var(--accent-lift); }
+  .preset-tab.active[data-mode="strato"] { background: var(--accent-strato); }
+  .preset-tab.active[data-mode="dada"] { background: var(--accent-dada); }
+
+  /* ── Main Area ── */
+  .main-area {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    flex: 1;
+    width: 100%;
+  }
+
+  /* ── Smiley ── */
+  .smiley-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .smiley-svg {
+    width: 100px;
+    height: 100px;
+    filter: drop-shadow(0 0 8px rgba(0,0,0,0.3));
+    transition: filter 0.3s;
+  }
+
+  .smiley-face-circle {
+    fill: var(--accent);
+    transition: fill 0.4s ease;
+  }
+
+  .smiley-eye {
+    fill: #1a1a1a;
+    transition: all 0.2s;
+  }
+
+  .smiley-mouth {
+    fill: none;
+    stroke: #1a1a1a;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    transition: all 0.2s;
+  }
+
+  .smiley-pupil {
+    fill: #1a1a1a;
+    transition: all 0.2s;
+  }
+
+  .smiley-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    transition: color 0.3s;
+  }
+
+  /* ── Knob ── */
+  .knob-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .knob-wrapper {
+    position: relative;
+    width: 160px;
+    height: 160px;
+    cursor: grab;
+  }
+
+  .knob-wrapper:active { cursor: grabbing; }
+
+  .knob-svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .knob-track-bg {
+    fill: none;
+    stroke: var(--knob-track);
+    stroke-width: 6;
+    stroke-linecap: round;
+  }
+
+  .knob-track-fill {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 6;
+    stroke-linecap: round;
+    transition: stroke 0.4s ease;
+  }
+
+  .knob-cap {
+    fill: var(--surface);
+    stroke: var(--border);
+    stroke-width: 1;
+  }
+
+  .knob-indicator {
+    stroke: var(--accent);
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke 0.4s ease;
+  }
+
+  .knob-value {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .knob-value span {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-dim);
+  }
+
+  .knob-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  /* ── Effect Indicators ── */
+  .fx-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    flex-shrink: 0;
+    min-width: 130px;
+  }
+
+  .fx-panel-title {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 2px;
+  }
+
+  .fx-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.3;
+    transition: opacity 0.3s ease;
+  }
+
+  .fx-indicator.active { opacity: 1; }
+
+  .fx-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--indicator-off);
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+    flex-shrink: 0;
+  }
+
+  .fx-indicator.active .fx-dot {
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .fx-name {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-dim);
+    transition: color 0.3s;
+    white-space: nowrap;
+  }
+
+  .fx-indicator.active .fx-name { color: var(--text); }
+
+  /* ── Intensity glow at high values ── */
+  .plugin-root.overdriven .knob-wrapper {
+    filter: drop-shadow(0 0 16px var(--accent));
+  }
+
+  .plugin-root.overdriven .smiley-svg {
+    filter: drop-shadow(0 0 12px var(--accent));
+  }
+
+  /* ── Bottom bar ── */
+  .bottom-bar {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    margin-top: auto;
+    padding-top: 8px;
+  }
+
+  .intensity-meter {
+    width: 260px;
+    height: 3px;
+    background: var(--knob-track);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .intensity-meter-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.05s linear, background 0.4s ease;
+  }
+
+  .meter-label {
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  /* ── Shake keyframes for maniac mode ── */
+  @keyframes shake {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    20% { transform: translate(-1px, 0.5px) rotate(-0.5deg); }
+    40% { transform: translate(1px, -0.5px) rotate(0.5deg); }
+    60% { transform: translate(-0.5px, 1px) rotate(-0.3deg); }
+    80% { transform: translate(0.5px, -1px) rotate(0.3deg); }
+  }
+
+  .smiley-shake {
+    animation: shake 0.15s infinite;
+  }
+</style>
+</head>
+<body>
+
+<div class="plugin-root" id="pluginRoot">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo"><span>Endless</span> Buildup</div>
+    <div class="version">v1.0</div>
+  </div>
+
+  <!-- Preset Tabs -->
+  <div class="preset-tabs">
+    <button class="preset-tab active" data-mode="lift" id="tabLift">Lift Off</button>
+    <button class="preset-tab" data-mode="strato" id="tabStrato">Stratosphere</button>
+    <button class="preset-tab" data-mode="dada" id="tabDada">Dada Dynamite</button>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-area">
+
+    <!-- Smiley -->
+    <div class="smiley-container">
+      <svg class="smiley-svg" id="smileySvg" viewBox="0 0 100 100">
+        <!-- Face -->
+        <circle class="smiley-face-circle" cx="50" cy="50" r="44"/>
+        <!-- Left Eye -->
+        <ellipse class="smiley-eye" id="eyeL" cx="35" cy="42" rx="5" ry="5.5"/>
+        <circle class="smiley-pupil" id="pupilL" cx="35" cy="42" r="2.5" style="display:none;"/>
+        <!-- Right Eye -->
+        <ellipse class="smiley-eye" id="eyeR" cx="65" cy="42" rx="5" ry="5.5"/>
+        <circle class="smiley-pupil" id="pupilR" cx="65" cy="42" r="2.5" style="display:none;"/>
+        <!-- Mouth -->
+        <path class="smiley-mouth" id="mouth" d="M 34 60 Q 50 60 66 60"/>
+        <!-- Extra elements for maniac mode -->
+        <line id="browL" x1="27" y1="32" x2="43" y2="34" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round" style="display:none;"/>
+        <line id="browR" x1="57" y1="34" x2="73" y2="32" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round" style="display:none;"/>
+      </svg>
+      <div class="smiley-label" id="smileyLabel">Chill</div>
+    </div>
+
+    <!-- Knob -->
+    <div class="knob-section">
+      <div class="knob-wrapper" id="knobWrapper">
+        <svg class="knob-svg" viewBox="0 0 160 160">
+          <!-- Track background arc -->
+          <path class="knob-track-bg" id="knobTrackBg" d=""/>
+          <!-- Track fill arc -->
+          <path class="knob-track-fill" id="knobTrackFill" d=""/>
+          <!-- Knob cap -->
+          <circle class="knob-cap" cx="80" cy="80" r="48"/>
+          <!-- Indicator line -->
+          <line class="knob-indicator" id="knobIndicator" x1="80" y1="80" x2="80" y2="40"/>
+        </svg>
+      </div>
+      <div class="knob-value" id="knobValue">0<span>%</span></div>
+      <div class="knob-label">Intensity</div>
+    </div>
+
+    <!-- FX Indicators -->
+    <div class="fx-panel" id="fxPanel">
+      <div class="fx-panel-title">Active FX</div>
+      <div class="fx-indicator" data-fx="highpass" id="fxHighpass">
+        <div class="fx-dot"></div>
+        <div class="fx-name">Highpass</div>
+      </div>
+      <div class="fx-indicator" data-fx="reverb" id="fxReverb">
+        <div class="fx-dot"></div>
+        <div class="fx-name">Reverb</div>
+      </div>
+      <div class="fx-indicator" data-fx="widener" id="fxWidener">
+        <div class="fx-dot"></div>
+        <div class="fx-name">Stereo Width</div>
+      </div>
+      <div class="fx-indicator" data-fx="delay" id="fxDelay">
+        <div class="fx-dot"></div>
+        <div class="fx-name">Delay</div>
+      </div>
+      <div class="fx-indicator" data-fx="noise" id="fxNoise">
+        <div class="fx-dot"></div>
+        <div class="fx-name">Noise</div>
+      </div>
+      <div class="fx-indicator" data-fx="phaser" id="fxPhaser">
+        <div class="fx-dot"></div>
+        <div class="fx-name">Phaser</div>
+      </div>
+      <div class="fx-indicator" data-fx="riser" id="fxRiser">
+        <div class="fx-dot"></div>
+        <div class="fx-name">Pitch Riser</div>
+      </div>
+      <div class="fx-indicator" data-fx="bitcrush" id="fxBitcrush">
+        <div class="fx-dot"></div>
+        <div class="fx-name">Bitcrush</div>
+      </div>
+      <div class="fx-indicator" data-fx="saturate" id="fxSaturate">
+        <div class="fx-dot"></div>
+        <div class="fx-name">Saturator</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Meter -->
+  <div class="bottom-bar">
+    <div class="meter-label">Buildup</div>
+    <div class="intensity-meter">
+      <div class="intensity-meter-fill" id="meterFill"></div>
+    </div>
+    <div class="meter-label" id="meterPercent">0%</div>
+  </div>
+
+</div>
+
+<script type="module">
+  import { getSliderState } from './js/juce/index.js';
+
+  // ── JUCE parameter states ──
+  const intensityState = getSliderState("INTENSITY");
+  const modeState = getSliderState("MODE");
+
+  // ── State ──
+  let intensity = 0;          // 0–110
+  let currentMode = 'lift';   // lift | strato | dada
+  const ARC_START = 135;
+  const ARC_END = 405;
+  const ARC_RANGE = 270;
+  const CENTER = 80;
+  const RADIUS = 62;
+
+  // ── DOM Refs ──
+  const root = document.getElementById('pluginRoot');
+  const knobWrapper = document.getElementById('knobWrapper');
+  const knobTrackBg = document.getElementById('knobTrackBg');
+  const knobTrackFill = document.getElementById('knobTrackFill');
+  const knobIndicator = document.getElementById('knobIndicator');
+  const knobValue = document.getElementById('knobValue');
+  const meterFill = document.getElementById('meterFill');
+  const meterPercent = document.getElementById('meterPercent');
+  const smileySvg = document.getElementById('smileySvg');
+  const smileyLabel = document.getElementById('smileyLabel');
+  const eyeL = document.getElementById('eyeL');
+  const eyeR = document.getElementById('eyeR');
+  const pupilL = document.getElementById('pupilL');
+  const pupilR = document.getElementById('pupilR');
+  const mouth = document.getElementById('mouth');
+  const browL = document.getElementById('browL');
+  const browR = document.getElementById('browR');
+  const tabs = document.querySelectorAll('.preset-tab');
+
+  // ── FX visibility per mode ──
+  const fxByMode = {
+    lift:   ['highpass','reverb','widener'],
+    strato: ['highpass','reverb','widener','delay','noise','phaser'],
+    dada:   ['highpass','reverb','widener','delay','noise','phaser','riser','bitcrush','saturate']
+  };
+
+  // ── FX activation thresholds (intensity %) ──
+  const fxThresholds = {
+    highpass:  2,
+    reverb:    5,
+    widener:   10,
+    delay:     15,
+    noise:     60,
+    phaser:    20,
+    riser:     10,
+    bitcrush:  80,
+    saturate:  30
+  };
+
+  // ── Accent colors ──
+  const accentColors = {
+    lift: '#5ec4e6',
+    strato: '#a06ef0',
+    dada: '#f04e4e'
+  };
+
+  // ── Mode name to normalised value mapping ──
+  // MODE is a Choice param with 3 options: 0=Lift Off, 1=Stratosphere, 2=Dada Dynamite
+  // Normalised: 0.0, 0.5, 1.0
+  const modeToNorm = { lift: 0.0, strato: 0.5, dada: 1.0 };
+  const normToMode = (n) => {
+    if (n < 0.25) return 'lift';
+    if (n < 0.75) return 'strato';
+    return 'dada';
+  };
+
+  // ── Arc helpers ──
+  function degToRad(d) { return (d - 90) * Math.PI / 180; }
+
+  function arcPath(startDeg, endDeg, r) {
+    const s = degToRad(startDeg);
+    const e = degToRad(endDeg);
+    const sx = CENTER + r * Math.cos(s);
+    const sy = CENTER + r * Math.sin(s);
+    const ex = CENTER + r * Math.cos(e);
+    const ey = CENTER + r * Math.sin(e);
+    const large = (endDeg - startDeg > 180) ? 1 : 0;
+    return `M ${sx} ${sy} A ${r} ${r} 0 ${large} 1 ${ex} ${ey}`;
+  }
+
+  function indicatorPos(deg, len) {
+    const r = degToRad(deg);
+    return {
+      x: CENTER + len * Math.cos(r),
+      y: CENTER + len * Math.sin(r)
+    };
+  }
+
+  // ── Init track bg ──
+  knobTrackBg.setAttribute('d', arcPath(ARC_START, ARC_END, RADIUS));
+
+  // ── Mode switching ──
+  function setMode(mode, sendToDAW = true) {
+    currentMode = mode;
+    document.documentElement.style.setProperty('--accent', accentColors[mode]);
+
+    tabs.forEach(t => {
+      t.classList.toggle('active', t.dataset.mode === mode);
+    });
+
+    // Show/hide relevant FX indicators
+    const allFx = document.querySelectorAll('.fx-indicator');
+    const visibleFx = fxByMode[mode];
+    allFx.forEach(el => {
+      const fx = el.dataset.fx;
+      el.style.display = visibleFx.includes(fx) ? 'flex' : 'none';
+    });
+
+    if (sendToDAW) {
+      modeState.setNormalisedValue(modeToNorm[mode]);
+    }
+
+    updateVisuals();
+  }
+
+  tabs.forEach(t => {
+    t.addEventListener('click', () => setMode(t.dataset.mode, true));
+  });
+
+  // ── Knob interaction (relative drag) ──
+  let dragging = false;
+  let lastY = 0;
+
+  knobWrapper.addEventListener('mousedown', (e) => {
+    dragging = true;
+    lastY = e.clientY;
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const deltaY = lastY - e.clientY;
+    lastY = e.clientY;
+    const sensitivity = 0.005;
+    let normVal = intensityState.getNormalisedValue();
+    normVal = Math.max(0, Math.min(1, normVal + deltaY * sensitivity));
+    intensityState.setNormalisedValue(normVal);
+  });
+
+  window.addEventListener('mouseup', () => { dragging = false; });
+
+  // ── Double-click to reset ──
+  knobWrapper.addEventListener('dblclick', () => {
+    intensityState.setNormalisedValue(0);
+  });
+
+  // ── Mouse wheel ──
+  knobWrapper.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.02 : 0.02;
+    let normVal = intensityState.getNormalisedValue();
+    normVal = Math.max(0, Math.min(1, normVal + delta));
+    intensityState.setNormalisedValue(normVal);
+  });
+
+  // ── Listen for parameter changes from C++ (automation, presets) ──
+  intensityState.valueChangedEvent.addListener(() => {
+    const normVal = intensityState.getNormalisedValue();
+    intensity = Math.round(normVal * 110);
+    updateVisuals();
+  });
+
+  modeState.valueChangedEvent.addListener(() => {
+    const normVal = modeState.getNormalisedValue();
+    const newMode = normToMode(normVal);
+    if (newMode !== currentMode) {
+      setMode(newMode, false);
+    }
+  });
+
+  // ── Smiley face expressions ──
+  function updateSmiley(pct) {
+    const t = pct / 110;
+
+    smileySvg.classList.remove('smiley-shake');
+
+    if (t < 0.02) {
+      eyeL.setAttribute('rx', 5); eyeL.setAttribute('ry', 5.5);
+      eyeR.setAttribute('rx', 5); eyeR.setAttribute('ry', 5.5);
+      eyeL.setAttribute('cy', 42); eyeR.setAttribute('cy', 42);
+      pupilL.style.display = 'none'; pupilR.style.display = 'none';
+      browL.style.display = 'none'; browR.style.display = 'none';
+      mouth.setAttribute('d', 'M 34 60 Q 50 60 66 60');
+      smileyLabel.textContent = 'Chill';
+
+    } else if (t < 0.3) {
+      const s = t / 0.3;
+      const dip = 60 + s * 5;
+      eyeL.setAttribute('rx', 5); eyeL.setAttribute('ry', 5.5);
+      eyeR.setAttribute('rx', 5); eyeR.setAttribute('ry', 5.5);
+      pupilL.style.display = 'none'; pupilR.style.display = 'none';
+      browL.style.display = 'none'; browR.style.display = 'none';
+      mouth.setAttribute('d', `M 34 58 Q 50 ${dip} 66 58`);
+      smileyLabel.textContent = 'Warming Up';
+
+    } else if (t < 0.55) {
+      const s = (t - 0.3) / 0.25;
+      const dip = 65 + s * 5;
+      eyeL.setAttribute('rx', 5 + s); eyeL.setAttribute('ry', 5.5 + s * 0.5);
+      eyeR.setAttribute('rx', 5 + s); eyeR.setAttribute('ry', 5.5 + s * 0.5);
+      pupilL.style.display = 'none'; pupilR.style.display = 'none';
+      browL.style.display = 'none'; browR.style.display = 'none';
+      mouth.setAttribute('d', `M 32 56 Q 50 ${dip} 68 56`);
+      mouth.setAttribute('stroke-width', '2.5');
+      smileyLabel.textContent = 'Excited';
+
+    } else if (t < 0.8) {
+      const s = (t - 0.55) / 0.25;
+      eyeL.setAttribute('rx', 6); eyeL.setAttribute('ry', 7);
+      eyeR.setAttribute('rx', 6); eyeR.setAttribute('ry', 7);
+      eyeL.setAttribute('cy', 41); eyeR.setAttribute('cy', 41);
+      pupilL.style.display = 'none'; pupilR.style.display = 'none';
+      browL.style.display = 'block';
+      browR.style.display = 'block';
+      browL.setAttribute('y1', 32 - s * 3);
+      browL.setAttribute('y2', 34 - s * 2);
+      browR.setAttribute('y1', 34 - s * 2);
+      browR.setAttribute('y2', 32 - s * 3);
+      const dip = 70 + s * 4;
+      mouth.setAttribute('d', `M 30 55 Q 50 ${dip} 70 55`);
+      mouth.setAttribute('stroke-width', '3');
+      smileyLabel.textContent = 'Hyped';
+
+    } else if (t < 0.95) {
+      const s = (t - 0.8) / 0.15;
+      eyeL.setAttribute('rx', 7 + s * 2); eyeL.setAttribute('ry', 8 + s * 2);
+      eyeR.setAttribute('rx', 7 + s * 2); eyeR.setAttribute('ry', 8 + s * 2);
+      eyeL.setAttribute('cy', 40); eyeR.setAttribute('cy', 40);
+      pupilL.style.display = 'block'; pupilR.style.display = 'block';
+      pupilL.setAttribute('r', 2 + s); pupilR.setAttribute('r', 2 + s);
+      browL.style.display = 'block'; browR.style.display = 'block';
+      browL.setAttribute('y1', 27); browL.setAttribute('y2', 30);
+      browR.setAttribute('y1', 30); browR.setAttribute('y2', 27);
+      mouth.setAttribute('d', 'M 28 54 Q 50 80 72 54');
+      mouth.setAttribute('stroke-width', '3');
+      smileyLabel.textContent = 'Losing It';
+
+    } else {
+      eyeL.setAttribute('rx', 9); eyeL.setAttribute('ry', 10);
+      eyeR.setAttribute('rx', 9); eyeR.setAttribute('ry', 10);
+      eyeL.setAttribute('cy', 40); eyeR.setAttribute('cy', 40);
+      pupilL.style.display = 'block'; pupilR.style.display = 'block';
+      pupilL.setAttribute('r', 3.5); pupilR.setAttribute('r', 3.5);
+      browL.style.display = 'block'; browR.style.display = 'block';
+      browL.setAttribute('y1', 25); browL.setAttribute('y2', 29);
+      browR.setAttribute('y1', 29); browR.setAttribute('y2', 25);
+      mouth.setAttribute('d', 'M 26 52 Q 50 85 74 52');
+      mouth.setAttribute('stroke-width', '3.5');
+      smileySvg.classList.add('smiley-shake');
+      smileyLabel.textContent = 'MANIAC';
+    }
+  }
+
+  // ── FX indicator updates ──
+  function updateFxIndicators(pct) {
+    const visibleFx = fxByMode[currentMode];
+    visibleFx.forEach(fx => {
+      const el = document.querySelector(`.fx-indicator[data-fx="${fx}"]`);
+      if (!el) return;
+      const threshold = fxThresholds[fx] || 0;
+      el.classList.toggle('active', pct >= threshold);
+    });
+  }
+
+  // ── Main visual update (no parameter sends — those happen via JUCE bridge) ──
+  function updateVisuals() {
+    const pct = intensity;
+    const t = pct / 110;
+
+    // Knob arc
+    const angleDeg = ARC_START + t * ARC_RANGE;
+    if (t > 0.005) {
+      knobTrackFill.setAttribute('d', arcPath(ARC_START, angleDeg, RADIUS));
+    } else {
+      knobTrackFill.setAttribute('d', '');
+    }
+
+    // Knob indicator line
+    const indOuter = indicatorPos(angleDeg, 44);
+    const indInner = indicatorPos(angleDeg, 30);
+    knobIndicator.setAttribute('x1', indInner.x);
+    knobIndicator.setAttribute('y1', indInner.y);
+    knobIndicator.setAttribute('x2', indOuter.x);
+    knobIndicator.setAttribute('y2', indOuter.y);
+
+    // Value display
+    knobValue.innerHTML = `${pct}<span>%</span>`;
+
+    // Meter
+    meterFill.style.width = `${(pct / 110) * 100}%`;
+    meterPercent.textContent = `${pct}%`;
+
+    // Overdrive glow at high intensity
+    root.classList.toggle('overdriven', pct >= 80);
+
+    // Smiley
+    updateSmiley(pct);
+
+    // FX indicators
+    updateFxIndicators(pct);
+  }
+
+  // ── Initialize from current C++ state ──
+  intensity = Math.round(intensityState.getNormalisedValue() * 110);
+  const initMode = normToMode(modeState.getNormalisedValue());
+  setMode(initMode, false);
+  updateVisuals();
+
+</script>
+
+</body>
+</html>
