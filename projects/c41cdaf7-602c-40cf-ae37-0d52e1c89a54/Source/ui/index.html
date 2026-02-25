@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spectral</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 600px;
+    height: 440px;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0c0c10;
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: #d0d0d8;
+    user-select: none;
+  }
+
+  .plugin-root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 28px 32px 24px;
+    box-sizing: border-box;
+    background: linear-gradient(170deg, #0e0e14 0%, #0a0a0f 40%, #0d0b12 100%);
+    position: relative;
+  }
+
+  /* Subtle ambient glow */
+  .plugin-root::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(90, 70, 140, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    z-index: 1;
+  }
+
+  .header h1 {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #c8c0d8;
+    background: linear-gradient(135deg, #c8bfda 0%, #8a7faa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .header .subtitle {
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #4a4560;
+  }
+
+  /* Visualizer */
+  .visualizer {
+    width: 100%;
+    height: 100px;
+    margin-bottom: 24px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.015);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    overflow: hidden;
+    z-index: 1;
+  }
+
+  .visualizer canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Knobs Row */
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 48px;
+    z-index: 1;
+    margin-bottom: 20px;
+  }
+
+  .knob-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .knob-container {
+    width: 80px;
+    height: 80px;
+    position: relative;
+    cursor: grab;
+  }
+
+  .knob-container:active {
+    cursor: grabbing;
+  }
+
+  .knob-container svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .knob-track {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.06);
+    stroke-width: 3.5;
+    stroke-linecap: round;
+  }
+
+  .knob-fill {
+    fill: none;
+    stroke-width: 3.5;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.05s ease;
+  }
+
+  .knob-fill.mix { stroke: #6b6b8a; }
+  .knob-fill.decay { stroke: #7a6a9a; }
+  .knob-fill.shimmer { stroke: #9070b0; }
+
+  .knob-indicator {
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+  }
+
+  .knob-indicator.mix { stroke: #8888a8; }
+  .knob-indicator.decay { stroke: #9a8aba; }
+  .knob-indicator.shimmer { stroke: #b090d0; }
+
+  .knob-value {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 13px;
+    font-weight: 500;
+    color: #b0b0c0;
+    pointer-events: none;
+    letter-spacing: 0.5px;
+  }
+
+  .knob-label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: #4a4660;
+  }
+
+  /* Footer */
+  .footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    z-index: 1;
+  }
+
+  .octave-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    background: rgba(144, 112, 176, 0.08);
+    border: 1px solid rgba(144, 112, 176, 0.12);
+  }
+
+  .octave-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #9070b0;
+    box-shadow: 0 0 6px rgba(144, 112, 176, 0.4);
+    animation: pulse-dot 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+
+  .octave-badge span {
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #7a6a90;
+  }
+</style>
+</head>
+<body>
+<div class="plugin-root">
+
+  <div class="header">
+    <h1>Spectral</h1>
+    <span class="subtitle">Shimmer Reverb</span>
+  </div>
+
+  <div class="visualizer">
+    <canvas id="vizCanvas"></canvas>
+  </div>
+
+  <div class="controls">
+    <div class="knob-group">
+      <div class="knob-container" data-param="mix" data-value="0.35" data-min="0" data-max="1" data-unit="%">
+        <svg viewBox="0 0 80 80">
+          <path class="knob-track" d="M 18.4 62.6 A 32 32 0 1 1 61.6 62.6" />
+          <path class="knob-fill mix" d="M 18.4 62.6 A 32 32 0 1 1 61.6 62.6" />
+          <line class="knob-indicator mix" x1="40" y1="40" x2="40" y2="12" />
+        </svg>
+        <div class="knob-value">35%</div>
+      </div>
+      <div class="knob-label">Mix</div>
+    </div>
+
+    <div class="knob-group">
+      <div class="knob-container" data-param="decay" data-value="0.55" data-min="0" data-max="1" data-unit="s">
+        <svg viewBox="0 0 80 80">
+          <path class="knob-track" d="M 18.4 62.6 A 32 32 0 1 1 61.6 62.6" />
+          <path class="knob-fill decay" d="M 18.4 62.6 A 32 32 0 1 1 61.6 62.6" />
+          <line class="knob-indicator decay" x1="40" y1="40" x2="40" y2="12" />
+        </svg>
+        <div class="knob-value">4.8s</div>
+      </div>
+      <div class="knob-label">Decay</div>
+    </div>
+
+    <div class="knob-group">
+      <div class="knob-container" data-param="shimmer" data-value="0.50" data-min="0" data-max="1" data-unit="%">
+        <svg viewBox="0 0 80 80">
+          <path class="knob-track" d="M 18.4 62.6 A 32 32 0 1 1 61.6 62.6" />
+          <path class="knob-fill shimmer" d="M 18.4 62.6 A 32 32 0 1 1 61.6 62.6" />
+          <line class="knob-indicator shimmer" x1="40" y1="40" x2="40" y2="12" />
+        </svg>
+        <div class="knob-value">50%</div>
+      </div>
+      <div class="knob-label">Shimmer</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="octave-badge">
+      <div class="octave-dot"></div>
+      <span>Octave Up</span>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+  import { getSliderState } from './js/juce/index.js';
+
+  // ── JUCE Parameter States ──
+  const mixState = getSliderState("MIX");
+  const decayState = getSliderState("DECAY");
+  const shimmerState = getSliderState("SHIMMER");
+
+  const paramStates = {
+    mix: mixState,
+    decay: decayState,
+    shimmer: shimmerState
+  };
+
+  // ── Knob Arc Geometry ──
+  const ARC_START = (3 * Math.PI / 4);
+  const ARC_END   = (Math.PI / 4) + 2 * Math.PI;
+  const ARC_RANGE = ARC_END - ARC_START;
+
+  const CX = 40, CY = 40, R = 32;
+
+  function arcPath(startAngle, endAngle) {
+    const x1 = CX + R * Math.cos(startAngle);
+    const y1 = CY + R * Math.sin(startAngle);
+    const x2 = CX + R * Math.cos(endAngle);
+    const y2 = CY + R * Math.sin(endAngle);
+    const sweep = endAngle - startAngle;
+    const largeArc = sweep > Math.PI ? 1 : 0;
+    return `M ${x1.toFixed(1)} ${y1.toFixed(1)} A ${R} ${R} 0 ${largeArc} 1 ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+  }
+
+  const trackPath = arcPath(ARC_START, ARC_END);
+
+  function formatValue(param, norm) {
+    if (param === 'decay') {
+      const seconds = (0.5 + norm * 9.5).toFixed(1);
+      return seconds + 's';
+    }
+    return Math.round(norm * 100) + '%';
+  }
+
+  function updateKnob(container) {
+    const val = parseFloat(container.dataset.value);
+    const param = container.dataset.param;
+    const fillPath = container.querySelector('.knob-fill');
+    const indicator = container.querySelector('.knob-indicator');
+    const valueEl = container.querySelector('.knob-value');
+
+    container.querySelector('.knob-track').setAttribute('d', trackPath);
+
+    const endAngle = ARC_START + val * ARC_RANGE;
+    if (val > 0.005) {
+      fillPath.setAttribute('d', arcPath(ARC_START, endAngle));
+      fillPath.style.display = '';
+    } else {
+      fillPath.style.display = 'none';
+    }
+
+    const innerR = 16;
+    const outerR = 28;
+    const ix1 = CX + innerR * Math.cos(endAngle);
+    const iy1 = CY + innerR * Math.sin(endAngle);
+    const ix2 = CX + outerR * Math.cos(endAngle);
+    const iy2 = CY + outerR * Math.sin(endAngle);
+    indicator.setAttribute('x1', ix1.toFixed(1));
+    indicator.setAttribute('y1', iy1.toFixed(1));
+    indicator.setAttribute('x2', ix2.toFixed(1));
+    indicator.setAttribute('y2', iy2.toFixed(1));
+
+    valueEl.textContent = formatValue(param, val);
+  }
+
+  // ── Knob Interaction ──
+  const knobs = document.querySelectorAll('.knob-container');
+  knobs.forEach(k => {
+    const param = k.dataset.param;
+    const state = paramStates[param];
+
+    // Initialize from JUCE state
+    const initVal = state.getNormalisedValue();
+    k.dataset.value = initVal.toFixed(4);
+    updateKnob(k);
+
+    // Listen for changes from C++ (DAW automation, preset recall)
+    state.valueChangedEvent.addListener(() => {
+      const val = state.getNormalisedValue();
+      k.dataset.value = val.toFixed(4);
+      updateKnob(k);
+    });
+
+    // Drag interaction — relative frame-delta
+    let dragging = false;
+    let lastY = 0;
+
+    k.addEventListener('mousedown', e => {
+      e.preventDefault();
+      dragging = true;
+      lastY = e.clientY;
+      document.body.style.cursor = 'grabbing';
+    });
+
+    window.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      const deltaY = lastY - e.clientY;
+      lastY = e.clientY;
+      const sensitivity = e.shiftKey ? 0.001 : 0.004;
+      let newVal = parseFloat(k.dataset.value) + deltaY * sensitivity;
+      newVal = Math.max(0, Math.min(1, newVal));
+      k.dataset.value = newVal.toFixed(4);
+      updateKnob(k);
+
+      // Send to C++ backend
+      state.setNormalisedValue(newVal);
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (dragging) {
+        dragging = false;
+        document.body.style.cursor = '';
+      }
+    });
+
+    k.addEventListener('dblclick', e => {
+      e.preventDefault();
+      const defaults = { mix: 0.35, decay: 0.55, shimmer: 0.50 };
+      const defVal = defaults[param] || 0.5;
+      k.dataset.value = defVal.toFixed(4);
+      updateKnob(k);
+      state.setNormalisedValue(defVal);
+    });
+  });
+
+  // ── Ambient Visualizer ──
+  const canvas = document.getElementById('vizCanvas');
+  const ctx = canvas.getContext('2d');
+
+  function resizeCanvas() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * 2;
+    canvas.height = rect.height * 2;
+    ctx.scale(2, 2);
+  }
+  resizeCanvas();
+
+  const particles = [];
+  const maxParticles = 60;
+
+  function getParams() {
+    const vals = {};
+    knobs.forEach(k => {
+      vals[k.dataset.param] = parseFloat(k.dataset.value);
+    });
+    return vals;
+  }
+
+  function spawnParticle(w, h, params) {
+    const shimmer = params.shimmer || 0.5;
+    const decay = params.decay || 0.5;
+    return {
+      x: Math.random() * w,
+      y: h * 0.3 + Math.random() * h * 0.5,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: -0.15 - Math.random() * 0.25 * (1 + shimmer),
+      size: 1 + Math.random() * 2 * (0.5 + shimmer),
+      alpha: 0,
+      maxAlpha: 0.15 + Math.random() * 0.25 * (0.5 + shimmer),
+      life: 0,
+      maxLife: 120 + Math.random() * 200 * (0.5 + decay),
+      hue: 250 + Math.random() * 30,
+      sat: 20 + shimmer * 40,
+    };
+  }
+
+  let time = 0;
+
+  function drawViz() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const w = rect.width;
+    const h = rect.height;
+
+    ctx.clearRect(0, 0, w, h);
+
+    const params = getParams();
+    const mix = params.mix || 0.35;
+
+    if (particles.length < maxParticles && Math.random() < 0.3 * (0.3 + mix)) {
+      particles.push(spawnParticle(w, h, params));
+    }
+
+    const waveAmp = 12 + params.shimmer * 20;
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.life++;
+      p.x += p.vx + Math.sin(time * 0.008 + p.y * 0.02) * 0.2;
+      p.y += p.vy;
+
+      const lifeRatio = p.life / p.maxLife;
+      if (lifeRatio < 0.15) {
+        p.alpha = p.maxAlpha * (lifeRatio / 0.15);
+      } else if (lifeRatio > 0.7) {
+        p.alpha = p.maxAlpha * (1 - (lifeRatio - 0.7) / 0.3);
+      } else {
+        p.alpha = p.maxAlpha;
+      }
+
+      if (p.life >= p.maxLife) {
+        particles.splice(i, 1);
+        continue;
+      }
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${p.hue}, ${p.sat}%, 70%, ${p.alpha})`;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${p.hue}, ${p.sat}%, 60%, ${p.alpha * 0.15})`;
+      ctx.fill();
+    }
+
+    const lineCount = 3;
+    for (let i = 0; i < lineCount; i++) {
+      const yBase = h * (0.25 + i * 0.25);
+      const y = yBase + Math.sin(time * 0.005 + i * 2) * 4;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      for (let x = 0; x <= w; x += 4) {
+        const wave = Math.sin(x * 0.015 + time * 0.008 + i) * waveAmp * 0.15;
+        ctx.lineTo(x, y + wave);
+      }
+      ctx.strokeStyle = `hsla(260, 30%, 55%, ${0.04 + params.shimmer * 0.03})`;
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+    }
+
+    time++;
+    requestAnimationFrame(drawViz);
+  }
+
+  drawViz();
+</script>
+</body>
+</html>
