@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=800, height=540">
+<title>Resonox</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=Share+Tech+Mono&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 800px;
+    height: 540px;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1a1611;
+    font-family: 'Share Tech Mono', monospace;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .plugin-root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 30px;
+    box-sizing: border-box;
+    background: linear-gradient(170deg, #2a2219 0%, #1a1611 40%, #12100c 100%);
+    border: 2px solid #3a3228;
+    border-radius: 6px;
+    position: relative;
+  }
+
+  /* Faux screw corners */
+  .plugin-root::before,
+  .plugin-root::after {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 40%, #4a4035, #1a1611);
+    border: 1px solid #3a3228;
+  }
+  .plugin-root::before { top: 12px; left: 12px; }
+  .plugin-root::after { top: 12px; right: 12px; }
+
+  .screw-bl, .screw-br {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 40%, #4a4035, #1a1611);
+    border: 1px solid #3a3228;
+  }
+  .screw-bl { bottom: 12px; left: 12px; }
+  .screw-br { bottom: 12px; right: 12px; }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  .header-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #5a4d3a, transparent);
+  }
+
+  .brand {
+    padding: 0 20px;
+    text-align: center;
+  }
+
+  .brand h1 {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 28px;
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    color: #d4b878;
+    text-shadow: 0 0 12px rgba(212, 184, 120, 0.3);
+  }
+
+  .brand .subtitle {
+    font-size: 9px;
+    letter-spacing: 4px;
+    color: #7a6d58;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* Freq display panel */
+  .freq-display-panel {
+    background: #0c0b09;
+    border: 1px solid #3a3228;
+    border-radius: 4px;
+    padding: 10px 30px;
+    margin-bottom: 20px;
+    text-align: center;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+    min-width: 200px;
+  }
+
+  .freq-display-label {
+    font-size: 8px;
+    letter-spacing: 3px;
+    color: #5a4d3a;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .freq-display-value {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 32px;
+    color: #e8c56d;
+    text-shadow: 0 0 10px rgba(232, 197, 109, 0.5), 0 0 30px rgba(232, 197, 109, 0.15);
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+
+  .freq-display-hz {
+    font-size: 13px;
+    color: #8a7d60;
+    margin-left: 4px;
+  }
+
+  /* Knobs row */
+  .knobs-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 50px;
+    width: 100%;
+  }
+
+  .knob-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .knob-label {
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #7a6d58;
+  }
+
+  .knob-container {
+    position: relative;
+    width: 90px;
+    height: 90px;
+  }
+
+  .knob-svg {
+    width: 90px;
+    height: 90px;
+  }
+
+  .knob-value {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: #b8a878;
+    margin-top: 2px;
+    min-height: 16px;
+    text-align: center;
+  }
+
+  /* Footer */
+  .footer {
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .footer-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #3a3228, transparent);
+  }
+
+  .footer-text {
+    padding: 0 16px;
+    font-size: 8px;
+    letter-spacing: 3px;
+    color: #4a4035;
+    text-transform: uppercase;
+  }
+
+  /* Tick marks ring for knobs */
+  .tick-mark {
+    stroke: #4a4035;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+  }
+
+  /* Knob interaction */
+  .knob-container { cursor: ns-resize; }
+</style>
+</head>
+<body>
+
+<div class="plugin-root">
+  <div class="screw-bl"></div>
+  <div class="screw-br"></div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-line"></div>
+    <div class="brand">
+      <h1>Resonox</h1>
+      <div class="subtitle">Spectral Resonator</div>
+    </div>
+    <div class="header-line"></div>
+  </div>
+
+  <!-- Frequency Display -->
+  <div class="freq-display-panel">
+    <div class="freq-display-label">Resonant Freq</div>
+    <div class="freq-display-value">
+      <span id="freqDisplayNum">440</span><span class="freq-display-hz">Hz</span>
+    </div>
+  </div>
+
+  <!-- Knobs -->
+  <div class="knobs-row">
+    <div class="knob-group">
+      <div class="knob-label">Freq</div>
+      <div class="knob-container" id="knob-freq" data-param="freq">
+        <svg class="knob-svg" viewBox="0 0 90 90"></svg>
+      </div>
+      <div class="knob-value" id="value-freq">440 Hz</div>
+    </div>
+    <div class="knob-group">
+      <div class="knob-label">Decay</div>
+      <div class="knob-container" id="knob-decay" data-param="decay">
+        <svg class="knob-svg" viewBox="0 0 90 90"></svg>
+      </div>
+      <div class="knob-value" id="value-decay">500 ms</div>
+    </div>
+    <div class="knob-group">
+      <div class="knob-label">Blur</div>
+      <div class="knob-container" id="knob-blur" data-param="blur">
+        <svg class="knob-svg" viewBox="0 0 90 90"></svg>
+      </div>
+      <div class="knob-value" id="value-blur">25%</div>
+    </div>
+    <div class="knob-group">
+      <div class="knob-label">Dry/Wet</div>
+      <div class="knob-container" id="knob-mix" data-param="mix">
+        <svg class="knob-svg" viewBox="0 0 90 90"></svg>
+      </div>
+      <div class="knob-value" id="value-mix">50%</div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-line"></div>
+    <div class="footer-text">Stereo &middot; FFT 2048 &middot; VST3</div>
+    <div class="footer-line"></div>
+  </div>
+</div>
+
+<script type="module" src="js/juce/index.js"></script>
+<script type="module">
+  import { getSliderState } from './js/juce/index.js';
+
+  // ---- Parameter definitions (display only) ----
+  const paramDefs = {
+    freq:  { min: 80, max: 4000, juceId: 'FREQ', type: 'freq' },
+    decay: { min: 50, max: 2000, juceId: 'DECAY', type: 'ms' },
+    blur:  { min: 0,  max: 100,  juceId: 'BLUR',  type: 'pct' },
+    mix:   { min: 0,  max: 100,  juceId: 'MIX',   type: 'pct' }
+  };
+
+  // ---- JUCE slider states ----
+  const sliderStates = {};
+  for (const [name, def] of Object.entries(paramDefs)) {
+    sliderStates[name] = getSliderState(def.juceId);
+  }
+
+  // ---- Knob rendering ----
+  const ARC_START = 135;
+  const ARC_END = 405;
+  const ARC_RANGE = ARC_END - ARC_START;
+  const CX = 45, CY = 45, R = 36;
+
+  function degToRad(d) { return (d - 90) * Math.PI / 180; }
+
+  function polarToCart(cx, cy, r, deg) {
+    const rad = degToRad(deg);
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }
+
+  function describeArc(cx, cy, r, startDeg, endDeg) {
+    const s = polarToCart(cx, cy, r, startDeg);
+    const e = polarToCart(cx, cy, r, endDeg);
+    const large = (endDeg - startDeg) > 180 ? 1 : 0;
+    return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 1 ${e.x} ${e.y}`;
+  }
+
+  function renderKnob(paramName, norm) {
+    const svg = document.querySelector(`#knob-${paramName} .knob-svg`);
+    const angle = ARC_START + norm * ARC_RANGE;
+
+    let svgContent = '';
+
+    // Tick marks
+    const numTicks = 11;
+    for (let i = 0; i <= numTicks; i++) {
+      const tickAngle = ARC_START + (i / numTicks) * ARC_RANGE;
+      const inner = polarToCart(CX, CY, R + 4, tickAngle);
+      const outer = polarToCart(CX, CY, R + 8, tickAngle);
+      svgContent += `<line x1="${inner.x}" y1="${inner.y}" x2="${outer.x}" y2="${outer.y}" class="tick-mark"/>`;
+    }
+
+    // Track arc (background)
+    svgContent += `<path d="${describeArc(CX, CY, R, ARC_START, ARC_END)}" fill="none" stroke="#2a2520" stroke-width="4" stroke-linecap="round"/>`;
+
+    // Active arc
+    if (norm > 0.005) {
+      svgContent += `<path d="${describeArc(CX, CY, R, ARC_START, angle)}" fill="none" stroke="#d4b878" stroke-width="4" stroke-linecap="round" style="filter: drop-shadow(0 0 4px rgba(212,184,120,0.4))"/>`;
+    }
+
+    // Knob body
+    svgContent += `
+      <circle cx="${CX}" cy="${CY}" r="24" fill="url(#knobGrad-${paramName})" stroke="#3a3228" stroke-width="1.5"/>
+      <defs>
+        <radialGradient id="knobGrad-${paramName}" cx="40%" cy="35%">
+          <stop offset="0%" stop-color="#3a3530"/>
+          <stop offset="100%" stop-color="#1a1815"/>
+        </radialGradient>
+      </defs>
+    `;
+
+    // Pointer line
+    const ptrInner = polarToCart(CX, CY, 10, angle);
+    const ptrOuter = polarToCart(CX, CY, 22, angle);
+    svgContent += `<line x1="${ptrInner.x}" y1="${ptrInner.y}" x2="${ptrOuter.x}" y2="${ptrOuter.y}" stroke="#e8c56d" stroke-width="2.5" stroke-linecap="round" style="filter: drop-shadow(0 0 3px rgba(232,197,109,0.5))"/>`;
+
+    svg.innerHTML = svgContent;
+  }
+
+  function normToRealValue(paramName, norm) {
+    const def = paramDefs[paramName];
+    if (def.type === 'freq') {
+      // Logarithmic mapping matching JUCE skew of 0.3
+      const logMin = Math.log(def.min);
+      const logMax = Math.log(def.max);
+      return Math.exp(logMin + norm * (logMax - logMin));
+    }
+    return def.min + norm * (def.max - def.min);
+  }
+
+  function formatValue(paramName, norm) {
+    const real = normToRealValue(paramName, norm);
+    const def = paramDefs[paramName];
+    switch (def.type) {
+      case 'freq': return `${Math.round(real)} Hz`;
+      case 'ms':   return `${Math.round(real)} ms`;
+      case 'pct':  return `${Math.round(real)}%`;
+    }
+  }
+
+  function updateDisplay(paramName, norm) {
+    renderKnob(paramName, norm);
+    document.getElementById(`value-${paramName}`).textContent = formatValue(paramName, norm);
+
+    if (paramName === 'freq') {
+      const real = normToRealValue('freq', norm);
+      document.getElementById('freqDisplayNum').textContent = Math.round(real);
+    }
+  }
+
+  // ---- Knob interaction (relative drag) ----
+  let activeKnob = null;
+  let lastY = 0;
+
+  document.querySelectorAll('.knob-container').forEach(function(el) {
+    el.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      activeKnob = el.dataset.param;
+      lastY = e.clientY;
+      document.body.style.cursor = 'ns-resize';
+
+      // Notify JUCE that drag started
+      const state = sliderStates[activeKnob];
+      if (state) state.sliderDragStarted();
+    });
+
+    // Double-click to reset to default
+    el.addEventListener('dblclick', function(e) {
+      e.preventDefault();
+      const paramName = el.dataset.param;
+      const state = sliderStates[paramName];
+      if (state) {
+        state.sliderDragStarted();
+        state.setNormalisedValue(state.properties.initialValue || 0.5);
+        state.sliderDragEnded();
+      }
+    });
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (!activeKnob) return;
+    const deltaY = lastY - e.clientY;
+    lastY = e.clientY;
+    const sensitivity = e.shiftKey ? 0.001 : 0.005;
+    const state = sliderStates[activeKnob];
+    if (state) {
+      const current = state.getNormalisedValue();
+      const newVal = Math.max(0, Math.min(1, current + deltaY * sensitivity));
+      state.setNormalisedValue(newVal);
+    }
+  });
+
+  document.addEventListener('mouseup', function() {
+    if (activeKnob) {
+      const state = sliderStates[activeKnob];
+      if (state) state.sliderDragEnded();
+      activeKnob = null;
+      document.body.style.cursor = '';
+    }
+  });
+
+  // ---- Listen for value changes from C++ (automation, presets) ----
+  for (const [name, state] of Object.entries(sliderStates)) {
+    state.valueChangedEvent.addListener(() => {
+      const norm = state.getNormalisedValue();
+      updateDisplay(name, norm);
+    });
+  }
+
+  // ---- Initialize displays with current JUCE values ----
+  for (const [name, state] of Object.entries(sliderStates)) {
+    const norm = state.getNormalisedValue();
+    updateDisplay(name, norm);
+  }
+</script>
+
+</body>
+</html>
