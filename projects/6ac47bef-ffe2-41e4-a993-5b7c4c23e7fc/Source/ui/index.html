@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chambers</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 400px;
+    height: 500px;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1a1a1e;
+    font-family: 'Inter', -apple-system, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .plugin-root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+    background: radial-gradient(ellipse at 50% 30%, #2a2a32 0%, #1a1a1e 70%);
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 40px;
+  }
+
+  .plugin-name {
+    font-size: 28px;
+    font-weight: 300;
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    color: #e0ddd5;
+  }
+
+  .plugin-sub {
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #5a5a64;
+    margin-top: 6px;
+  }
+
+  /* Knob Area */
+  .knob-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .knob-container {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    cursor: grab;
+  }
+
+  .knob-container:active {
+    cursor: grabbing;
+  }
+
+  .knob-svg {
+    width: 180px;
+    height: 180px;
+  }
+
+  /* Track background */
+  .knob-track {
+    fill: none;
+    stroke: #2a2a30;
+    stroke-width: 6;
+    stroke-linecap: round;
+  }
+
+  /* Active arc */
+  .knob-arc {
+    fill: none;
+    stroke: url(#arcGradient);
+    stroke-width: 6;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.05s ease;
+    filter: drop-shadow(0 0 6px rgba(160, 140, 110, 0.3));
+  }
+
+  /* Center circle */
+  .knob-body {
+    fill: #222228;
+    stroke: #333338;
+    stroke-width: 1;
+  }
+
+  /* Indicator line */
+  .knob-indicator {
+    stroke: #c8b890;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 4px rgba(200, 184, 144, 0.4));
+  }
+
+  /* Value display */
+  .knob-value {
+    font-size: 32px;
+    font-weight: 300;
+    color: #e0ddd5;
+    letter-spacing: 2px;
+    text-align: center;
+    min-width: 80px;
+  }
+
+  .knob-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: #5a5a64;
+    text-align: center;
+  }
+
+  /* Subtle glow behind knob */
+  .knob-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(160, 140, 110, 0.06) 0%, transparent 70%);
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  /* Footer */
+  .footer {
+    margin-top: 40px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .footer-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #3a3a42;
+  }
+
+  .footer-text {
+    font-size: 9px;
+    font-weight: 400;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #3a3a42;
+  }
+</style>
+</head>
+<body>
+
+<div class="plugin-root">
+
+  <div class="header">
+    <div class="plugin-name">Chambers</div>
+    <div class="plugin-sub">Reverb</div>
+  </div>
+
+  <div class="knob-section">
+    <div class="knob-container" id="knobContainer">
+      <div class="knob-glow" id="knobGlow"></div>
+      <svg class="knob-svg" viewBox="0 0 180 180">
+        <defs>
+          <linearGradient id="arcGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#a08c6e" />
+            <stop offset="100%" stop-color="#c8b890" />
+          </linearGradient>
+        </defs>
+
+        <!-- Track background arc -->
+        <path class="knob-track" id="knobTrack" />
+
+        <!-- Active value arc -->
+        <path class="knob-arc" id="knobArc" />
+
+        <!-- Knob body -->
+        <circle class="knob-body" cx="90" cy="90" r="52" />
+
+        <!-- Indicator line -->
+        <line class="knob-indicator" id="knobIndicator" x1="90" y1="90" x2="90" y2="48" />
+      </svg>
+    </div>
+
+    <div class="knob-value" id="knobValue">0%</div>
+    <div class="knob-label">Amount</div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-dot"></div>
+    <div class="footer-text">One Knob Reverb</div>
+    <div class="footer-dot"></div>
+  </div>
+
+</div>
+
+<script type="module">
+  import { getSliderState } from './js/juce/index.js';
+
+  const knobContainer = document.getElementById('knobContainer');
+  const knobArc = document.getElementById('knobArc');
+  const knobTrack = document.getElementById('knobTrack');
+  const knobIndicator = document.getElementById('knobIndicator');
+  const knobValue = document.getElementById('knobValue');
+  const knobGlow = document.getElementById('knobGlow');
+
+  const cx = 90, cy = 90, r = 68;
+  const startAngle = 135;
+  const endAngle = 405;
+  const totalAngle = endAngle - startAngle;
+
+  let value = 0;
+  let dragging = false;
+  let lastY = 0;
+
+  const amountState = getSliderState("AMOUNT");
+
+  function degToRad(deg) {
+    return (deg * Math.PI) / 180;
+  }
+
+  function polarToCartesian(angle) {
+    const rad = degToRad(angle);
+    return {
+      x: cx + r * Math.cos(rad),
+      y: cy + r * Math.sin(rad)
+    };
+  }
+
+  function describeArc(startA, endA) {
+    const start = polarToCartesian(startA);
+    const end = polarToCartesian(endA);
+    const largeArc = (endA - startA) > 180 ? 1 : 0;
+    return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y}`;
+  }
+
+  function updateKnobVisual(v) {
+    value = v;
+
+    knobTrack.setAttribute('d', describeArc(startAngle, endAngle));
+
+    const currentAngle = startAngle + value * totalAngle;
+    if (value > 0.005) {
+      knobArc.setAttribute('d', describeArc(startAngle, currentAngle));
+      knobArc.style.display = '';
+    } else {
+      knobArc.style.display = 'none';
+    }
+
+    const indicatorAngle = degToRad(currentAngle);
+    const innerR = 52;
+    const outerR = 40;
+    knobIndicator.setAttribute('x1', cx + outerR * Math.cos(indicatorAngle));
+    knobIndicator.setAttribute('y1', cy + outerR * Math.sin(indicatorAngle));
+    knobIndicator.setAttribute('x2', cx + (innerR - 4) * Math.cos(indicatorAngle));
+    knobIndicator.setAttribute('y2', cy + (innerR - 4) * Math.sin(indicatorAngle));
+
+    const percent = Math.round(value * 100);
+    knobValue.textContent = percent + '%';
+
+    const glowOpacity = 0.3 + value * 0.7;
+    knobGlow.style.opacity = glowOpacity;
+  }
+
+  // Receive parameter changes from DAW (automation, preset recall)
+  amountState.valueChangedEvent.addListener(() => {
+    const v = amountState.getNormalisedValue();
+    updateKnobVisual(v);
+  });
+
+  // Mouse interaction — relative drag
+  knobContainer.addEventListener('mousedown', (e) => {
+    dragging = true;
+    lastY = e.clientY;
+    document.body.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const deltaY = lastY - e.clientY;
+    lastY = e.clientY;
+    const sensitivity = 0.005;
+    let newValue = value + deltaY * sensitivity;
+    newValue = Math.max(0, Math.min(1, newValue));
+    value = newValue;
+    amountState.setNormalisedValue(value);
+    updateKnobVisual(value);
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (dragging) {
+      dragging = false;
+      document.body.style.cursor = '';
+    }
+  });
+
+  // Double-click to reset
+  knobContainer.addEventListener('dblclick', () => {
+    amountState.setNormalisedValue(0);
+    updateKnobVisual(0);
+  });
+
+  // Initialize from current parameter value
+  updateKnobVisual(amountState.getNormalisedValue());
+</script>
+
+</body>
+</html>
