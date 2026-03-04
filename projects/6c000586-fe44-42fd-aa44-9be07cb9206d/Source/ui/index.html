@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nimbus</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+    html, body {
+      width: 600px;
+      height: 400px;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      background: #1a1a2e;
+      font-family: 'Inter', sans-serif;
+      color: #e0e0e0;
+      user-select: none;
+    }
+
+    .plugin-root {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      box-sizing: border-box;
+      background: linear-gradient(170deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%);
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .plugin-name {
+      font-size: 22px;
+      font-weight: 300;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      color: #b8c4e0;
+    }
+
+    .plugin-subtitle {
+      font-size: 10px;
+      font-weight: 400;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #5a6a8a;
+      margin-top: 2px;
+    }
+
+    /* Knob Area */
+    .knob-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .knob-container {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      cursor: grab;
+    }
+
+    .knob-container:active {
+      cursor: grabbing;
+    }
+
+    .knob-svg {
+      width: 120px;
+      height: 120px;
+    }
+
+    /* Track (background arc) */
+    .knob-track {
+      fill: none;
+      stroke: #2a2a4a;
+      stroke-width: 6;
+      stroke-linecap: round;
+    }
+
+    /* Active arc */
+    .knob-arc {
+      fill: none;
+      stroke: url(#arcGradient);
+      stroke-width: 6;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.05s ease;
+      filter: drop-shadow(0 0 6px rgba(120, 160, 255, 0.3));
+    }
+
+    /* Center circle */
+    .knob-center {
+      fill: #22223a;
+      stroke: #3a3a5a;
+      stroke-width: 1;
+    }
+
+    /* Indicator line */
+    .knob-indicator {
+      stroke: #a0b8e8;
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      filter: drop-shadow(0 0 4px rgba(160, 184, 232, 0.5));
+    }
+
+    /* Value display */
+    .knob-value {
+      font-size: 22px;
+      font-weight: 500;
+      color: #c8d4ef;
+      letter-spacing: 1px;
+      text-align: center;
+      min-width: 60px;
+    }
+
+    .knob-label {
+      font-size: 10px;
+      font-weight: 400;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #5a6a8a;
+      text-align: center;
+    }
+
+    /* Glow behind knob */
+    .knob-glow {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(100, 140, 255, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+  <div class="plugin-root">
+    <div class="header">
+      <div class="plugin-name">Nimbus</div>
+      <div class="plugin-subtitle">Reverb</div>
+    </div>
+
+    <div class="knob-section">
+      <div class="knob-container" id="knobContainer">
+        <div class="knob-glow" id="knobGlow"></div>
+        <svg class="knob-svg" viewBox="0 0 120 120">
+          <defs>
+            <linearGradient id="arcGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#6888cc" />
+              <stop offset="100%" stop-color="#88aaee" />
+            </linearGradient>
+          </defs>
+
+          <!-- Background track arc -->
+          <path class="knob-track" id="knobTrack" />
+
+          <!-- Active value arc -->
+          <path class="knob-arc" id="knobArc" />
+
+          <!-- Center circle -->
+          <circle class="knob-center" cx="60" cy="60" r="32" />
+
+          <!-- Indicator line -->
+          <line class="knob-indicator" id="knobIndicator" x1="60" y1="60" x2="60" y2="34" />
+        </svg>
+      </div>
+
+      <div class="knob-value" id="knobValue">50%</div>
+      <div class="knob-label">Mix</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { getSliderState } from './js/juce/index.js';
+
+    const ARC_START = 135;
+    const ARC_END = 405;
+    const ARC_RANGE = ARC_END - ARC_START;
+    const CX = 60, CY = 60, R = 48;
+
+    let value = 0.5;
+    let dragging = false;
+    let lastY = 0;
+
+    const knobContainer = document.getElementById('knobContainer');
+    const knobArc = document.getElementById('knobArc');
+    const knobTrack = document.getElementById('knobTrack');
+    const knobIndicator = document.getElementById('knobIndicator');
+    const knobValue = document.getElementById('knobValue');
+    const knobGlow = document.getElementById('knobGlow');
+
+    // Connect to the JUCE parameter relay
+    const mixState = getSliderState("MIX");
+
+    function degToRad(deg) {
+      return (deg * Math.PI) / 180;
+    }
+
+    function polarToCart(cx, cy, r, angleDeg) {
+      const rad = degToRad(angleDeg - 90);
+      return {
+        x: cx + r * Math.cos(rad),
+        y: cy + r * Math.sin(rad),
+      };
+    }
+
+    function describeArc(cx, cy, r, startAngle, endAngle) {
+      const start = polarToCart(cx, cy, r, endAngle);
+      const end = polarToCart(cx, cy, r, startAngle);
+      const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+      return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 0 ${end.x} ${end.y}`;
+    }
+
+    function updateKnobVisual() {
+      // Track
+      knobTrack.setAttribute('d', describeArc(CX, CY, R, ARC_START, ARC_END));
+
+      // Active arc
+      const activeEnd = ARC_START + value * ARC_RANGE;
+      if (value > 0.005) {
+        knobArc.setAttribute('d', describeArc(CX, CY, R, ARC_START, activeEnd));
+        knobArc.style.display = '';
+      } else {
+        knobArc.style.display = 'none';
+      }
+
+      // Indicator
+      const indicatorAngle = ARC_START + value * ARC_RANGE;
+      const indInner = polarToCart(CX, CY, 26, indicatorAngle);
+      const indOuter = polarToCart(CX, CY, 38, indicatorAngle);
+      knobIndicator.setAttribute('x1', indInner.x);
+      knobIndicator.setAttribute('y1', indInner.y);
+      knobIndicator.setAttribute('x2', indOuter.x);
+      knobIndicator.setAttribute('y2', indOuter.y);
+
+      // Value text
+      knobValue.textContent = Math.round(value * 100) + '%';
+
+      // Glow intensity
+      knobGlow.style.opacity = 0.4 + value * 0.6;
+    }
+
+    // Receive value changes from C++ (DAW automation, preset load)
+    mixState.valueChangedEvent.addListener(() => {
+      value = mixState.getNormalisedValue();
+      updateKnobVisual();
+    });
+
+    // Mouse interaction — relative drag (frame-delta)
+    knobContainer.addEventListener('mousedown', (e) => {
+      dragging = true;
+      lastY = e.clientY;
+      e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const deltaY = lastY - e.clientY;
+      lastY = e.clientY;
+      value = Math.max(0, Math.min(1, value + deltaY * 0.005));
+      mixState.setNormalisedValue(value);
+      updateKnobVisual();
+    });
+
+    window.addEventListener('mouseup', () => {
+      dragging = false;
+    });
+
+    // Double-click to reset
+    knobContainer.addEventListener('dblclick', () => {
+      value = 0.5;
+      mixState.setNormalisedValue(value);
+      updateKnobVisual();
+    });
+
+    // Initialize with current parameter value
+    value = mixState.getNormalisedValue();
+    updateKnobVisual();
+  </script>
+</body>
+</html>
