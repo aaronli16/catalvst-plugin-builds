@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Velvet</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 600px;
+    height: 440px;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1a1410;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .plugin-root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 32px;
+    box-sizing: border-box;
+    background: linear-gradient(165deg, #2a2018 0%, #1e1812 40%, #191310 100%);
+    border: 1px solid #3a2e22;
+    position: relative;
+  }
+
+  /* Subtle inner glow */
+  .plugin-root::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border: 1px solid rgba(200, 160, 100, 0.06);
+    pointer-events: none;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .brand-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 36px;
+    font-weight: 700;
+    color: #d4a857;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    text-shadow: 0 1px 8px rgba(212, 168, 87, 0.2);
+  }
+
+  .subtitle {
+    font-size: 10px;
+    font-weight: 400;
+    color: #7a6b58;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* Divider line */
+  .divider {
+    width: 240px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #4a3c2c, transparent);
+    margin: 12px 0 28px 0;
+  }
+
+  /* Knobs row */
+  .knobs-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 44px;
+  }
+
+  /* Knob container */
+  .knob-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .knob-label {
+    font-size: 9px;
+    font-weight: 500;
+    color: #8a7b68;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+  }
+
+  .knob-container {
+    width: 88px;
+    height: 88px;
+    position: relative;
+    cursor: pointer;
+  }
+
+  /* SVG arc track */
+  .knob-svg {
+    width: 88px;
+    height: 88px;
+    transform: rotate(0deg);
+  }
+
+  .knob-track {
+    fill: none;
+    stroke: #2e2620;
+    stroke-width: 3;
+    stroke-linecap: round;
+  }
+
+  .knob-fill {
+    fill: none;
+    stroke: url(#knobGradient);
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.08s ease;
+  }
+
+  /* Knob body */
+  .knob-body {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #3a3028, #252018 70%);
+    box-shadow:
+      0 2px 8px rgba(0,0,0,0.5),
+      0 1px 2px rgba(0,0,0,0.3),
+      inset 0 1px 1px rgba(255,255,255,0.04);
+    border: 1px solid #3a3228;
+  }
+
+  /* Knob indicator line */
+  .knob-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 2px;
+    height: 18px;
+    background: #d4a857;
+    border-radius: 1px;
+    transform-origin: bottom center;
+    box-shadow: 0 0 6px rgba(212, 168, 87, 0.4);
+  }
+
+  /* Value display */
+  .knob-value {
+    font-size: 13px;
+    font-weight: 400;
+    color: #c4a060;
+    letter-spacing: 0.5px;
+    min-width: 48px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Bottom plate texture bar */
+  .bottom-bar {
+    margin-top: 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #d4a857;
+    box-shadow: 0 0 8px rgba(212, 168, 87, 0.5);
+    animation: pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+
+  .bottom-label {
+    font-size: 9px;
+    color: #5a4e40;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  /* Screw accents */
+  .screws {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+  }
+
+  .screw {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #3a3228, #1e1a14);
+    border: 1px solid #2a2418;
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.05);
+  }
+
+  .screw::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(45deg);
+    width: 5px;
+    height: 1px;
+    background: #1a1610;
+  }
+
+  .screw.tl { top: 12px; left: 12px; }
+  .screw.tr { top: 12px; right: 12px; }
+  .screw.bl { bottom: 12px; left: 12px; }
+  .screw.br { bottom: 12px; right: 12px; }
+
+</style>
+</head>
+<body>
+
+<div class="plugin-root">
+  <!-- Corner screws -->
+  <div class="screws">
+    <div class="screw tl"></div>
+    <div class="screw tr"></div>
+    <div class="screw bl"></div>
+    <div class="screw br"></div>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="brand-name">Velvet</div>
+    <div class="subtitle">Plate Reverb</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Shared SVG gradient -->
+  <svg width="0" height="0" style="position:absolute">
+    <defs>
+      <linearGradient id="knobGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#c49450"/>
+        <stop offset="100%" stop-color="#d4a857"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <!-- Knobs -->
+  <div class="knobs-row">
+
+    <div class="knob-group">
+      <div class="knob-label">Decay</div>
+      <div class="knob-container" data-param="decay" data-min="0.2" data-max="10" data-value="3.0" data-unit="s" data-decimals="1">
+        <svg class="knob-svg" viewBox="0 0 88 88">
+          <path class="knob-track" d="M 18.5 70.5 A 35 35 0 1 1 69.5 70.5"/>
+          <path class="knob-fill" d="M 18.5 70.5 A 35 35 0 1 1 69.5 70.5"/>
+        </svg>
+        <div class="knob-body">
+          <div class="knob-indicator"></div>
+        </div>
+      </div>
+      <div class="knob-value">3.0s</div>
+    </div>
+
+    <div class="knob-group">
+      <div class="knob-label">Damping</div>
+      <div class="knob-container" data-param="damping" data-min="0" data-max="100" data-value="45" data-unit="%" data-decimals="0">
+        <svg class="knob-svg" viewBox="0 0 88 88">
+          <path class="knob-track" d="M 18.5 70.5 A 35 35 0 1 1 69.5 70.5"/>
+          <path class="knob-fill" d="M 18.5 70.5 A 35 35 0 1 1 69.5 70.5"/>
+        </svg>
+        <div class="knob-body">
+          <div class="knob-indicator"></div>
+        </div>
+      </div>
+      <div class="knob-value">45%</div>
+    </div>
+
+    <div class="knob-group">
+      <div class="knob-label">Pre-Delay</div>
+      <div class="knob-container" data-param="predelay" data-min="0" data-max="200" data-value="20" data-unit="ms" data-decimals="0">
+        <svg class="knob-svg" viewBox="0 0 88 88">
+          <path class="knob-track" d="M 18.5 70.5 A 35 35 0 1 1 69.5 70.5"/>
+          <path class="knob-fill" d="M 18.5 70.5 A 35 35 0 1 1 69.5 70.5"/>
+        </svg>
+        <div class="knob-body">
+          <div class="knob-indicator"></div>
+        </div>
+      </div>
+      <div class="knob-value">20ms</div>
+    </div>
+
+    <div class="knob-group">
+      <div class="knob-label">Mix</div>
+      <div class="knob-container" data-param="mix" data-min="0" data-max="100" data-value="35" data-unit="%" data-decimals="0">
+        <svg class="knob-svg" viewBox="0 0 88 88">
+          <path class="knob-track" d="M 18.5 70.5 A 35 35 0 1 1 69.5 70.5"/>
+          <path class="knob-fill" d="M 18.5 70.5 A 35 35 0 1 1 69.5 70.5"/>
+        </svg>
+        <div class="knob-body">
+          <div class="knob-indicator"></div>
+        </div>
+      </div>
+      <div class="knob-value">35%</div>
+    </div>
+
+  </div>
+
+  <!-- Status bar -->
+  <div class="bottom-bar">
+    <div class="status-dot"></div>
+    <div class="bottom-label">Stereo Plate</div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+  const ARC_START_ANGLE = 135;
+  const ARC_END_ANGLE = 405;
+  const ARC_RANGE = ARC_END_ANGLE - ARC_START_ANGLE; // 270 degrees
+
+  // Measure the arc length from the SVG path
+  const sampleTrack = document.querySelector('.knob-track');
+  const totalArcLength = sampleTrack.getTotalLength();
+
+  const knobs = document.querySelectorAll('.knob-container');
+
+  knobs.forEach(knob => {
+    const min = parseFloat(knob.dataset.min);
+    const max = parseFloat(knob.dataset.max);
+    const decimals = parseInt(knob.dataset.decimals);
+    const unit = knob.dataset.unit;
+    let value = parseFloat(knob.dataset.value);
+
+    const fill = knob.querySelector('.knob-fill');
+    const indicator = knob.querySelector('.knob-indicator');
+    const valueDisplay = knob.parentElement.querySelector('.knob-value');
+
+    fill.style.strokeDasharray = totalArcLength;
+
+    function update() {
+      const norm = (value - min) / (max - min);
+      const angle = ARC_START_ANGLE + norm * ARC_RANGE;
+
+      // Arc fill
+      const dashOffset = totalArcLength * (1 - norm);
+      fill.style.strokeDashoffset = dashOffset;
+
+      // Indicator rotation (pointing up at 0 = 12 o'clock)
+      const indicatorAngle = ARC_START_ANGLE + norm * ARC_RANGE;
+      indicator.style.transform = `translate(-50%, -100%) rotate(${indicatorAngle}deg)`;
+      indicator.style.transformOrigin = '50% 100%';
+
+      // Position indicator at center of knob body
+      indicator.style.top = '50%';
+      indicator.style.left = '50%';
+
+      // Value text
+      valueDisplay.textContent = value.toFixed(decimals) + unit;
+
+      // Send to JUCE
+      if (window.juce) {
+        const paramId = knob.dataset.param;
+        // Normalize to 0-1 for JUCE
+        const juceValue = norm;
+        try {
+          window.juce.updateParameter(paramId, juceValue);
+        } catch(e) {}
+      }
+    }
+
+    // Mouse drag interaction
+    let dragging = false;
+    let startY = 0;
+    let startValue = 0;
+
+    knob.addEventListener('mousedown', (e) => {
+      dragging = true;
+      startY = e.clientY;
+      startValue = value;
+      document.body.style.cursor = 'grabbing';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const dy = startY - e.clientY;
+      const sensitivity = (max - min) / 200;
+      value = Math.min(max, Math.max(min, startValue + dy * sensitivity));
+      update();
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (dragging) {
+        dragging = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+    });
+
+    // Double-click to reset
+    knob.addEventListener('dblclick', () => {
+      value = parseFloat(knob.dataset.value);
+      update();
+    });
+
+    // Initialize
+    update();
+  });
+});
+</script>
+
+</body>
+</html>
