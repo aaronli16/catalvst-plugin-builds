@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Velour 2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 700px;
+    height: 440px;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #2a2520;
+  }
+
+  .plugin-root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 32px 28px;
+    box-sizing: border-box;
+    background: linear-gradient(170deg, #e8dfd3 0%, #d9cebf 40%, #cfc3b2 100%);
+    border-radius: 12px;
+    border: 2px solid #b8a992;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.45),
+      inset 0 -1px 0 rgba(0,0,0,0.08),
+      0 4px 20px rgba(0,0,0,0.5);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Subtle texture overlay */
+  .plugin-root::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.012) 2px,
+      rgba(0,0,0,0.012) 4px
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .plugin-root > * { position: relative; z-index: 1; }
+
+  /* Header */
+  .header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .brand {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 9px;
+    letter-spacing: 3.5px;
+    text-transform: uppercase;
+    color: #8a7d6f;
+  }
+
+  .title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 30px;
+    color: #3d352c;
+    letter-spacing: 1px;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+  }
+
+  .subtitle {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 9.5px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: #9a8d7e;
+    margin-top: 1px;
+  }
+
+  /* Divider line */
+  .divider {
+    width: 85%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, #b5a694 20%, #b5a694 80%, transparent 100%);
+    opacity: 0.5;
+  }
+
+  /* Knobs row */
+  .knobs-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 52px;
+  }
+
+  .knob-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .knob-label {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #6e6356;
+  }
+
+  .knob-container {
+    width: 80px;
+    height: 80px;
+    position: relative;
+    cursor: grab;
+  }
+
+  .knob-container:active { cursor: grabbing; }
+
+  /* Knob track (arc background) */
+  .knob-track {
+    position: absolute;
+    top: 0; left: 0;
+    width: 80px;
+    height: 80px;
+  }
+
+  /* The knob body */
+  .knob-body {
+    position: absolute;
+    top: 8px; left: 8px;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #f0e8dc 0%, #d4c8b6 50%, #c4b8a4 100%);
+    box-shadow:
+      0 2px 6px rgba(0,0,0,0.15),
+      0 1px 2px rgba(0,0,0,0.1),
+      inset 0 1px 0 rgba(255,255,255,0.5),
+      inset 0 -1px 0 rgba(0,0,0,0.05);
+    border: 1.5px solid #b0a291;
+  }
+
+  .knob-indicator {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2.5px;
+    height: 12px;
+    border-radius: 2px;
+    background: #6e5d4a;
+    box-shadow: 0 0 2px rgba(0,0,0,0.15);
+  }
+
+  .knob-value {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 12px;
+    color: #5a4e42;
+    letter-spacing: 0.5px;
+    min-width: 44px;
+    text-align: center;
+  }
+
+  /* SVG arcs */
+  .arc-bg {
+    fill: none;
+    stroke: #c2b6a4;
+    stroke-width: 3;
+    stroke-linecap: round;
+  }
+
+  .arc-fill {
+    fill: none;
+    stroke: #7a6a56;
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.05s ease;
+  }
+
+  /* Footer */
+  .footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .footer-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #b5a694;
+    opacity: 0.5;
+  }
+
+  .footer-text {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 8.5px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #a0937f;
+  }
+
+  /* Hover glow on knobs */
+  .knob-container:hover .knob-body {
+    box-shadow:
+      0 2px 6px rgba(0,0,0,0.15),
+      0 1px 2px rgba(0,0,0,0.1),
+      inset 0 1px 0 rgba(255,255,255,0.5),
+      inset 0 -1px 0 rgba(0,0,0,0.05),
+      0 0 12px rgba(180,165,140,0.3);
+  }
+
+  .knob-container:hover .arc-fill {
+    stroke: #6a583f;
+  }
+</style>
+</head>
+<body>
+
+<div class="plugin-root">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="brand">Velour</div>
+    <div class="title">Velour 2</div>
+    <div class="subtitle">Plate Reverb</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Knobs -->
+  <div class="knobs-row">
+
+    <div class="knob-group">
+      <div class="knob-label">Decay</div>
+      <div class="knob-container" data-param="decay" data-min="0.2" data-max="10" data-default="3.0" data-unit="s" data-decimals="1">
+        <svg class="knob-track" viewBox="0 0 80 80">
+          <path class="arc-bg" d="M 16,64 A 32,32 0 1,1 64,64" />
+          <path class="arc-fill" d="M 16,64 A 32,32 0 1,1 64,64" />
+        </svg>
+        <div class="knob-body">
+          <div class="knob-indicator"></div>
+        </div>
+      </div>
+      <div class="knob-value">3.0s</div>
+    </div>
+
+    <div class="knob-group">
+      <div class="knob-label">Damping</div>
+      <div class="knob-container" data-param="damping" data-min="0" data-max="100" data-default="50" data-unit="%" data-decimals="0">
+        <svg class="knob-track" viewBox="0 0 80 80">
+          <path class="arc-bg" d="M 16,64 A 32,32 0 1,1 64,64" />
+          <path class="arc-fill" d="M 16,64 A 32,32 0 1,1 64,64" />
+        </svg>
+        <div class="knob-body">
+          <div class="knob-indicator"></div>
+        </div>
+      </div>
+      <div class="knob-value">50%</div>
+    </div>
+
+    <div class="knob-group">
+      <div class="knob-label">Pre-Delay</div>
+      <div class="knob-container" data-param="predelay" data-min="0" data-max="100" data-default="20" data-unit="ms" data-decimals="0">
+        <svg class="knob-track" viewBox="0 0 80 80">
+          <path class="arc-bg" d="M 16,64 A 32,32 0 1,1 64,64" />
+          <path class="arc-fill" d="M 16,64 A 32,32 0 1,1 64,64" />
+        </svg>
+        <div class="knob-body">
+          <div class="knob-indicator"></div>
+        </div>
+      </div>
+      <div class="knob-value">20ms</div>
+    </div>
+
+    <div class="knob-group">
+      <div class="knob-label">Mix</div>
+      <div class="knob-container" data-param="mix" data-min="0" data-max="100" data-default="35" data-unit="%" data-decimals="0">
+        <svg class="knob-track" viewBox="0 0 80 80">
+          <path class="arc-bg" d="M 16,64 A 32,32 0 1,1 64,64" />
+          <path class="arc-fill" d="M 16,64 A 32,32 0 1,1 64,64" />
+        </svg>
+        <div class="knob-body">
+          <div class="knob-indicator"></div>
+        </div>
+      </div>
+      <div class="knob-value">35%</div>
+    </div>
+
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-dot"></div>
+    <div class="footer-text">Plate Reverb</div>
+    <div class="footer-dot"></div>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  const ARC_START_ANGLE = 225;
+  const ARC_END_ANGLE = 495;
+  const ARC_RANGE = ARC_END_ANGLE - ARC_START_ANGLE; // 270 degrees
+
+  function polarToCartesian(cx, cy, r, angleDeg) {
+    const rad = (angleDeg - 90) * Math.PI / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }
+
+  function describeArc(cx, cy, r, startAngle, endAngle) {
+    const start = polarToCartesian(cx, cy, r, endAngle);
+    const end = polarToCartesian(cx, cy, r, startAngle);
+    const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+    return `M ${start.x},${start.y} A ${r},${r} 0 ${largeArc} 0 ${end.x},${end.y}`;
+  }
+
+  // Measure arc length for dash offset animation
+  function getArcLength(r, angleDeg) {
+    return (angleDeg / 360) * 2 * Math.PI * r;
+  }
+
+  const knobs = document.querySelectorAll('.knob-container');
+  const state = {};
+
+  knobs.forEach(knob => {
+    const param = knob.dataset.param;
+    const min = parseFloat(knob.dataset.min);
+    const max = parseFloat(knob.dataset.max);
+    const def = parseFloat(knob.dataset.default);
+    const unit = knob.dataset.unit;
+    const decimals = parseInt(knob.dataset.decimals);
+
+    const normalized = (def - min) / (max - min);
+    state[param] = { value: def, normalized, min, max, unit, decimals, element: knob };
+
+    updateKnob(param);
+
+    // Drag interaction
+    let dragging = false;
+    let startY = 0;
+    let startNorm = 0;
+
+    knob.addEventListener('mousedown', e => {
+      e.preventDefault();
+      dragging = true;
+      startY = e.clientY;
+      startNorm = state[param].normalized;
+      document.body.style.cursor = 'grabbing';
+      document.body.style.userSelect = 'none';
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      const dy = startY - e.clientY;
+      const sensitivity = 0.005;
+      let newNorm = startNorm + dy * sensitivity;
+      newNorm = Math.max(0, Math.min(1, newNorm));
+      state[param].normalized = newNorm;
+      state[param].value = min + newNorm * (max - min);
+      updateKnob(param);
+      sendParam(param, state[param].value);
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (dragging) {
+        dragging = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+    });
+
+    // Double-click to reset
+    knob.addEventListener('dblclick', e => {
+      e.preventDefault();
+      state[param].normalized = (def - min) / (max - min);
+      state[param].value = def;
+      updateKnob(param);
+      sendParam(param, def);
+    });
+  });
+
+  function updateKnob(param) {
+    const s = state[param];
+    const knob = s.element;
+    const norm = s.normalized;
+
+    // Update indicator rotation
+    const angle = ARC_START_ANGLE + norm * ARC_RANGE;
+    const body = knob.querySelector('.knob-body');
+    body.style.transform = `rotate(${angle}deg)`;
+
+    // Update arc fill
+    const arcFill = knob.querySelector('.arc-fill');
+    const totalArcLength = getArcLength(32, ARC_RANGE);
+    const fillLength = totalArcLength * norm;
+    arcFill.style.strokeDasharray = `${totalArcLength}`;
+    arcFill.style.strokeDashoffset = `${totalArcLength - fillLength}`;
+
+    // Update value display
+    const valueEl = knob.closest('.knob-group').querySelector('.knob-value');
+    const displayVal = s.value.toFixed(s.decimals);
+    valueEl.textContent = displayVal + s.unit;
+  }
+
+  function sendParam(param, value) {
+    if (window.juce) {
+      // Normalize to 0-1 for JUCE
+      const s = state[param];
+      const norm01 = (value - s.min) / (s.max - s.min);
+      // Use JUCE SliderState if available
+      try {
+        window.juce.postMessage && window.juce.postMessage(JSON.stringify({ param, value: norm01 }));
+      } catch(e) {}
+    }
+  }
+
+  // Receive parameter updates from JUCE
+  window.updateParamFromDAW = function(param, normalizedValue) {
+    if (state[param]) {
+      const s = state[param];
+      s.normalized = normalizedValue;
+      s.value = s.min + normalizedValue * (s.max - s.min);
+      updateKnob(param);
+    }
+  };
+})();
+</script>
+
+</body>
+</html>
