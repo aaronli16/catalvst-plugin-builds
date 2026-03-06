@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grit</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+  html, body {
+    width: 400px;
+    height: 520px;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    background: #1A1A1A;
+    font-family: 'Inter', sans-serif;
+    color: #E0E0E0;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  .plugin-root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 20px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 32px;
+  }
+
+  .plugin-title {
+    font-size: 32px;
+    font-weight: 600;
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    color: #FFFFFF;
+  }
+
+  .plugin-subtitle {
+    font-size: 11px;
+    font-weight: 300;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #666666;
+    margin-top: 4px;
+  }
+
+  /* Knobs area */
+  .knobs-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 36px;
+  }
+
+  .knob-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .knob-label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #777777;
+  }
+
+  .knob-wrapper {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    cursor: grab;
+  }
+
+  .knob-wrapper:active {
+    cursor: grabbing;
+  }
+
+  .knob-svg {
+    width: 120px;
+    height: 120px;
+  }
+
+  /* Track (background arc) */
+  .knob-track {
+    fill: none;
+    stroke: #2A2A2A;
+    stroke-width: 4;
+    stroke-linecap: round;
+  }
+
+  /* Active arc */
+  .knob-arc {
+    fill: none;
+    stroke-width: 4;
+    stroke-linecap: round;
+    transition: stroke 0.15s ease;
+  }
+
+  .knob-arc.bits {
+    stroke: #FFFFFF;
+  }
+
+  .knob-arc.rate {
+    stroke: #FFFFFF;
+  }
+
+  /* Indicator dot */
+  .knob-indicator {
+    fill: #FFFFFF;
+    transition: fill 0.15s ease;
+  }
+
+  /* Center circle */
+  .knob-center {
+    fill: #222222;
+    stroke: #333333;
+    stroke-width: 1;
+  }
+
+  .knob-value {
+    font-size: 18px;
+    font-weight: 400;
+    color: #FFFFFF;
+    letter-spacing: 1px;
+    min-width: 80px;
+    text-align: center;
+  }
+
+  .knob-value .unit {
+    font-size: 11px;
+    font-weight: 300;
+    color: #555555;
+    margin-left: 2px;
+  }
+
+  /* Hover glow */
+  .knob-wrapper:hover .knob-arc {
+    stroke: #FFFFFF;
+    filter: drop-shadow(0 0 6px rgba(255,255,255,0.15));
+  }
+
+  .knob-wrapper:hover .knob-indicator {
+    filter: drop-shadow(0 0 4px rgba(255,255,255,0.3));
+  }
+</style>
+</head>
+<body>
+
+<div class="plugin-root">
+  <div class="header">
+    <div class="plugin-title">Grit</div>
+    <div class="plugin-subtitle">Bitcrusher</div>
+  </div>
+
+  <div class="knobs-container">
+    <!-- Bit Depth Knob -->
+    <div class="knob-group">
+      <div class="knob-label">Bits</div>
+      <div class="knob-wrapper" id="knob-bits" data-param="bit_depth" data-min="4" data-max="12" data-value="12" data-step="0.1" data-decimals="1">
+        <svg class="knob-svg" viewBox="0 0 120 120">
+          <path class="knob-track" id="track-bits" />
+          <path class="knob-arc bits" id="arc-bits" />
+          <circle class="knob-center" cx="60" cy="60" r="32" />
+          <circle class="knob-indicator" id="ind-bits" r="5" />
+        </svg>
+      </div>
+      <div class="knob-value" id="value-bits">12.0<span class="unit">bit</span></div>
+    </div>
+
+    <!-- Sample Rate Knob -->
+    <div class="knob-group">
+      <div class="knob-label">Rate</div>
+      <div class="knob-wrapper" id="knob-rate" data-param="sample_rate" data-min="1000" data-max="44100" data-value="44100" data-step="1" data-decimals="1">
+        <svg class="knob-svg" viewBox="0 0 120 120">
+          <path class="knob-track" id="track-rate" />
+          <path class="knob-arc rate" id="arc-rate" />
+          <circle class="knob-center" cx="60" cy="60" r="32" />
+          <circle class="knob-indicator" id="ind-rate" r="5" />
+        </svg>
+      </div>
+      <div class="knob-value" id="value-rate">44.1<span class="unit">kHz</span></div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/juce/index.js"></script>
+<script type="module">
+  import { getSliderState } from './js/juce/index.js';
+
+  const ARC_START = 135;
+  const ARC_END = 405;
+  const ARC_RANGE = ARC_END - ARC_START;
+  const CX = 60, CY = 60, R = 46;
+
+  function degToRad(d) { return (d - 90) * Math.PI / 180; }
+
+  function describeArc(cx, cy, r, startAngle, endAngle) {
+    const s = degToRad(startAngle);
+    const e = degToRad(endAngle);
+    const x1 = cx + r * Math.cos(s);
+    const y1 = cy + r * Math.sin(s);
+    const x2 = cx + r * Math.cos(e);
+    const y2 = cy + r * Math.sin(e);
+    const large = (endAngle - startAngle > 180) ? 1 : 0;
+    return `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`;
+  }
+
+  function indicatorPos(angle) {
+    const rad = degToRad(angle);
+    return { x: CX + R * Math.cos(rad), y: CY + R * Math.sin(rad) };
+  }
+
+  // Draw full track arcs
+  document.getElementById('track-bits').setAttribute('d', describeArc(CX, CY, R, ARC_START, ARC_END));
+  document.getElementById('track-rate').setAttribute('d', describeArc(CX, CY, R, ARC_START, ARC_END));
+
+  // Parameter config
+  const paramConfig = {
+    BIT_DEPTH: { id: 'bits', min: 4.0, max: 12.0, defaultVal: 12.0,
+      format: v => v.toFixed(1) + '<span class="unit">bit</span>' },
+    SAMPLE_RATE: { id: 'rate', min: 1000.0, max: 44100.0, defaultVal: 44100.0,
+      format: v => v >= 1000 ? (v / 1000).toFixed(1) + '<span class="unit">kHz</span>'
+                              : Math.round(v) + '<span class="unit">Hz</span>' }
+  };
+
+  // Get JUCE slider states
+  const bitDepthState = getSliderState("BIT_DEPTH");
+  const sampleRateState = getSliderState("SAMPLE_RATE");
+
+  function normToReal(norm, min, max) { return min + norm * (max - min); }
+  function realToNorm(val, min, max) { return (val - min) / (max - min); }
+
+  function updateKnobVisual(paramName, normValue) {
+    const cfg = paramConfig[paramName];
+    const realVal = normToReal(normValue, cfg.min, cfg.max);
+    const angle = ARC_START + normValue * ARC_RANGE;
+
+    const arcEl = document.getElementById('arc-' + cfg.id);
+    const indEl = document.getElementById('ind-' + cfg.id);
+    const valEl = document.getElementById('value-' + cfg.id);
+
+    if (normValue > 0.003) {
+      arcEl.setAttribute('d', describeArc(CX, CY, R, ARC_START, angle));
+      arcEl.style.display = '';
+    } else {
+      arcEl.style.display = 'none';
+    }
+
+    const pos = indicatorPos(angle);
+    indEl.setAttribute('cx', pos.x);
+    indEl.setAttribute('cy', pos.y);
+    valEl.innerHTML = cfg.format(realVal);
+  }
+
+  // Listen for parameter changes from C++ (automation, preset recall)
+  bitDepthState.valueChangedEvent.addListener(() => {
+    updateKnobVisual('BIT_DEPTH', bitDepthState.getNormalisedValue());
+  });
+  sampleRateState.valueChangedEvent.addListener(() => {
+    updateKnobVisual('SAMPLE_RATE', sampleRateState.getNormalisedValue());
+  });
+
+  // Initialize visuals from current state
+  updateKnobVisual('BIT_DEPTH', bitDepthState.getNormalisedValue());
+  updateKnobVisual('SAMPLE_RATE', sampleRateState.getNormalisedValue());
+
+  // Map wrapper elements to their JUCE states
+  const knobMap = {
+    'knob-bits': { state: bitDepthState, param: 'BIT_DEPTH' },
+    'knob-rate': { state: sampleRateState, param: 'SAMPLE_RATE' }
+  };
+
+  // Drag interaction
+  let activeKnob = null;
+  let lastY = 0;
+
+  function onPointerDown(e) {
+    const el = e.currentTarget;
+    const entry = knobMap[el.id];
+    if (!entry) return;
+    activeKnob = { el, state: entry.state, param: entry.param };
+    lastY = e.clientY;
+    entry.state.sliderDragStarted();
+    document.addEventListener('pointermove', onPointerMove);
+    document.addEventListener('pointerup', onPointerUp);
+    e.preventDefault();
+  }
+
+  function onPointerMove(e) {
+    if (!activeKnob) return;
+    const deltaY = lastY - e.clientY;
+    lastY = e.clientY;
+    const sensitivity = e.shiftKey ? 0.001 : 0.004;
+    let norm = activeKnob.state.getNormalisedValue() + deltaY * sensitivity;
+    norm = Math.max(0, Math.min(1, norm));
+    activeKnob.state.setNormalisedValue(norm);
+  }
+
+  function onPointerUp() {
+    if (activeKnob) {
+      activeKnob.state.sliderDragEnded();
+      activeKnob = null;
+    }
+    document.removeEventListener('pointermove', onPointerMove);
+    document.removeEventListener('pointerup', onPointerUp);
+  }
+
+  document.querySelectorAll('.knob-wrapper').forEach(k => {
+    k.addEventListener('pointerdown', onPointerDown);
+  });
+
+  // Double-click to reset
+  document.querySelectorAll('.knob-wrapper').forEach(k => {
+    k.addEventListener('dblclick', () => {
+      const entry = knobMap[k.id];
+      if (!entry) return;
+      const cfg = paramConfig[entry.param];
+      const norm = realToNorm(cfg.defaultVal, cfg.min, cfg.max);
+      entry.state.setNormalisedValue(norm);
+    });
+  });
+</script>
+
+</body>
+</html>
