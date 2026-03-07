@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Halo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f4f4f6;
+    font-family: 'Inter', -apple-system, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .plugin-root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 28px 32px 24px;
+    box-sizing: border-box;
+    background: linear-gradient(168deg, #ffffff 0%, #f0f0f4 50%, #e8e8ee 100%);
+    border-radius: 0;
+    position: relative;
+  }
+
+  /* Subtle top accent line */
+  .plugin-root::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 10%, #c0c0cc 30%, #d8d8e4 50%, #c0c0cc 70%, transparent 90%);
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 36px;
+  }
+
+  .plugin-name {
+    font-size: 28px;
+    font-weight: 300;
+    letter-spacing: 10px;
+    text-transform: uppercase;
+    color: #3a3a46;
+    margin-bottom: 4px;
+  }
+
+  .plugin-subtitle {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #a0a0b0;
+  }
+
+  /* Knobs area */
+  .knobs-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 72px;
+    margin-bottom: 32px;
+  }
+
+  .knob-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .knob-container {
+    width: 100px;
+    height: 100px;
+    position: relative;
+    cursor: grab;
+  }
+
+  .knob-container:active {
+    cursor: grabbing;
+  }
+
+  .knob-svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .knob-track {
+    fill: none;
+    stroke: #dcdce4;
+    stroke-width: 4;
+    stroke-linecap: round;
+  }
+
+  .knob-fill {
+    fill: none;
+    stroke: #8a8aa0;
+    stroke-width: 4;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.05s ease;
+  }
+
+  .knob-fill.active {
+    stroke: #6e6e88;
+  }
+
+  .knob-dot {
+    fill: #6e6e88;
+    transition: transform 0.05s ease;
+  }
+
+  .knob-center {
+    fill: none;
+    stroke: #e4e4ec;
+    stroke-width: 1;
+  }
+
+  .knob-value {
+    font-size: 15px;
+    font-weight: 400;
+    color: #4a4a58;
+    letter-spacing: 1px;
+    min-width: 44px;
+    text-align: center;
+  }
+
+  .knob-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #9898a8;
+  }
+
+  /* Divider */
+  .divider {
+    width: 120px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #d0d0dc, transparent);
+    margin-bottom: 18px;
+  }
+
+  /* Footer badge */
+  .footer {
+    font-size: 9px;
+    font-weight: 400;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #b8b8c8;
+  }
+</style>
+</head>
+<body>
+
+<div class="plugin-root">
+
+  <div class="header">
+    <div class="plugin-name">Halo</div>
+    <div class="plugin-subtitle">Cathedral Reverb</div>
+  </div>
+
+  <div class="knobs-row">
+
+    <!-- MIX knob -->
+    <div class="knob-group">
+      <div class="knob-label">Mix</div>
+      <div class="knob-container" data-param="mix" data-min="0" data-max="100" data-value="35" data-suffix="%">
+        <svg class="knob-svg" viewBox="0 0 100 100">
+          <circle class="knob-center" cx="50" cy="50" r="32"/>
+          <path class="knob-track" id="mix-track"/>
+          <path class="knob-fill" id="mix-fill"/>
+          <circle class="knob-dot" id="mix-dot" r="4"/>
+        </svg>
+      </div>
+      <div class="knob-value" id="mix-value">35%</div>
+    </div>
+
+    <!-- DECAY knob -->
+    <div class="knob-group">
+      <div class="knob-label">Decay</div>
+      <div class="knob-container" data-param="decay" data-min="0.5" data-max="10.0" data-value="4.0" data-suffix="s">
+        <svg class="knob-svg" viewBox="0 0 100 100">
+          <circle class="knob-center" cx="50" cy="50" r="32"/>
+          <path class="knob-track" id="decay-track"/>
+          <path class="knob-fill" id="decay-fill"/>
+          <circle class="knob-dot" id="decay-dot" r="4"/>
+        </svg>
+      </div>
+      <div class="knob-value" id="decay-value">4.0s</div>
+    </div>
+
+  </div>
+
+  <div class="divider"></div>
+  <div class="footer">Ethereal Space Engine</div>
+
+</div>
+
+<script type="module" src="js/juce/index.js"></script>
+<script type="module">
+import { getSliderState } from './js/juce/index.js';
+
+const ARC_START = 135;
+const ARC_END = 405;
+const ARC_RANGE = ARC_END - ARC_START;
+const CX = 50, CY = 50, R = 40;
+
+function degToRad(deg) { return (deg - 90) * Math.PI / 180; }
+
+function polarToCart(cx, cy, r, deg) {
+  const rad = degToRad(deg);
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+
+function describeArc(cx, cy, r, startDeg, endDeg) {
+  const s = polarToCart(cx, cy, r, startDeg);
+  const e = polarToCart(cx, cy, r, endDeg);
+  const sweep = endDeg - startDeg;
+  const largeArc = sweep > 180 ? 1 : 0;
+  return `M ${s.x} ${s.y} A ${r} ${r} 0 ${largeArc} 1 ${e.x} ${e.y}`;
+}
+
+function setupKnob(paramId, displayMin, displayMax, suffix, isDecimal) {
+  const state = getSliderState(paramId);
+  const key = paramId.toLowerCase();
+  const container = document.querySelector(`[data-param="${key}"]`);
+  const track = document.getElementById(key + '-track');
+  const fill = document.getElementById(key + '-fill');
+  const dot = document.getElementById(key + '-dot');
+  const display = document.getElementById(key + '-value');
+
+  track.setAttribute('d', describeArc(CX, CY, R, ARC_START, ARC_END));
+
+  function updateVisual(norm) {
+    const angle = ARC_START + norm * ARC_RANGE;
+    if (angle > ARC_START + 0.5) {
+      fill.setAttribute('d', describeArc(CX, CY, R, ARC_START, angle));
+      fill.style.display = '';
+    } else {
+      fill.style.display = 'none';
+    }
+    const dotPos = polarToCart(CX, CY, R, angle);
+    dot.setAttribute('cx', dotPos.x);
+    dot.setAttribute('cy', dotPos.y);
+
+    const displayVal = displayMin + norm * (displayMax - displayMin);
+    display.textContent = (isDecimal ? displayVal.toFixed(1) : Math.round(displayVal)) + suffix;
+  }
+
+  // Sync from C++ (automation, preset recall)
+  state.valueChangedEvent.addListener(() => {
+    updateVisual(state.getNormalisedValue());
+  });
+
+  // Initial render
+  updateVisual(state.getNormalisedValue());
+
+  // Relative mouse drag
+  let dragging = false;
+  let lastY = 0;
+
+  container.addEventListener('mousedown', (e) => {
+    dragging = true;
+    lastY = e.clientY;
+    fill.classList.add('active');
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const deltaY = lastY - e.clientY;
+    lastY = e.clientY;
+    const current = state.getNormalisedValue();
+    const newVal = Math.max(0, Math.min(1, current + deltaY / 150));
+    state.setNormalisedValue(newVal);
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (dragging) {
+      dragging = false;
+      fill.classList.remove('active');
+    }
+  });
+
+  // Double-click to reset
+  container.addEventListener('dblclick', () => {
+    state.setNormalisedValue(state.properties.defaultValue);
+  });
+}
+
+setupKnob('MIX', 0, 100, '%', false);
+setupKnob('DECAY', 0.5, 10.0, 's', true);
+</script>
+
+</body>
+</html>
