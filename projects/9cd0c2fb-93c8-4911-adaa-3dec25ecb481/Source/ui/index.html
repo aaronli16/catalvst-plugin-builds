@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resonant</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&display=swap');
+
+  :root {
+    --gold: #c9a84c;
+    --gold-light: #e8d48b;
+    --gold-dim: #8a6f2e;
+    --bg-deep: #1a1118;
+    --bg-mid: #241a22;
+    --bg-surface: #2e2430;
+    --text-primary: #e8ddd0;
+    --text-secondary: #9a8e80;
+    --warm-shadow: rgba(160, 120, 50, 0.08);
+  }
+
+  html, body {
+    width: 500px;
+    height: 440px;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    background: var(--bg-deep);
+    font-family: 'Cormorant Garamond', serif;
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  .plugin-root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 24px 28px 20px;
+    position: relative;
+    background:
+      radial-gradient(ellipse 70% 50% at 50% 20%, rgba(160, 120, 50, 0.06) 0%, transparent 70%),
+      linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-mid) 50%, var(--bg-deep) 100%);
+  }
+
+  /* Ornate border frame */
+  .plugin-root::before {
+    content: '';
+    position: absolute;
+    inset: 8px;
+    border: 1px solid var(--gold-dim);
+    border-radius: 4px;
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  .plugin-root::after {
+    content: '';
+    position: absolute;
+    inset: 12px;
+    border: 1px solid var(--gold-dim);
+    border-radius: 2px;
+    opacity: 0.2;
+    pointer-events: none;
+  }
+
+  /* Corner ornaments */
+  .corner-ornament {
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    opacity: 0.45;
+    pointer-events: none;
+  }
+  .corner-ornament::before,
+  .corner-ornament::after {
+    content: '';
+    position: absolute;
+    background: var(--gold-dim);
+  }
+  .corner-ornament::before {
+    width: 28px;
+    height: 1px;
+    top: 0;
+    left: 0;
+  }
+  .corner-ornament::after {
+    width: 1px;
+    height: 28px;
+    top: 0;
+    left: 0;
+  }
+  .corner-tl { top: 14px; left: 14px; }
+  .corner-tr { top: 14px; right: 14px; transform: scaleX(-1); }
+  .corner-bl { bottom: 14px; left: 14px; transform: scaleY(-1); }
+  .corner-br { bottom: 14px; right: 14px; transform: scale(-1, -1); }
+
+  /* Header */
+  .header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 8px;
+    z-index: 1;
+  }
+
+  .header-rule {
+    width: 100px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+    margin-bottom: 10px;
+  }
+
+  .plugin-name {
+    font-family: 'Cinzel', serif;
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: var(--gold);
+    text-shadow: 0 0 20px rgba(201, 168, 76, 0.2);
+    margin: 0;
+  }
+
+  .plugin-subtitle {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 12px;
+    font-weight: 300;
+    font-style: italic;
+    letter-spacing: 3px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    text-transform: lowercase;
+  }
+
+  .header-rule-bottom {
+    width: 160px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+    margin-top: 10px;
+  }
+
+  /* Cathedral visualization */
+  .cathedral-visual {
+    width: 100%;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 4px 0;
+    z-index: 1;
+    min-height: 0;
+  }
+
+  .cathedral-canvas {
+    width: 280px;
+    height: 160px;
+  }
+
+  /* Arch SVG styles */
+  .arch-line {
+    fill: none;
+    stroke: var(--gold-dim);
+    stroke-width: 0.8;
+    opacity: 0.3;
+    transition: opacity 0.6s ease, stroke 0.6s ease;
+  }
+
+  .arch-line.active {
+    stroke: var(--gold);
+    opacity: 0.6;
+    filter: drop-shadow(0 0 4px rgba(201, 168, 76, 0.15));
+  }
+
+  .arch-glow {
+    fill: none;
+    stroke: var(--gold-light);
+    stroke-width: 1.5;
+    opacity: 0;
+    transition: opacity 0.8s ease;
+  }
+
+  .arch-glow.active {
+    opacity: 0.15;
+    filter: blur(3px);
+  }
+
+  /* Divider */
+  .section-divider {
+    width: 220px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    z-index: 1;
+    flex-shrink: 0;
+  }
+
+  .divider-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+    opacity: 0.4;
+  }
+
+  .divider-diamond {
+    width: 5px;
+    height: 5px;
+    background: var(--gold-dim);
+    transform: rotate(45deg);
+    opacity: 0.5;
+    flex-shrink: 0;
+  }
+
+  /* Controls */
+  .controls-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 60px;
+    z-index: 1;
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+
+  .knob-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .knob-label {
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  .knob-container {
+    width: 80px;
+    height: 80px;
+    position: relative;
+    cursor: grab;
+  }
+
+  .knob-container:active {
+    cursor: grabbing;
+  }
+
+  .knob-svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .knob-track {
+    fill: none;
+    stroke: var(--bg-surface);
+    stroke-width: 3;
+    stroke-linecap: round;
+  }
+
+  .knob-arc {
+    fill: none;
+    stroke: var(--gold);
+    stroke-width: 3;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 4px rgba(201, 168, 76, 0.25));
+    transition: stroke-dashoffset 0.05s ease;
+  }
+
+  .knob-dot {
+    fill: var(--gold-light);
+    filter: drop-shadow(0 0 3px rgba(201, 168, 76, 0.4));
+    transition: cx 0.05s ease, cy 0.05s ease;
+  }
+
+  .knob-center-ring {
+    fill: none;
+    stroke: var(--gold-dim);
+    stroke-width: 0.5;
+    opacity: 0.3;
+  }
+
+  .knob-value {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px;
+    font-weight: 300;
+    color: var(--text-primary);
+    letter-spacing: 1px;
+    min-width: 40px;
+    text-align: center;
+  }
+
+  /* Footer */
+  .footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 6px;
+    z-index: 1;
+    flex-shrink: 0;
+  }
+
+  .footer-text {
+    font-size: 9px;
+    font-weight: 300;
+    letter-spacing: 2px;
+    color: var(--text-secondary);
+    opacity: 0.4;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+<div class="plugin-root">
+  <!-- Corner ornaments -->
+  <div class="corner-ornament corner-tl"></div>
+  <div class="corner-ornament corner-tr"></div>
+  <div class="corner-ornament corner-bl"></div>
+  <div class="corner-ornament corner-br"></div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-rule"></div>
+    <h1 class="plugin-name">Resonant</h1>
+    <span class="plugin-subtitle">cathedral reverb</span>
+    <div class="header-rule-bottom"></div>
+  </div>
+
+  <!-- Cathedral arch visualization -->
+  <div class="cathedral-visual">
+    <svg class="cathedral-canvas" viewBox="0 0 280 160" xmlns="http://www.w3.org/2000/svg">
+      <!-- Glow layers (behind) -->
+      <path class="arch-glow" id="glow-1" d="M 60,155 L 60,80 Q 60,25 140,25 Q 220,25 220,80 L 220,155" />
+      <path class="arch-glow" id="glow-2" d="M 80,155 L 80,85 Q 80,40 140,40 Q 200,40 200,85 L 200,155" />
+      <path class="arch-glow" id="glow-3" d="M 100,155 L 100,90 Q 100,55 140,55 Q 180,55 180,90 L 180,155" />
+      <path class="arch-glow" id="glow-4" d="M 115,155 L 115,95 Q 115,68 140,68 Q 165,68 165,95 L 165,155" />
+      <path class="arch-glow" id="glow-5" d="M 128,155 L 128,100 Q 128,80 140,80 Q 152,80 152,100 L 152,155" />
+
+      <!-- Structural arch lines -->
+      <path class="arch-line" id="arch-1" d="M 40,155 L 40,70 Q 40,10 140,10 Q 240,10 240,70 L 240,155" />
+      <path class="arch-line" id="arch-2" d="M 60,155 L 60,80 Q 60,25 140,25 Q 220,25 220,80 L 220,155" />
+      <path class="arch-line" id="arch-3" d="M 80,155 L 80,85 Q 80,40 140,40 Q 200,40 200,85 L 200,155" />
+      <path class="arch-line" id="arch-4" d="M 100,155 L 100,90 Q 100,55 140,55 Q 180,55 180,90 L 180,155" />
+      <path class="arch-line" id="arch-5" d="M 115,155 L 115,95 Q 115,68 140,68 Q 165,68 165,95 L 165,155" />
+      <path class="arch-line" id="arch-6" d="M 128,155 L 128,100 Q 128,80 140,80 Q 152,80 152,100 L 152,155" />
+
+      <!-- Floor line -->
+      <line x1="30" y1="155" x2="250" y2="155" stroke="var(--gold-dim)" stroke-width="0.5" opacity="0.25" />
+    </svg>
+  </div>
+
+  <!-- Divider -->
+  <div class="section-divider">
+    <div class="divider-line"></div>
+    <div class="divider-diamond"></div>
+    <div class="divider-line"></div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls-section">
+    <!-- Size knob -->
+    <div class="knob-group">
+      <span class="knob-label">Size</span>
+      <div class="knob-container" id="knob-size" data-param="size" data-value="0.65" data-min="0" data-max="1" data-default="0.65">
+        <svg class="knob-svg" viewBox="0 0 80 80">
+          <circle class="knob-center-ring" cx="40" cy="40" r="18" />
+          <path class="knob-track" id="track-size" />
+          <path class="knob-arc" id="arc-size" />
+          <circle class="knob-dot" id="dot-size" r="3" />
+        </svg>
+      </div>
+      <span class="knob-value" id="value-size">65%</span>
+    </div>
+
+    <!-- Mix knob -->
+    <div class="knob-group">
+      <span class="knob-label">Mix</span>
+      <div class="knob-container" id="knob-mix" data-param="mix" data-value="0.35" data-min="0" data-max="1" data-default="0.35">
+        <svg class="knob-svg" viewBox="0 0 80 80">
+          <circle class="knob-center-ring" cx="40" cy="40" r="18" />
+          <path class="knob-track" id="track-mix" />
+          <path class="knob-arc" id="arc-mix" />
+          <circle class="knob-dot" id="dot-mix" r="3" />
+        </svg>
+      </div>
+      <span class="knob-value" id="value-mix">35%</span>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span class="footer-text">Cathedral Reverb</span>
+  </div>
+</div>
+
+<script type="module" src="./js/juce/index.js"></script>
+<script type="module">
+  import { getSliderState } from './js/juce/index.js';
+
+  // Knob configuration
+  const ARC_START = 225;
+  const ARC_END = -45;
+  const ARC_RANGE = 270;
+  const RADIUS = 30;
+  const CX = 40;
+  const CY = 40;
+
+  function degToRad(deg) {
+    return (deg * Math.PI) / 180;
+  }
+
+  function polarToCart(cx, cy, r, angleDeg) {
+    const rad = degToRad(angleDeg);
+    return {
+      x: cx + r * Math.cos(rad),
+      y: cy - r * Math.sin(rad)
+    };
+  }
+
+  function describeArc(cx, cy, r, startAngle, endAngle) {
+    const start = polarToCart(cx, cy, r, startAngle);
+    const end = polarToCart(cx, cy, r, endAngle);
+    const sweep = startAngle - endAngle;
+    const largeArc = sweep > 180 ? 1 : 0;
+    return `M ${start.x},${start.y} A ${r},${r} 0 ${largeArc} 1 ${end.x},${end.y}`;
+  }
+
+  // JUCE parameter bridge states
+  const sizeState = getSliderState("SIZE");
+  const mixState = getSliderState("MIX");
+
+  // Map param names to their JUCE states
+  const paramStates = { size: sizeState, mix: mixState };
+
+  function updateVisual(param, val) {
+    const container = document.getElementById(`knob-${param}`);
+    const arc = document.getElementById(`arc-${param}`);
+    const dot = document.getElementById(`dot-${param}`);
+    const display = document.getElementById(`value-${param}`);
+    const track = document.getElementById(`track-${param}`);
+
+    container.dataset.value = val;
+    track.setAttribute('d', describeArc(CX, CY, RADIUS, ARC_START, ARC_END));
+
+    const angle = ARC_START - val * ARC_RANGE;
+    arc.setAttribute('d', describeArc(CX, CY, RADIUS, ARC_START, angle));
+
+    const dotPos = polarToCart(CX, CY, RADIUS, angle);
+    dot.setAttribute('cx', dotPos.x);
+    dot.setAttribute('cy', dotPos.y);
+
+    display.textContent = Math.round(val * 100) + '%';
+    updateVisualization();
+  }
+
+  function initKnob(container) {
+    const param = container.dataset.param;
+    const defaultValue = parseFloat(container.dataset.default);
+    const state = paramStates[param];
+    let value = state ? state.getNormalisedValue() : parseFloat(container.dataset.value);
+
+    const track = document.getElementById(`track-${param}`);
+    track.setAttribute('d', describeArc(CX, CY, RADIUS, ARC_START, ARC_END));
+    updateVisual(param, value);
+
+    // Listen for value changes from C++ (automation, presets)
+    if (state) {
+      state.valueChangedEvent.addListener(() => {
+        value = state.getNormalisedValue();
+        updateVisual(param, value);
+      });
+    }
+
+    // Mouse interaction (relative drag)
+    let dragging = false;
+    let lastY;
+
+    container.addEventListener('mousedown', (e) => {
+      dragging = true;
+      lastY = e.clientY;
+      e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const deltaY = lastY - e.clientY;
+      lastY = e.clientY;
+      value = Math.max(0, Math.min(1, value + deltaY / 150));
+      updateVisual(param, value);
+      if (state) state.setNormalisedValue(value);
+    });
+
+    window.addEventListener('mouseup', () => {
+      dragging = false;
+    });
+
+    // Double-click to reset
+    container.addEventListener('dblclick', () => {
+      value = defaultValue;
+      updateVisual(param, value);
+      if (state) state.setNormalisedValue(value);
+    });
+  }
+
+  // Visualization update
+  function updateVisualization() {
+    const sizeVal = parseFloat(document.getElementById('knob-size').dataset.value);
+    const mixVal = parseFloat(document.getElementById('knob-mix').dataset.value);
+
+    const archCount = 6;
+    const activeArches = Math.ceil(sizeVal * archCount);
+
+    for (let i = 1; i <= archCount; i++) {
+      const arch = document.getElementById(`arch-${i}`);
+      if (i <= activeArches) {
+        arch.classList.add('active');
+        arch.style.opacity = 0.25 + (mixVal * 0.5) * (1 - (i - 1) / archCount);
+      } else {
+        arch.classList.remove('active');
+        arch.style.opacity = '';
+      }
+    }
+
+    const glowCount = 5;
+    const activeGlows = Math.ceil(sizeVal * glowCount);
+
+    for (let i = 1; i <= glowCount; i++) {
+      const glow = document.getElementById(`glow-${i}`);
+      if (i <= activeGlows && mixVal > 0.1) {
+        glow.classList.add('active');
+        glow.style.opacity = mixVal * 0.2 * (1 - (i - 1) / glowCount);
+      } else {
+        glow.classList.remove('active');
+        glow.style.opacity = '';
+      }
+    }
+  }
+
+  // Initialize knobs
+  document.querySelectorAll('.knob-container').forEach(initKnob);
+</script>
+</body>
+</html>
