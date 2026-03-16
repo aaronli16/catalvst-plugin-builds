@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Satin</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Playfair+Display:wght@400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%;
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1a1714;
+    font-family: 'Courier Prime', monospace;
+  }
+
+  .plugin-root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+    background: linear-gradient(180deg, #2a2520 0%, #1e1b17 40%, #1a1714 100%);
+    border: 2px solid #3a3530;
+    border-radius: 6px;
+    position: relative;
+  }
+
+  /* Rack screws */
+  .plugin-root::before,
+  .plugin-root::after {
+    content: '';
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 40%, #5a5550, #2a2520);
+    border: 1px solid #4a4540;
+    position: absolute;
+    top: 12px;
+  }
+  .plugin-root::before { left: 14px; }
+  .plugin-root::after { right: 14px; }
+
+  /* Top section */
+  .header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .brand-label {
+    font-family: 'Courier Prime', monospace;
+    font-size: 9px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #6a6258;
+    margin-bottom: 2px;
+  }
+
+  .plugin-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: #d4c8b8;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  }
+
+  .plugin-type {
+    font-family: 'Courier Prime', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #5a5248;
+    margin-top: 1px;
+  }
+
+  /* Divider line */
+  .divider {
+    width: 80%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #4a4238, transparent);
+    margin: 12px 0;
+  }
+
+  /* VU Meter */
+  .vu-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+  }
+
+  .vu-meter {
+    width: 200px;
+    height: 44px;
+    background: linear-gradient(180deg, #f5f0e6, #e8e0d0);
+    border-radius: 4px;
+    border: 1px solid #3a3530;
+    box-shadow: inset 0 1px 4px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .vu-scale {
+    display: flex;
+    justify-content: space-between;
+    width: 170px;
+    font-size: 7px;
+    color: #4a4540;
+    font-family: 'Courier Prime', monospace;
+    margin-bottom: 2px;
+  }
+
+  .vu-scale span.red { color: #8b3a2a; }
+
+  .vu-bar-track {
+    width: 170px;
+    height: 6px;
+    background: #d8d0c0;
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .vu-bar-fill {
+    height: 100%;
+    width: 45%;
+    background: linear-gradient(90deg, #6a8a5a, #a08a40, #8b3a2a);
+    border-radius: 3px;
+    transition: width 0.15s ease-out;
+  }
+
+  .vu-needle {
+    width: 2px;
+    height: 10px;
+    background: #2a2520;
+    position: absolute;
+    bottom: 6px;
+    left: 45%;
+    transform: translateX(-50%);
+    border-radius: 1px;
+    transition: left 0.15s ease-out;
+  }
+
+  /* Knobs area */
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 60px;
+    margin-top: 6px;
+  }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .knob-container {
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .knob {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #4a4540, #2a2520 70%);
+    border: 2px solid #3a3530;
+    box-shadow:
+      0 2px 6px rgba(0,0,0,0.5),
+      inset 0 1px 1px rgba(255,255,255,0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .knob-inner {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 45% 40%, #3a3530, #1e1b17 80%);
+    border: 1px solid #4a4540;
+    position: relative;
+  }
+
+  .knob-indicator {
+    width: 2px;
+    height: 14px;
+    background: #d4a854;
+    border-radius: 1px;
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    transform-origin: bottom center;
+    box-shadow: 0 0 4px rgba(212, 168, 84, 0.4);
+  }
+
+  .knob-label {
+    font-family: 'Courier Prime', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #7a7268;
+    margin-top: 8px;
+  }
+
+  .knob-value {
+    font-family: 'Courier Prime', monospace;
+    font-size: 11px;
+    color: #d4a854;
+    margin-top: 3px;
+    min-width: 40px;
+    text-align: center;
+  }
+
+  /* LED indicator */
+  .led-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .led {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #d4a854;
+    box-shadow: 0 0 6px rgba(212, 168, 84, 0.6), 0 0 12px rgba(212, 168, 84, 0.2);
+  }
+
+  .led-label {
+    font-family: 'Courier Prime', monospace;
+    font-size: 8px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #5a5248;
+  }
+
+  /* Bottom screws */
+  .bottom-screws {
+    position: absolute;
+    bottom: 12px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 14px;
+  }
+
+  .screw {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 40%, #5a5550, #2a2520);
+    border: 1px solid #4a4540;
+  }
+</style>
+</head>
+<body>
+
+<div class="plugin-root">
+  <!-- Top screws via pseudo-elements -->
+
+  <div class="header">
+    <div class="brand-label">Plate Reverb</div>
+    <div class="plugin-name">Satin</div>
+    <div class="plugin-type">Warm Saturated Decay</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="vu-section">
+    <div class="vu-meter">
+      <div class="vu-scale">
+        <span>-20</span>
+        <span>-10</span>
+        <span>-7</span>
+        <span>-3</span>
+        <span>0</span>
+        <span class="red">+3</span>
+      </div>
+      <div class="vu-bar-track">
+        <div class="vu-bar-fill" id="vuFill"></div>
+      </div>
+      <div class="vu-needle" id="vuNeedle"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="control-group">
+      <div class="knob-container" id="decayKnob">
+        <div class="knob">
+          <div class="knob-inner">
+            <div class="knob-indicator" id="decayIndicator"></div>
+          </div>
+        </div>
+      </div>
+      <div class="knob-label">Decay</div>
+      <div class="knob-value" id="decayValue">15.0s</div>
+    </div>
+
+    <div class="control-group">
+      <div class="knob-container" id="mixKnob">
+        <div class="knob">
+          <div class="knob-inner">
+            <div class="knob-indicator" id="mixIndicator"></div>
+          </div>
+        </div>
+      </div>
+      <div class="knob-label">Mix</div>
+      <div class="knob-value" id="mixValue">50%</div>
+    </div>
+  </div>
+
+  <div class="led-section">
+    <div class="led"></div>
+    <div class="led-label">Active</div>
+  </div>
+
+  <div class="bottom-screws">
+    <div class="screw"></div>
+    <div class="screw"></div>
+  </div>
+</div>
+
+<script type="module">
+  import { getSliderState } from './js/juce/index.js';
+
+  const decayState = getSliderState("DECAY");
+  const mixState = getSliderState("MIX");
+
+  const knobs = {
+    decay: {
+      state: decayState,
+      value: 0.5,
+      el: 'decayKnob',
+      indicator: 'decayIndicator',
+      display: 'decayValue',
+      format: v => (10 + v * 10).toFixed(1) + 's'
+    },
+    mix: {
+      state: mixState,
+      value: 0.5,
+      el: 'mixKnob',
+      indicator: 'mixIndicator',
+      display: 'mixValue',
+      format: v => Math.round(v * 100) + '%'
+    }
+  };
+
+  let activeKnob = null;
+  let lastY = 0;
+
+  function updateKnobVisual(name) {
+    const k = knobs[name];
+    const rotation = -135 + k.value * 270;
+    document.getElementById(k.indicator).style.transform = `translateX(-50%) rotate(${rotation}deg)`;
+    document.getElementById(k.display).textContent = k.format(k.value);
+  }
+
+  function initKnobs() {
+    for (const name in knobs) {
+      const k = knobs[name];
+      updateKnobVisual(name);
+
+      document.getElementById(k.el).addEventListener('mousedown', (e) => {
+        activeKnob = name;
+        lastY = e.clientY;
+        e.preventDefault();
+      });
+
+      k.state.valueChangedEvent.addListener(() => {
+        k.value = k.state.getNormalisedValue();
+        updateKnobVisual(name);
+      });
+    }
+  }
+
+  document.addEventListener('mousemove', (e) => {
+    if (!activeKnob) return;
+    const k = knobs[activeKnob];
+    const deltaY = lastY - e.clientY;
+    lastY = e.clientY;
+    k.value = Math.max(0, Math.min(1, k.value + deltaY * 0.005));
+    updateKnobVisual(activeKnob);
+    k.state.setNormalisedValue(k.value);
+  });
+
+  document.addEventListener('mouseup', () => {
+    activeKnob = null;
+  });
+
+  function animateVU() {
+    const base = 35 + Math.sin(Date.now() / 800) * 10 + Math.random() * 8;
+    const clamped = Math.max(10, Math.min(85, base));
+    document.getElementById('vuFill').style.width = clamped + '%';
+    document.getElementById('vuNeedle').style.left = (15 + clamped * 0.7) + '%';
+    requestAnimationFrame(animateVU);
+  }
+
+  initKnobs();
+  animateVU();
+</script>
+
+</body>
+</html>
