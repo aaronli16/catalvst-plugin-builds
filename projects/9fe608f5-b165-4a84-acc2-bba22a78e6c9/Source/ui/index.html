@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sludge</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 500px;
+    height: 380px;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1a1714;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .plugin-root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0;
+    box-sizing: border-box;
+    background: linear-gradient(180deg, #2a2520 0%, #1e1b17 40%, #181510 100%);
+    border: 2px solid #3a3530;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  /* === TOP RACK STRIP === */
+  .rack-strip-top, .rack-strip-bottom {
+    width: 100%;
+    height: 14px;
+    background: linear-gradient(180deg, #3a3530 0%, #2a2520 100%);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    flex-shrink: 0;
+  }
+
+  .rack-strip-bottom {
+    background: linear-gradient(180deg, #2a2520 0%, #3a3530 100%);
+    margin-top: auto;
+  }
+
+  .rack-screw {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #706858, #3a3530 60%, #2a2520);
+    border: 1px solid #4a4538;
+    flex-shrink: 0;
+  }
+
+  /* === HEADER === */
+  .header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px 6px 28px;
+    flex-shrink: 0;
+  }
+
+  .brand-block {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .plugin-name {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 32px;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: #d4a84b;
+    line-height: 1;
+    text-shadow: 0 1px 4px rgba(212, 168, 75, 0.3);
+  }
+
+  .plugin-subtitle {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #7a7060;
+    line-height: 1;
+    margin-top: 2px;
+  }
+
+  .status-led {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #d4a84b;
+    box-shadow: 0 0 6px rgba(212, 168, 75, 0.6), 0 0 12px rgba(212, 168, 75, 0.2);
+    flex-shrink: 0;
+  }
+
+  /* === DIVIDER === */
+  .divider {
+    width: calc(100% - 56px);
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, #4a4538 20%, #5a5548 50%, #4a4538 80%, transparent 100%);
+    margin: 8px auto 0 auto;
+    flex-shrink: 0;
+  }
+
+  /* === CONTROLS AREA === */
+  .controls-area {
+    flex: 1;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 70px;
+    padding: 10px 28px 0 28px;
+  }
+
+  .knob-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .knob-label {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #8a8070;
+  }
+
+  /* === KNOB === */
+  .knob-wrapper {
+    position: relative;
+    width: 110px;
+    height: 110px;
+  }
+
+  .knob-svg {
+    width: 110px;
+    height: 110px;
+  }
+
+  .knob-track {
+    fill: none;
+    stroke: #2a2822;
+    stroke-width: 4;
+    stroke-linecap: round;
+  }
+
+  .knob-arc {
+    fill: none;
+    stroke: url(#knobGradient);
+    stroke-width: 4;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.05s ease-out;
+    filter: drop-shadow(0 0 4px rgba(212, 168, 75, 0.3));
+  }
+
+  .knob-body {
+    fill: url(#knobBodyGradient);
+    stroke: #4a4538;
+    stroke-width: 1;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+  }
+
+  .knob-indicator {
+    stroke: #d4a84b;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 3px rgba(212, 168, 75, 0.5));
+  }
+
+  .knob-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 500;
+    font-size: 13px;
+    color: #d4a84b;
+    text-align: center;
+    min-width: 60px;
+    height: 18px;
+    line-height: 18px;
+    text-shadow: 0 0 8px rgba(212, 168, 75, 0.3);
+  }
+
+  /* === BOTTOM INFO === */
+  .bottom-info {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 28px 10px 28px;
+    flex-shrink: 0;
+  }
+
+  .info-text {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #4a4538;
+  }
+
+  /* === TICK MARKS === */
+  .knob-tick {
+    stroke: #4a4538;
+    stroke-width: 1;
+  }
+
+  .knob-tick-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 7.5px;
+    fill: #5a5548;
+    text-anchor: middle;
+  }
+
+  /* Drag cursor */
+  .knob-wrapper:active { cursor: ns-resize; }
+  .knob-wrapper { cursor: ns-resize; }
+
+</style>
+</head>
+<body>
+
+<div class="plugin-root">
+  <!-- Top Rack Strip -->
+  <div class="rack-strip-top">
+    <div class="rack-screw"></div>
+    <div class="rack-screw"></div>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="brand-block">
+      <div class="plugin-name">Sludge</div>
+      <div class="plugin-subtitle">Saturated Plate Reverb</div>
+    </div>
+    <div class="status-led"></div>
+  </div>
+
+  <!-- Divider -->
+  <div class="divider"></div>
+
+  <!-- Controls -->
+  <div class="controls-area">
+
+    <!-- DECAY Knob -->
+    <div class="knob-group">
+      <div class="knob-label">Decay</div>
+      <div class="knob-wrapper" id="decayKnob" data-param="decay" data-min="10" data-max="20" data-value="14" data-unit="s" data-decimals="1">
+        <svg class="knob-svg" viewBox="0 0 110 110">
+          <defs>
+            <linearGradient id="knobGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#d4a84b"/>
+              <stop offset="100%" stop-color="#b8863a"/>
+            </linearGradient>
+            <radialGradient id="knobBodyGradient" cx="40%" cy="35%" r="60%">
+              <stop offset="0%" stop-color="#3a3530"/>
+              <stop offset="60%" stop-color="#2a2520"/>
+              <stop offset="100%" stop-color="#1e1b17"/>
+            </radialGradient>
+          </defs>
+          <!-- Tick marks and labels -->
+          <line class="knob-tick" x1="22" y1="85" x2="27" y2="81"/>
+          <text class="knob-tick-label" x="16" y="89">10</text>
+          <line class="knob-tick" x1="15" y1="58" x2="21" y2="58"/>
+          <text class="knob-tick-label" x="11" y="55">13</text>
+          <line class="knob-tick" x1="38" y1="18" x2="41" y2="24"/>
+          <text class="knob-tick-label" x="34" y="15">15</text>
+          <line class="knob-tick" x1="72" y1="18" x2="69" y2="24"/>
+          <text class="knob-tick-label" x="76" y="15">17</text>
+          <line class="knob-tick" x1="95" y1="58" x2="89" y2="58"/>
+          <text class="knob-tick-label" x="100" y="55">19</text>
+          <line class="knob-tick" x1="88" y1="85" x2="83" y2="81"/>
+          <text class="knob-tick-label" x="94" y="89">20</text>
+          <!-- Track -->
+          <path class="knob-track" d="M 27 81 A 38 38 0 1 1 83 81"/>
+          <!-- Active arc -->
+          <path class="knob-arc" id="decayArc" d="M 27 81 A 38 38 0 1 1 83 81"/>
+          <!-- Knob body -->
+          <circle class="knob-body" cx="55" cy="55" r="28"/>
+          <!-- Indicator line -->
+          <line class="knob-indicator" id="decayIndicator" x1="55" y1="55" x2="55" y2="30"/>
+        </svg>
+      </div>
+      <div class="knob-value" id="decayValue">14.0s</div>
+    </div>
+
+    <!-- MIX Knob -->
+    <div class="knob-group">
+      <div class="knob-label">Mix</div>
+      <div class="knob-wrapper" id="mixKnob" data-param="mix" data-min="0" data-max="100" data-value="40" data-unit="%" data-decimals="0">
+        <svg class="knob-svg" viewBox="0 0 110 110">
+          <!-- Tick marks and labels -->
+          <line class="knob-tick" x1="22" y1="85" x2="27" y2="81"/>
+          <text class="knob-tick-label" x="16" y="89">0</text>
+          <line class="knob-tick" x1="15" y1="58" x2="21" y2="58"/>
+          <text class="knob-tick-label" x="10" y="55">20</text>
+          <line class="knob-tick" x1="38" y1="18" x2="41" y2="24"/>
+          <text class="knob-tick-label" x="34" y="15">40</text>
+          <line class="knob-tick" x1="72" y1="18" x2="69" y2="24"/>
+          <text class="knob-tick-label" x="76" y="15">60</text>
+          <line class="knob-tick" x1="95" y1="58" x2="89" y2="58"/>
+          <text class="knob-tick-label" x="101" y="55">80</text>
+          <line class="knob-tick" x1="88" y1="85" x2="83" y2="81"/>
+          <text class="knob-tick-label" x="94" y="89">100</text>
+          <!-- Track -->
+          <path class="knob-track" d="M 27 81 A 38 38 0 1 1 83 81"/>
+          <!-- Active arc -->
+          <path class="knob-arc" id="mixArc" d="M 27 81 A 38 38 0 1 1 83 81"/>
+          <!-- Knob body -->
+          <circle class="knob-body" cx="55" cy="55" r="28"/>
+          <!-- Indicator line -->
+          <line class="knob-indicator" id="mixIndicator" x1="55" y1="55" x2="55" y2="30"/>
+        </svg>
+      </div>
+      <div class="knob-value" id="mixValue">40%</div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Info -->
+  <div class="bottom-info">
+    <span class="info-text">Plate Reverb &mdash; Saturated &mdash; Dark</span>
+  </div>
+
+  <!-- Bottom Rack Strip -->
+  <div class="rack-strip-bottom">
+    <div class="rack-screw"></div>
+    <div class="rack-screw"></div>
+  </div>
+</div>
+
+<script type="module">
+  import { getSliderState } from './js/juce/index.js';
+
+  const START_ANGLE = 225;
+  const SWEEP = 270;
+  const CENTER = 55;
+  const INDICATOR_OUTER = 28;
+  const RADIUS = 38;
+
+  function degToRad(deg) { return deg * Math.PI / 180; }
+
+  function polarToCart(cx, cy, r, angleDeg) {
+    const rad = degToRad(angleDeg);
+    return { x: cx + r * Math.cos(rad), y: cy - r * Math.sin(rad) };
+  }
+
+  function totalArcLength() {
+    return RADIUS * 2 * Math.PI * (SWEEP / 360);
+  }
+
+  function updateKnobVisual(wrapper, normalisedValue) {
+    const min = parseFloat(wrapper.dataset.min);
+    const max = parseFloat(wrapper.dataset.max);
+    const unit = wrapper.dataset.unit;
+    const decimals = parseInt(wrapper.dataset.decimals);
+    const param = wrapper.dataset.param;
+
+    const value = min + normalisedValue * (max - min);
+    wrapper.dataset.value = value;
+
+    const angle = START_ANGLE - normalisedValue * SWEEP;
+
+    const indicator = wrapper.querySelector('.knob-indicator');
+    const tip = polarToCart(CENTER, CENTER, INDICATOR_OUTER, angle);
+    indicator.setAttribute('x2', tip.x);
+    indicator.setAttribute('y2', tip.y);
+
+    const arc = wrapper.querySelector('.knob-arc');
+    const total = totalArcLength();
+    const active = total * normalisedValue;
+    arc.style.strokeDasharray = `${active} ${total}`;
+
+    const display = document.getElementById(param + 'Value');
+    display.textContent = value.toFixed(decimals) + unit;
+  }
+
+  function initKnob(wrapper, sliderState) {
+    let isDragging = false;
+    let lastY = 0;
+    const sensitivity = 200;
+
+    wrapper.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      lastY = e.clientY;
+      e.preventDefault();
+      document.body.style.cursor = 'ns-resize';
+      document.body.style.userSelect = 'none';
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const deltaY = lastY - e.clientY;
+      lastY = e.clientY;
+      let current = sliderState.getNormalisedValue();
+      current += deltaY / sensitivity;
+      current = Math.max(0, Math.min(1, current));
+      sliderState.setNormalisedValue(current);
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (isDragging) {
+        isDragging = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+    });
+
+    wrapper.addEventListener('dblclick', () => {
+      sliderState.setNormalisedValue(sliderState.properties.defaultValue);
+    });
+
+    sliderState.valueChangedEvent.addListener(() => {
+      updateKnobVisual(wrapper, sliderState.getNormalisedValue());
+    });
+
+    updateKnobVisual(wrapper, sliderState.getNormalisedValue());
+  }
+
+  const decayState = getSliderState("DECAY");
+  const mixState   = getSliderState("MIX");
+
+  initKnob(document.getElementById('decayKnob'), decayState);
+  initKnob(document.getElementById('mixKnob'),   mixState);
+</script>
+
+</body>
+</html>
