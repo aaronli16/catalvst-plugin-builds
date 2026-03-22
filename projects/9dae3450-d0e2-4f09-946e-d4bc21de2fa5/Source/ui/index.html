@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Metronome</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0e0e10;
+    font-family: 'Inter', sans-serif;
+    color: #d4d4d8;
+    user-select: none;
+  }
+
+  .plugin-root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 24px 28px 20px;
+    box-sizing: border-box;
+  }
+
+  /* ── Header ── */
+  .header {
+    width: 100%;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #1e1e22;
+  }
+
+  .header-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #a0a0b0;
+  }
+
+  .header-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #4a4a58;
+  }
+
+  /* ── Controls Row ── */
+  .controls-row {
+    width: 100%;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 32px;
+    flex: 1;
+  }
+
+  /* ── Individual Control ── */
+  .control {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    min-width: 120px;
+  }
+
+  .control-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: #5a5a6a;
+  }
+
+  /* ── Knob ── */
+  .knob-container {
+    position: relative;
+    width: 80px;
+    height: 80px;
+  }
+
+  .knob-svg {
+    width: 80px;
+    height: 80px;
+  }
+
+  .knob-track {
+    fill: none;
+    stroke: #1c1c22;
+    stroke-width: 3;
+    stroke-linecap: round;
+  }
+
+  .knob-arc {
+    fill: none;
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke 0.15s ease;
+  }
+
+  .knob-indicator {
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    transition: stroke 0.15s ease;
+  }
+
+  .control:nth-child(1) .knob-arc,
+  .control:nth-child(1) .knob-indicator { stroke: #6366f1; }
+
+  .control:nth-child(2) .knob-arc,
+  .control:nth-child(2) .knob-indicator { stroke: #8b5cf6; }
+
+  .control:nth-child(3) .knob-arc,
+  .control:nth-child(3) .knob-indicator { stroke: #a78bfa; }
+
+  .knob-center {
+    fill: #15151a;
+    stroke: #222230;
+    stroke-width: 1;
+  }
+
+  /* ── Value Display ── */
+  .control-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: #e4e4e8;
+    letter-spacing: 0.5px;
+    min-height: 18px;
+    text-align: center;
+  }
+
+  /* ── Sync Selector (Time) ── */
+  .sync-selector {
+    display: flex;
+    gap: 4px;
+    background: #141418;
+    border-radius: 4px;
+    padding: 3px;
+    border: 1px solid #1e1e24;
+  }
+
+  .sync-option {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    padding: 4px 7px;
+    border-radius: 3px;
+    cursor: pointer;
+    color: #4a4a58;
+    background: transparent;
+    border: none;
+    transition: all 0.15s ease;
+    letter-spacing: 0.5px;
+  }
+
+  .sync-option:hover {
+    color: #7a7a8a;
+  }
+
+  .sync-option.active {
+    background: #6366f1;
+    color: #e8e8f0;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 14px;
+    border-top: 1px solid #1a1a1e;
+    margin-top: auto;
+  }
+
+  .ping-pong-indicator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .pp-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #2a2a35;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .pp-dot.left-active {
+    background: #6366f1;
+    box-shadow: 0 0 8px #6366f180;
+  }
+
+  .pp-dot.right-active {
+    background: #a78bfa;
+    box-shadow: 0 0 8px #a78bfa80;
+  }
+
+  .pp-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 400;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #3a3a48;
+  }
+
+  .pp-arrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #2a2a35;
+  }
+</style>
+</head>
+<body>
+
+<div class="plugin-root">
+
+  <!-- Header -->
+  <div class="header">
+    <span class="header-title">Metronome</span>
+    <span class="header-sub">Ping Pong Delay</span>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls-row">
+
+    <!-- TIME -->
+    <div class="control" data-param="time">
+      <span class="control-label">Time</span>
+      <div class="knob-container">
+        <svg class="knob-svg" viewBox="0 0 80 80">
+          <circle class="knob-center" cx="40" cy="40" r="24" />
+          <path class="knob-track" d="M 18.04 61.96 A 31 31 0 1 1 61.96 61.96" />
+          <path class="knob-arc" d="M 18.04 61.96 A 31 31 0 0 1 40 9" />
+          <line class="knob-indicator" x1="40" y1="40" x2="40" y2="18" />
+        </svg>
+      </div>
+      <div class="sync-selector">
+        <button class="sync-option" data-val="0">1/8</button>
+        <button class="sync-option active" data-val="1">1/4</button>
+        <button class="sync-option" data-val="2">1/2</button>
+        <button class="sync-option" data-val="3">1/1</button>
+        <button class="sync-option" data-val="4">D</button>
+        <button class="sync-option" data-val="5">T</button>
+      </div>
+    </div>
+
+    <!-- FEEDBACK -->
+    <div class="control" data-param="feedback">
+      <span class="control-label">Feedback</span>
+      <div class="knob-container">
+        <svg class="knob-svg" viewBox="0 0 80 80">
+          <circle class="knob-center" cx="40" cy="40" r="24" />
+          <path class="knob-track" d="M 18.04 61.96 A 31 31 0 1 1 61.96 61.96" />
+          <path class="knob-arc" d="M 18.04 61.96 A 31 31 0 0 1 40 9" />
+          <line class="knob-indicator" x1="40" y1="40" x2="40" y2="18" />
+        </svg>
+      </div>
+      <span class="control-value">50%</span>
+    </div>
+
+    <!-- MIX -->
+    <div class="control" data-param="mix">
+      <span class="control-label">Mix</span>
+      <div class="knob-container">
+        <svg class="knob-svg" viewBox="0 0 80 80">
+          <circle class="knob-center" cx="40" cy="40" r="24" />
+          <path class="knob-track" d="M 18.04 61.96 A 31 31 0 1 1 61.96 61.96" />
+          <path class="knob-arc" d="M 18.04 61.96 A 31 31 0 0 1 40 9" />
+          <line class="knob-indicator" x1="40" y1="40" x2="40" y2="18" />
+        </svg>
+      </div>
+      <span class="control-value">30%</span>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="ping-pong-indicator">
+      <div class="pp-dot left-active"></div>
+      <span class="pp-arrow">&#x2192;</span>
+      <span class="pp-label">Ping Pong</span>
+      <span class="pp-arrow">&#x2190;</span>
+      <div class="pp-dot"></div>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+import { getSliderState, getToggleState } from './js/juce/index.js';
+
+// ── JUCE parameter states ──
+const timeState     = getSliderState("TIME");
+const dottedState   = getToggleState("DOTTED");
+const tripletState  = getToggleState("TRIPLET");
+const feedbackState = getSliderState("FEEDBACK");
+const mixState      = getSliderState("MIX");
+
+// ── Arc math ──
+const START_ANGLE = 135;
+const END_ANGLE = 405;
+const RANGE = END_ANGLE - START_ANGLE;
+
+function polarToCart(cx, cy, r, angleDeg) {
+  const rad = (angleDeg - 90) * Math.PI / 180;
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+
+function describeArc(cx, cy, r, startAngle, endAngle) {
+  if (endAngle - startAngle < 0.5) return '';
+  const start = polarToCart(cx, cy, r, startAngle);
+  const end = polarToCart(cx, cy, r, endAngle);
+  const large = endAngle - startAngle > 180 ? 1 : 0;
+  return `M ${start.x} ${start.y} A ${r} ${r} 0 ${large} 1 ${end.x} ${end.y}`;
+}
+
+function updateKnob(controlEl, value) {
+  const arc = controlEl.querySelector('.knob-arc');
+  const indicator = controlEl.querySelector('.knob-indicator');
+  const angle = START_ANGLE + value * RANGE;
+  arc.setAttribute('d', describeArc(40, 40, 31, START_ANGLE, angle));
+  const indEnd = polarToCart(40, 40, 24, angle);
+  const indStart = polarToCart(40, 40, 14, angle);
+  indicator.setAttribute('x1', indStart.x);
+  indicator.setAttribute('y1', indStart.y);
+  indicator.setAttribute('x2', indEnd.x);
+  indicator.setAttribute('y2', indEnd.y);
+}
+
+// ── DOM references ──
+const controls = document.querySelectorAll('.control');
+const timeCtrl = controls[0];
+const feedbackCtrl = controls[1];
+const mixCtrl = controls[2];
+const syncButtons = document.querySelectorAll('.sync-option');
+
+// ── Sync buttons → C++ ──
+syncButtons.forEach(btn => {
+  btn.addEventListener('click', function() {
+    const val = parseInt(this.dataset.val);
+    if (val <= 3) {
+      timeState.setNormalisedValue(val / 3);
+    } else if (val === 4) {
+      const newVal = !dottedState.getValue();
+      if (newVal) tripletState.setValue(false);
+      dottedState.setValue(newVal);
+    } else if (val === 5) {
+      const newVal = !tripletState.getValue();
+      if (newVal) dottedState.setValue(false);
+      tripletState.setValue(newVal);
+    }
+  });
+});
+
+// ── Knob drag → C++ (relative delta) ──
+function addKnobDrag(controlEl, sliderState, defaultNorm) {
+  const knobContainer = controlEl.querySelector('.knob-container');
+  let dragging = false;
+  let lastY;
+
+  knobContainer.addEventListener('mousedown', e => {
+    dragging = true;
+    lastY = e.clientY;
+    document.body.style.cursor = 'ns-resize';
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const delta = (lastY - e.clientY) * 0.004;
+    lastY = e.clientY;
+    const newVal = Math.max(0, Math.min(1, sliderState.getNormalisedValue() + delta));
+    sliderState.setNormalisedValue(newVal);
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (dragging) {
+      dragging = false;
+      document.body.style.cursor = '';
+    }
+  });
+
+  knobContainer.addEventListener('dblclick', () => {
+    sliderState.setNormalisedValue(defaultNorm);
+  });
+}
+
+addKnobDrag(feedbackCtrl, feedbackState, 0.5);
+addKnobDrag(mixCtrl, mixState, 0.3);
+
+// ── C++ → UI: sync visuals when parameters change ──
+timeState.valueChangedEvent.addListener(() => {
+  const norm = timeState.getNormalisedValue();
+  const index = Math.round(norm * 3);
+  updateKnob(timeCtrl, norm);
+  syncButtons.forEach(b => {
+    const bVal = parseInt(b.dataset.val);
+    if (bVal <= 3) b.classList.toggle('active', bVal === index);
+  });
+});
+
+dottedState.valueChangedEvent.addListener(() => {
+  const val = dottedState.getValue();
+  syncButtons.forEach(b => {
+    if (parseInt(b.dataset.val) === 4) b.classList.toggle('active', val);
+  });
+});
+
+tripletState.valueChangedEvent.addListener(() => {
+  const val = tripletState.getValue();
+  syncButtons.forEach(b => {
+    if (parseInt(b.dataset.val) === 5) b.classList.toggle('active', val);
+  });
+});
+
+feedbackState.valueChangedEvent.addListener(() => {
+  const val = feedbackState.getNormalisedValue();
+  updateKnob(feedbackCtrl, val);
+  feedbackCtrl.querySelector('.control-value').textContent = Math.round(val * 100) + '%';
+});
+
+mixState.valueChangedEvent.addListener(() => {
+  const val = mixState.getNormalisedValue();
+  updateKnob(mixCtrl, val);
+  mixCtrl.querySelector('.control-value').textContent = Math.round(val * 100) + '%';
+});
+
+// ── Initialize UI from current C++ state ──
+function initUI() {
+  const timeNorm = timeState.getNormalisedValue();
+  const timeIndex = Math.round(timeNorm * 3);
+  updateKnob(timeCtrl, timeNorm);
+  syncButtons.forEach(b => {
+    const bVal = parseInt(b.dataset.val);
+    if (bVal <= 3) b.classList.toggle('active', bVal === timeIndex);
+    if (bVal === 4) b.classList.toggle('active', dottedState.getValue());
+    if (bVal === 5) b.classList.toggle('active', tripletState.getValue());
+  });
+
+  const fbVal = feedbackState.getNormalisedValue();
+  updateKnob(feedbackCtrl, fbVal);
+  feedbackCtrl.querySelector('.control-value').textContent = Math.round(fbVal * 100) + '%';
+
+  const mixVal = mixState.getNormalisedValue();
+  updateKnob(mixCtrl, mixVal);
+  mixCtrl.querySelector('.control-value').textContent = Math.round(mixVal * 100) + '%';
+}
+
+initUI();
+
+// ── Ping pong animation ──
+const dots = document.querySelectorAll('.pp-dot');
+let ppSide = 0;
+setInterval(() => {
+  dots[0].classList.toggle('left-active', ppSide === 0);
+  dots[0].classList.remove('right-active');
+  dots[1].classList.toggle('right-active', ppSide === 1);
+  dots[1].classList.remove('left-active');
+  ppSide = ppSide === 0 ? 1 : 0;
+}, 600);
+</script>
+
+</body>
+</html>
