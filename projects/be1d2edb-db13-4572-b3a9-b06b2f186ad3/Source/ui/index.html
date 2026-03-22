@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flutter</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif&family=DM+Mono:wght@300;400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 800px;
+    height: 540px;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1a1410;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .plugin-root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 24px 30px 20px;
+    box-sizing: border-box;
+    background: linear-gradient(180deg, #2a2018 0%, #1e1812 40%, #1a1410 100%);
+    position: relative;
+  }
+
+  /* Subtle texture overlay */
+  .plugin-root::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  /* === HEADER === */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 20px;
+    flex-shrink: 0;
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .brand h1 {
+    font-family: 'Instrument Serif', serif;
+    font-size: 32px;
+    font-weight: 400;
+    color: #e8d5b8;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .brand .subtitle {
+    font-size: 10px;
+    color: #8a7560;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .bypass-btn {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #4a3828;
+    border: 1.5px solid #5a4838;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .bypass-btn.active {
+    background: #d4915e;
+    border-color: #e8a56e;
+    box-shadow: 0 0 8px rgba(212, 145, 94, 0.5);
+  }
+
+  /* === TAPE REELS SECTION === */
+  .tape-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 60px;
+    width: 100%;
+    margin-bottom: 22px;
+    flex-shrink: 0;
+  }
+
+  .reel {
+    width: 120px;
+    height: 120px;
+    position: relative;
+  }
+
+  .reel-outer {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 2px solid #3d3028;
+    background: radial-gradient(circle, #2a2018 0%, #1e1812 60%, #252018 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .reel-spokes {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 1.5px solid #3d3028;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: spin 4s linear infinite;
+  }
+
+  .reel-spokes.slow {
+    animation-duration: 6s;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .spoke {
+    position: absolute;
+    width: 2px;
+    height: 70px;
+    background: #3d3028;
+    left: 50%;
+    top: 50%;
+    transform-origin: center center;
+    margin-left: -1px;
+    margin-top: -35px;
+  }
+
+  .spoke:nth-child(1) { transform: translate(0, 0) rotate(0deg); }
+  .spoke:nth-child(2) { transform: translate(0, 0) rotate(60deg); }
+  .spoke:nth-child(3) { transform: translate(0, 0) rotate(120deg); }
+
+  .reel-hub {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #3d3028;
+    border: 2px solid #4a3c30;
+    z-index: 2;
+  }
+
+  /* Tape path between reels */
+  .tape-path {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tape-line {
+    width: 80px;
+    height: 2px;
+    background: linear-gradient(90deg, #4a3828, #6b5540, #4a3828);
+    border-radius: 1px;
+  }
+
+  .tape-head-indicator {
+    display: flex;
+    gap: 10px;
+  }
+
+  .head-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #5a4838;
+  }
+
+  .head-dot.active {
+    background: #d4915e;
+    box-shadow: 0 0 6px rgba(212, 145, 94, 0.4);
+  }
+
+  /* === VU METER === */
+  .vu-section {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 22px;
+    flex-shrink: 0;
+  }
+
+  .vu-meter {
+    width: 280px;
+    height: 36px;
+    background: #161210;
+    border: 1.5px solid #3d3028;
+    border-radius: 4px;
+    padding: 6px 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .vu-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .vu-label {
+    font-size: 8px;
+    color: #6b5540;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .vu-bar-track {
+    width: 100%;
+    height: 6px;
+    background: #0e0c0a;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .vu-bar-fill {
+    height: 100%;
+    width: 55%;
+    background: linear-gradient(90deg, #8a6840, #d4915e, #e8a56e);
+    border-radius: 3px;
+    transition: width 0.15s ease;
+  }
+
+  /* === KNOBS SECTION === */
+  .controls-section {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    flex-shrink: 0;
+  }
+
+  .knob-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100px;
+  }
+
+  .knob-group.primary {
+    width: 110px;
+  }
+
+  .knob-label {
+    font-size: 9px;
+    color: #8a7560;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .knob-container {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    cursor: grab;
+  }
+
+  .knob-container:active {
+    cursor: grabbing;
+  }
+
+  .knob-group.primary .knob-container {
+    width: 76px;
+    height: 76px;
+  }
+
+  .knob-ring {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: conic-gradient(from 220deg, #3d3028 0%, #4a3c30 70%, #3d3028 80%, transparent 80%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .knob-body {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #3a3028, #2a2018);
+    border: 1.5px solid #4a3c30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  .knob-group.primary .knob-body {
+    width: 58px;
+    height: 58px;
+  }
+
+  .knob-indicator {
+    position: absolute;
+    width: 2px;
+    height: 12px;
+    background: #d4915e;
+    border-radius: 1px;
+    top: 6px;
+    left: 50%;
+    margin-left: -1px;
+    transform-origin: center 18px;
+    box-shadow: 0 0 4px rgba(212, 145, 94, 0.3);
+  }
+
+  .knob-group.primary .knob-indicator {
+    height: 14px;
+    top: 7px;
+    transform-origin: center 22px;
+  }
+
+  .knob-value {
+    font-size: 10px;
+    color: #c4a882;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+    min-height: 14px;
+  }
+
+  /* === DIVIDER === */
+  .divider {
+    width: 1px;
+    height: 100px;
+    background: linear-gradient(180deg, transparent, #3d3028, transparent);
+    margin: 0 8px;
+    align-self: center;
+  }
+
+  /* === TOGGLE / SWITCH === */
+  .switch-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 80px;
+  }
+
+  .switch-label {
+    font-size: 9px;
+    color: #8a7560;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .toggle-switch {
+    width: 36px;
+    height: 18px;
+    background: #1a1410;
+    border: 1.5px solid #3d3028;
+    border-radius: 9px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s ease;
+  }
+
+  .toggle-switch.active {
+    border-color: #5a4838;
+  }
+
+  .toggle-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #5a4838;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: all 0.3s ease;
+  }
+
+  .toggle-switch.active .toggle-thumb {
+    left: 19px;
+    background: #d4915e;
+    box-shadow: 0 0 6px rgba(212, 145, 94, 0.4);
+  }
+
+  /* === FOOTER === */
+  .footer {
+    margin-top: auto;
+    display: flex;
+    justify-content: center;
+    padding-top: 12px;
+    flex-shrink: 0;
+  }
+
+  .footer span {
+    font-size: 8px;
+    color: #4a3c30;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  /* Warm glow accent */
+  .glow-accent {
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(212, 145, 94, 0.03) 0%, transparent 70%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<div class="plugin-root">
+  <div class="glow-accent"></div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="brand">
+      <h1>Flutter</h1>
+      <span class="subtitle">Tape Delay</span>
+    </div>
+    <div class="header-right">
+      <div class="bypass-btn active" id="bypassBtn" data-param="bypass"></div>
+    </div>
+  </div>
+
+  <!-- Tape Reels -->
+  <div class="tape-section">
+    <div class="reel">
+      <div class="reel-outer">
+        <div class="reel-spokes">
+          <div class="spoke"></div>
+          <div class="spoke"></div>
+          <div class="spoke"></div>
+          <div class="reel-hub"></div>
+        </div>
+      </div>
+    </div>
+    <div class="tape-path">
+      <div class="tape-line"></div>
+      <div class="tape-head-indicator">
+        <div class="head-dot active"></div>
+        <div class="head-dot"></div>
+        <div class="head-dot"></div>
+      </div>
+      <div class="tape-line"></div>
+    </div>
+    <div class="reel">
+      <div class="reel-outer">
+        <div class="reel-spokes slow">
+          <div class="spoke"></div>
+          <div class="spoke"></div>
+          <div class="spoke"></div>
+          <div class="reel-hub"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VU Meter -->
+  <div class="vu-section">
+    <div class="vu-meter">
+      <div class="vu-label-row">
+        <span class="vu-label">Level</span>
+        <span class="vu-label">VU</span>
+      </div>
+      <div class="vu-bar-track">
+        <div class="vu-bar-fill" id="vuFill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Knob Controls -->
+  <div class="controls-section">
+    <!-- Delay Time -->
+    <div class="knob-group primary">
+      <span class="knob-label">Time</span>
+      <div class="knob-container" data-param="delayTime" data-min="50" data-max="1200" data-value="380" data-unit="ms">
+        <div class="knob-ring">
+          <div class="knob-body">
+            <div class="knob-indicator"></div>
+          </div>
+        </div>
+      </div>
+      <span class="knob-value">380 ms</span>
+    </div>
+
+    <!-- Feedback -->
+    <div class="knob-group">
+      <span class="knob-label">Feedback</span>
+      <div class="knob-container" data-param="feedback" data-min="0" data-max="100" data-value="45" data-unit="%">
+        <div class="knob-ring">
+          <div class="knob-body">
+            <div class="knob-indicator"></div>
+          </div>
+        </div>
+      </div>
+      <span class="knob-value">45%</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Flutter / Wobble -->
+    <div class="knob-group primary">
+      <span class="knob-label">Flutter</span>
+      <div class="knob-container" data-param="flutter" data-min="0" data-max="100" data-value="30" data-unit="%">
+        <div class="knob-ring">
+          <div class="knob-body">
+            <div class="knob-indicator"></div>
+          </div>
+        </div>
+      </div>
+      <span class="knob-value">30%</span>
+    </div>
+
+    <!-- Tape Age / Saturation -->
+    <div class="knob-group">
+      <span class="knob-label">Tape Age</span>
+      <div class="knob-container" data-param="tapeAge" data-min="0" data-max="100" data-value="50" data-unit="%">
+        <div class="knob-ring">
+          <div class="knob-body">
+            <div class="knob-indicator"></div>
+          </div>
+        </div>
+      </div>
+      <span class="knob-value">50%</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Tone / High-End Roll-off -->
+    <div class="knob-group">
+      <span class="knob-label">Tone</span>
+      <div class="knob-container" data-param="tone" data-min="0" data-max="100" data-value="60" data-unit="%">
+        <div class="knob-ring">
+          <div class="knob-body">
+            <div class="knob-indicator"></div>
+          </div>
+        </div>
+      </div>
+      <span class="knob-value">60%</span>
+    </div>
+
+    <!-- Mix -->
+    <div class="knob-group">
+      <span class="knob-label">Mix</span>
+      <div class="knob-container" data-param="mix" data-min="0" data-max="100" data-value="35" data-unit="%">
+        <div class="knob-ring">
+          <div class="knob-body">
+            <div class="knob-indicator"></div>
+          </div>
+        </div>
+      </div>
+      <span class="knob-value">35%</span>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span>Magnetic Tape Emulation</span>
+  </div>
+</div>
+
+<script>
+(function() {
+  // === KNOB INTERACTION ===
+  const knobs = document.querySelectorAll('.knob-container');
+
+  knobs.forEach(knob => {
+    const min = parseFloat(knob.dataset.min);
+    const max = parseFloat(knob.dataset.max);
+    let value = parseFloat(knob.dataset.value);
+    const unit = knob.dataset.unit;
+    const param = knob.dataset.param;
+    const indicator = knob.querySelector('.knob-indicator');
+    const valueDisplay = knob.parentElement.querySelector('.knob-value');
+
+    function updateKnob(val) {
+      value = Math.max(min, Math.min(max, val));
+      knob.dataset.value = value;
+      const norm = (value - min) / (max - min);
+      const angle = -140 + norm * 280;
+      indicator.style.transform = `rotate(${angle}deg)`;
+
+      // Update ring
+      const ring = knob.querySelector('.knob-ring');
+      const fillDeg = 220 + norm * 280;
+      ring.style.background = `conic-gradient(from 220deg, #6b5540 0%, #d4915e ${norm * 70}%, #4a3c30 ${norm * 80}%, transparent ${norm * 80 + 5}%, transparent 100%)`;
+
+      if (unit === 'ms') {
+        valueDisplay.textContent = `${Math.round(value)} ${unit}`;
+      } else {
+        valueDisplay.textContent = `${Math.round(value)}${unit}`;
+      }
+
+      // Send to JUCE
+      if (window.juce) {
+        const normVal = (value - min) / (max - min);
+        window.juce.postMessage(JSON.stringify({ type: 'param', id: param, value: normVal }));
+      }
+    }
+
+    updateKnob(value);
+
+    let dragging = false;
+    let startY = 0;
+    let startValue = 0;
+
+    knob.addEventListener('mousedown', (e) => {
+      dragging = true;
+      startY = e.clientY;
+      startValue = value;
+      e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const dy = startY - e.clientY;
+      const range = max - min;
+      const sensitivity = e.shiftKey ? 0.1 : 0.5;
+      const delta = dy * (range / 200) * sensitivity;
+      updateKnob(startValue + delta);
+    });
+
+    window.addEventListener('mouseup', () => {
+      dragging = false;
+    });
+
+    knob.addEventListener('dblclick', () => {
+      updateKnob(parseFloat(knob.dataset.value));
+    });
+  });
+
+  // === BYPASS TOGGLE ===
+  const bypassBtn = document.getElementById('bypassBtn');
+  bypassBtn.addEventListener('click', () => {
+    bypassBtn.classList.toggle('active');
+    if (window.juce) {
+      const active = bypassBtn.classList.contains('active');
+      window.juce.postMessage(JSON.stringify({ type: 'param', id: 'bypass', value: active ? 1 : 0 }));
+    }
+  });
+
+  // === VU METER ANIMATION ===
+  const vuFill = document.getElementById('vuFill');
+  let vuTarget = 55;
+
+  function animateVU() {
+    vuTarget += (Math.random() - 0.48) * 8;
+    vuTarget = Math.max(15, Math.min(85, vuTarget));
+    vuFill.style.width = vuTarget + '%';
+
+    if (vuTarget > 70) {
+      vuFill.style.background = 'linear-gradient(90deg, #8a6840, #d4915e, #e06040)';
+    } else {
+      vuFill.style.background = 'linear-gradient(90deg, #8a6840, #d4915e, #e8a56e)';
+    }
+
+    requestAnimationFrame(animateVU);
+  }
+
+  setTimeout(animateVU, 500);
+
+  // === REEL SPEED VARIATION ===
+  const reelSpokes = document.querySelectorAll('.reel-spokes');
+  function varyReelSpeed() {
+    reelSpokes.forEach(reel => {
+      const base = reel.classList.contains('slow') ? 6 : 4;
+      const variation = (Math.random() - 0.5) * 0.8;
+      reel.style.animationDuration = (base + variation) + 's';
+    });
+    setTimeout(varyReelSpeed, 3000);
+  }
+  varyReelSpeed();
+})();
+</script>
+</body>
+</html>
