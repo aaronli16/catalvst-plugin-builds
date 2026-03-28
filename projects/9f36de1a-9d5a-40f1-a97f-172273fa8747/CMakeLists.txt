@@ -18,7 +18,7 @@ juce_add_plugin(Abyssal
     COMPANY_NAME "Catalvst"
     PLUGIN_MANUFACTURER_CODE Ctlv
     PLUGIN_CODE V0FX
-    FORMATS VST3
+    FORMATS VST3 AU
     PRODUCT_NAME "Abyssal"
     NEEDS_WEB_BROWSER TRUE
 )
