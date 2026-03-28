@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clarity</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 600px;
+            height: 400px;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #ffffff;
+        }
+
+        .plugin-root {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+        }
+
+        .header {
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 300;
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            color: #ffffff;
+        }
+
+        .header .tagline {
+            font-size: 11px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #666;
+        }
+
+        .controls {
+            display: flex;
+            gap: 40px;
+            align-items: flex-end;
+            margin-bottom: 40px;
+        }
+
+        .knob-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .knob-label {
+            font-size: 10px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: #999;
+        }
+
+        .knob {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #2a2a2a, #0a0a0a);
+            border: 2px solid #1a1a1a;
+            box-shadow: 
+                0 4px 12px rgba(0, 0, 0, 0.6),
+                inset 0 2px 4px rgba(255, 255, 255, 0.05);
+            position: relative;
+            cursor: pointer;
+            transition: box-shadow 0.2s;
+        }
+
+        .knob:hover {
+            box-shadow: 
+                0 4px 16px rgba(100, 200, 255, 0.3),
+                inset 0 2px 4px rgba(255, 255, 255, 0.08);
+        }
+
+        .knob-indicator {
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 3px;
+            height: 22px;
+            background: linear-gradient(180deg, #64c8ff 0%, #3a9edb 100%);
+            border-radius: 2px;
+            box-shadow: 0 0 8px rgba(100, 200, 255, 0.6);
+        }
+
+        .knob-value {
+            font-size: 12px;
+            color: #64c8ff;
+            font-weight: 500;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .type-toggle {
+            display: flex;
+            background: #0a0a0a;
+            border-radius: 6px;
+            border: 1px solid #2a2a2a;
+            overflow: hidden;
+        }
+
+        .type-button {
+            padding: 10px 24px;
+            font-size: 11px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            background: transparent;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .type-button.active {
+            background: linear-gradient(135deg, #64c8ff 0%, #3a9edb 100%);
+            color: #000;
+        }
+
+        .type-button:hover:not(.active) {
+            color: #999;
+            background: rgba(100, 200, 255, 0.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="plugin-root">
+        <div class="header">
+            <h1>Clarity</h1>
+            <div class="tagline">Reverb</div>
+        </div>
+
+        <div class="type-toggle">
+            <button class="type-button active" data-type="0">Room</button>
+            <button class="type-button" data-type="1">Hall</button>
+        </div>
+
+        <div style="height: 20px;"></div>
+
+        <div class="controls">
+            <div class="knob-container">
+                <div class="knob" id="decayKnob">
+                    <div class="knob-indicator" id="decayIndicator"></div>
+                </div>
+                <div class="knob-label">Decay</div>
+                <div class="knob-value" id="decayValue">2.0s</div>
+            </div>
+
+            <div class="knob-container">
+                <div class="knob" id="brightnessKnob">
+                    <div class="knob-indicator" id="brightnessIndicator"></div>
+                </div>
+                <div class="knob-label">Brightness</div>
+                <div class="knob-value" id="brightnessValue">70%</div>
+            </div>
+
+            <div class="knob-container">
+                <div class="knob" id="mixKnob">
+                    <div class="knob-indicator" id="mixIndicator"></div>
+                </div>
+                <div class="knob-label">Mix</div>
+                <div class="knob-value" id="mixValue">35%</div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/juce/index.js"></script>
+    <script type="module">
+        import { getSliderState } from './js/juce/index.js';
+
+        // Parameter states
+        const typeState = getSliderState("TYPE");
+        const decayState = getSliderState("DECAY");
+        const brightnessState = getSliderState("BRIGHTNESS");
+        const mixState = getSliderState("MIX");
+
+        // Knob elements
+        const decayKnob = document.getElementById('decayKnob');
+        const decayIndicator = document.getElementById('decayIndicator');
+        const decayValue = document.getElementById('decayValue');
+
+        const brightnessKnob = document.getElementById('brightnessKnob');
+        const brightnessIndicator = document.getElementById('brightnessIndicator');
+        const brightnessValue = document.getElementById('brightnessValue');
+
+        const mixKnob = document.getElementById('mixKnob');
+        const mixIndicator = document.getElementById('mixIndicator');
+        const mixValue = document.getElementById('mixValue');
+
+        // Type toggle buttons
+        const typeButtons = document.querySelectorAll('.type-button');
+
+        // Knob rotation range: -135deg to +135deg (270 degrees total)
+        const MIN_ANGLE = -135;
+        const MAX_ANGLE = 135;
+
+        // Update knob visual and value display
+        function updateKnob(indicator, valueDisplay, normalizedValue, formatter) {
+            const angle = MIN_ANGLE + normalizedValue * (MAX_ANGLE - MIN_ANGLE);
+            indicator.style.transform = `translateX(-50%) rotate(${angle}deg)`;
+            indicator.style.transformOrigin = 'center 28px';
+            valueDisplay.textContent = formatter(normalizedValue);
+        }
+
+        // Formatters
+        function formatDecay(normalized) {
+            const value = 0.1 + normalized * 9.9;
+            return value.toFixed(1) + 's';
+        }
+
+        function formatBrightness(normalized) {
+            return Math.round(normalized * 100) + '%';
+        }
+
+        function formatMix(normalized) {
+            return Math.round(normalized * 100) + '%';
+        }
+
+        // Setup knob interaction
+        function setupKnob(knob, indicator, valueDisplay, state, formatter) {
+            let isDragging = false;
+            let lastY = 0;
+            let currentAngle = MIN_ANGLE;
+
+            const updateFromNormalized = (normalized) => {
+                updateKnob(indicator, valueDisplay, normalized, formatter);
+            };
+
+            knob.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                lastY = e.clientY;
+                const normalized = state.getNormalisedValue();
+                currentAngle = MIN_ANGLE + normalized * (MAX_ANGLE - MIN_ANGLE);
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+
+                const deltaY = lastY - e.clientY;
+                currentAngle += deltaY * 0.5;
+                currentAngle = Math.max(MIN_ANGLE, Math.min(MAX_ANGLE, currentAngle));
+
+                const normalized = (currentAngle - MIN_ANGLE) / (MAX_ANGLE - MIN_ANGLE);
+                state.setNormalisedValue(normalized);
+                updateFromNormalized(normalized);
+
+                lastY = e.clientY;
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            // Listen for parameter changes from DAW
+            state.valueChangedEvent.addListener(() => {
+                const normalized = state.getNormalisedValue();
+                updateFromNormalized(normalized);
+            });
+
+            // Initialize visual from current value
+            updateFromNormalized(state.getNormalisedValue());
+        }
+
+        // Setup all knobs
+        setupKnob(decayKnob, decayIndicator, decayValue, decayState, formatDecay);
+        setupKnob(brightnessKnob, brightnessIndicator, brightnessValue, brightnessState, formatBrightness);
+        setupKnob(mixKnob, mixIndicator, mixValue, mixState, formatMix);
+
+        // Type toggle interaction
+        function updateTypeButtons(selectedType) {
+            typeButtons.forEach(btn => {
+                const btnType = parseInt(btn.dataset.type);
+                if (btnType === selectedType) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        typeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const type = parseInt(btn.dataset.type);
+                typeState.setNormalisedValue(type);
+                updateTypeButtons(type);
+            });
+        });
+
+        // Listen for type changes from DAW
+        typeState.valueChangedEvent.addListener(() => {
+            const type = Math.round(typeState.getNormalisedValue());
+            updateTypeButtons(type);
+        });
+
+        // Initialize type buttons
+        updateTypeButtons(Math.round(typeState.getNormalisedValue()));
+    </script>
+</body>
+</html>
