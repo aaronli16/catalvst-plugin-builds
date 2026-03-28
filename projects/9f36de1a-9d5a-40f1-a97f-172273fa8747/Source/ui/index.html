@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=600, height=400">
+<title>Abyssal</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 600px;
+    height: 400px;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0a0c12;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: #c8d0e0;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .plugin-root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 32px;
+    position: relative;
+    background:
+      radial-gradient(ellipse 70% 60% at 50% 80%, rgba(20, 50, 80, 0.35) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 40% at 30% 60%, rgba(15, 40, 70, 0.2) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 40% at 70% 55%, rgba(20, 35, 65, 0.15) 0%, transparent 60%),
+      linear-gradient(180deg, #080a10 0%, #0c1018 40%, #0f1520 100%);
+  }
+
+  /* Subtle animated particles (CSS only) */
+  .plugin-root::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 120px 280px, rgba(100, 160, 220, 0.3), transparent),
+      radial-gradient(1px 1px at 340px 320px, rgba(80, 140, 200, 0.25), transparent),
+      radial-gradient(1px 1px at 480px 300px, rgba(90, 150, 210, 0.2), transparent),
+      radial-gradient(1px 1px at 200px 350px, rgba(100, 170, 230, 0.15), transparent),
+      radial-gradient(1.5px 1.5px at 420px 340px, rgba(80, 130, 190, 0.2), transparent),
+      radial-gradient(1px 1px at 80px 330px, rgba(70, 120, 180, 0.15), transparent),
+      radial-gradient(1px 1px at 530px 360px, rgba(90, 140, 200, 0.2), transparent);
+    pointer-events: none;
+    animation: drift 12s ease-in-out infinite alternate;
+  }
+
+  @keyframes drift {
+    0% { opacity: 0.6; transform: translateY(0); }
+    100% { opacity: 1; transform: translateY(-8px); }
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 36px;
+    z-index: 1;
+  }
+
+  .title {
+    font-size: 28px;
+    font-weight: 300;
+    letter-spacing: 10px;
+    text-transform: uppercase;
+    color: #8aacc8;
+    text-shadow: 0 0 20px rgba(100, 160, 220, 0.25);
+  }
+
+  .subtitle {
+    font-size: 10px;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: #4a6078;
+    margin-top: 4px;
+  }
+
+  /* Knob section */
+  .controls {
+    display: flex;
+    gap: 100px;
+    align-items: center;
+    z-index: 1;
+  }
+
+  .knob-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .knob-container {
+    width: 100px;
+    height: 100px;
+    position: relative;
+    cursor: grab;
+  }
+
+  .knob-container:active { cursor: grabbing; }
+
+  .knob-svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Track (background arc) */
+  .knob-track {
+    fill: none;
+    stroke: #1a2030;
+    stroke-width: 3;
+    stroke-linecap: round;
+  }
+
+  /* Value arc */
+  .knob-value {
+    fill: none;
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke 0.3s ease;
+  }
+
+  .knob-value.mix-arc {
+    stroke: #4a8ab5;
+    filter: drop-shadow(0 0 4px rgba(74, 138, 181, 0.4));
+  }
+
+  .knob-value.size-arc {
+    stroke: #5a7aa0;
+    filter: drop-shadow(0 0 4px rgba(90, 122, 160, 0.35));
+  }
+
+  /* Center dot */
+  .knob-center {
+    fill: #141a24;
+    stroke: #2a3448;
+    stroke-width: 1;
+  }
+
+  /* Indicator line */
+  .knob-indicator {
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .knob-indicator.mix-ind { stroke: #6abadf; }
+  .knob-indicator.size-ind { stroke: #7a9abc; }
+
+  /* Labels */
+  .knob-label {
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #5a7088;
+  }
+
+  .knob-value-text {
+    font-size: 13px;
+    font-weight: 400;
+    color: #8aacc8;
+    font-variant-numeric: tabular-nums;
+    min-width: 36px;
+    text-align: center;
+  }
+
+  /* Footer */
+  .footer {
+    position: absolute;
+    bottom: 14px;
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #2a3848;
+  }
+</style>
+</head>
+<body>
+<div class="plugin-root">
+
+  <div class="header">
+    <div class="title">Abyssal</div>
+    <div class="subtitle">Shimmer Reverb</div>
+  </div>
+
+  <div class="controls">
+    <div class="knob-group">
+      <div class="knob-container" id="knob-mix">
+        <svg class="knob-svg" viewBox="0 0 100 100">
+          <path class="knob-track" id="track-mix"/>
+          <path class="knob-value mix-arc" id="arc-mix"/>
+          <circle class="knob-center" cx="50" cy="50" r="24"/>
+          <line class="knob-indicator mix-ind" id="ind-mix" x1="50" y1="50" x2="50" y2="30"/>
+        </svg>
+      </div>
+      <div class="knob-value-text" id="val-mix">35%</div>
+      <div class="knob-label">Mix</div>
+    </div>
+
+    <div class="knob-group">
+      <div class="knob-container" id="knob-size">
+        <svg class="knob-svg" viewBox="0 0 100 100">
+          <path class="knob-track" id="track-size"/>
+          <path class="knob-value size-arc" id="arc-size"/>
+          <circle class="knob-center" cx="50" cy="50" r="24"/>
+          <line class="knob-indicator size-ind" id="ind-size" x1="50" y1="50" x2="50" y2="30"/>
+        </svg>
+      </div>
+      <div class="knob-value-text" id="val-size">50%</div>
+      <div class="knob-label">Size</div>
+    </div>
+  </div>
+
+  <div class="footer">Catalvst</div>
+</div>
+
+<script type="module" src="js/juce/index.js"></script>
+<script type="module">
+import { getSliderState } from './js/juce/index.js';
+
+// ======================================================================
+// Arc math
+// ======================================================================
+const ARC_START = 135;    // degrees (7 o'clock)
+const ARC_END   = 405;    // degrees (5 o'clock)
+const ARC_RANGE = ARC_END - ARC_START; // 270 degrees
+const CX = 50, CY = 50, R = 38;
+
+function degToRad(d) { return d * Math.PI / 180; }
+
+function polarToXY(angleDeg) {
+  const r = degToRad(angleDeg);
+  return { x: CX + R * Math.cos(r), y: CY + R * Math.sin(r) };
+}
+
+function describeArc(startDeg, endDeg) {
+  if (endDeg - startDeg < 0.5) return '';
+  const s = polarToXY(startDeg);
+  const e = polarToXY(endDeg);
+  const large = (endDeg - startDeg > 180) ? 1 : 0;
+  return `M ${s.x} ${s.y} A ${R} ${R} 0 ${large} 1 ${e.x} ${e.y}`;
+}
+
+// Draw full track arcs
+document.getElementById('track-mix').setAttribute('d', describeArc(ARC_START, ARC_END));
+document.getElementById('track-size').setAttribute('d', describeArc(ARC_START, ARC_END));
+
+// ======================================================================
+// Knob rendering
+// ======================================================================
+function updateKnob(id, normValue) {
+  const valueDeg = ARC_START + normValue * ARC_RANGE;
+  const arcPath = describeArc(ARC_START, valueDeg);
+  document.getElementById('arc-' + id).setAttribute('d', arcPath);
+
+  // Indicator line
+  const indAngle = degToRad(valueDeg);
+  const indR = 20;
+  const ix = CX + indR * Math.cos(indAngle);
+  const iy = CY + indR * Math.sin(indAngle);
+  const ind = document.getElementById('ind-' + id);
+  ind.setAttribute('x2', ix);
+  ind.setAttribute('y2', iy);
+
+  // Value text
+  const pct = Math.round(normValue * 100);
+  document.getElementById('val-' + id).textContent = pct + '%';
+}
+
+// ======================================================================
+// JUCE bridge
+// ======================================================================
+const mixState  = getSliderState("MIX");
+const sizeState = getSliderState("SIZE");
+
+// Sync from C++ to UI
+mixState.valueChangedEvent.addListener(() => {
+  updateKnob('mix', mixState.getNormalisedValue());
+});
+sizeState.valueChangedEvent.addListener(() => {
+  updateKnob('size', sizeState.getNormalisedValue());
+});
+
+// Initial draw
+updateKnob('mix',  mixState.getNormalisedValue());
+updateKnob('size', sizeState.getNormalisedValue());
+
+// ======================================================================
+// Drag interaction (relative / incremental)
+// ======================================================================
+function attachDrag(elementId, sliderState, knobId) {
+  const el = document.getElementById(elementId);
+  let dragging = false;
+  let lastY = 0;
+
+  function onPointerDown(e) {
+    dragging = true;
+    lastY = e.clientY;
+    el.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  }
+
+  function onPointerMove(e) {
+    if (!dragging) return;
+    const deltaY = lastY - e.clientY;
+    lastY = e.clientY;
+
+    const sensitivity = e.shiftKey ? 0.001 : 0.005;
+    let val = sliderState.getNormalisedValue() + deltaY * sensitivity;
+    val = Math.max(0, Math.min(1, val));
+    sliderState.setNormalisedValue(val);
+    updateKnob(knobId, val);
+    e.preventDefault();
+  }
+
+  function onPointerUp(e) {
+    dragging = false;
+    el.releasePointerCapture(e.pointerId);
+  }
+
+  el.addEventListener('pointerdown', onPointerDown);
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', onPointerUp);
+
+  // Double-click to reset
+  el.addEventListener('dblclick', () => {
+    const defaults = { mix: 0.35, size: 0.5 };
+    const def = defaults[knobId] || 0.5;
+    sliderState.setNormalisedValue(def);
+    updateKnob(knobId, def);
+  });
+}
+
+attachDrag('knob-mix',  mixState,  'mix');
+attachDrag('knob-size', sizeState, 'size');
+</script>
+</body>
+</html>
