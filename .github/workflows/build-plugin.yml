@@ -1,4 +1,4 @@
-name: Build VST3 Plugin
+name: Build Plugin (VST3 + AU)
 
 on:
   workflow_dispatch:
@@ -90,7 +90,7 @@ jobs:
             2>&1 | tee -a build_log.txt
 
       - name: Find, sign, and package VST3
-        id: package
+        id: package-vst3
         run: |
           VST3_PATH=$(find build -name "*.vst3" -type d | head -1)
           if [ -z "$VST3_PATH" ]; then
@@ -99,7 +99,6 @@ jobs:
             exit 1
           fi
           echo "Found VST3 at: $VST3_PATH"
-          echo "vst3_path=$VST3_PATH" >> "$GITHUB_OUTPUT"
 
           # Safety net: verify the binary actually exists inside the bundle
           if [ -z "$(ls -A "$VST3_PATH/Contents/MacOS/" 2>/dev/null)" ]; then
@@ -119,27 +118,76 @@ jobs:
           codesign --verify --verbose=2 "$VST3_PATH"
 
           # Create PKG installer (auto-installs VST3 to system plugin folder)
-          mkdir -p "$GITHUB_WORKSPACE/staging"
-          cp -R "$VST3_PATH" "$GITHUB_WORKSPACE/staging/"
+          mkdir -p "$GITHUB_WORKSPACE/staging-vst3"
+          cp -R "$VST3_PATH" "$GITHUB_WORKSPACE/staging-vst3/"
 
           # Build unsigned pkg
           pkgbuild \
-            --root "$GITHUB_WORKSPACE/staging" \
+            --root "$GITHUB_WORKSPACE/staging-vst3" \
             --install-location "/Library/Audio/Plug-Ins/VST3" \
-            --identifier "com.catalvst.${{ inputs.plugin_name }}" \
+            --identifier "com.catalvst.${{ inputs.plugin_name }}.vst3" \
             --version "1.0.0" \
-            "$GITHUB_WORKSPACE/unsigned.pkg"
+            "$GITHUB_WORKSPACE/unsigned-vst3.pkg"
 
           # Sign the pkg with Developer ID Installer certificate
           productsign \
             --sign "Developer ID Installer: Aaron Li (${{ secrets.APPLE_TEAM_ID }})" \
-            "$GITHUB_WORKSPACE/unsigned.pkg" \
+            "$GITHUB_WORKSPACE/unsigned-vst3.pkg" \
             "$GITHUB_WORKSPACE/${{ inputs.plugin_name }}.vst3.pkg"
 
-          rm "$GITHUB_WORKSPACE/unsigned.pkg"
-          echo "PKG created and signed successfully"
+          rm "$GITHUB_WORKSPACE/unsigned-vst3.pkg"
+          echo "VST3 PKG created and signed successfully"
 
-      - name: Notarize and staple PKG
+      - name: Find, sign, and package AU
+        id: package-au
+        run: |
+          AU_PATH=$(find build -name "*.component" -type d | head -1)
+          if [ -z "$AU_PATH" ]; then
+            echo "Error: AU component not found in build output"
+            find build -type d -name "*.component" || true
+            exit 1
+          fi
+          echo "Found AU at: $AU_PATH"
+
+          # Safety net: verify the binary actually exists inside the bundle
+          if [ -z "$(ls -A "$AU_PATH/Contents/MacOS/" 2>/dev/null)" ]; then
+            echo "Error: AU bundle is empty — no binary in Contents/MacOS/"
+            exit 1
+          fi
+
+          # Sign with Developer ID certificate (required for notarization)
+          codesign --force --deep \
+            --sign "Developer ID Application: Aaron Li (${{ secrets.APPLE_TEAM_ID }})" \
+            --options runtime \
+            --timestamp \
+            "$AU_PATH"
+          echo "Developer ID signed successfully"
+
+          # Verify the signature
+          codesign --verify --verbose=2 "$AU_PATH"
+
+          # Create PKG installer (auto-installs AU to system plugin folder)
+          mkdir -p "$GITHUB_WORKSPACE/staging-au"
+          cp -R "$AU_PATH" "$GITHUB_WORKSPACE/staging-au/"
+
+          # Build unsigned pkg
+          pkgbuild \
+            --root "$GITHUB_WORKSPACE/staging-au" \
+            --install-location "/Library/Audio/Plug-Ins/Components" \
+            --identifier "com.catalvst.${{ inputs.plugin_name }}.au" \
+            --version "1.0.0" \
+            "$GITHUB_WORKSPACE/unsigned-au.pkg"
+
+          # Sign the pkg with Developer ID Installer certificate
+          productsign \
+            --sign "Developer ID Installer: Aaron Li (${{ secrets.APPLE_TEAM_ID }})" \
+            "$GITHUB_WORKSPACE/unsigned-au.pkg" \
+            "$GITHUB_WORKSPACE/${{ inputs.plugin_name }}.au.pkg"
+
+          rm "$GITHUB_WORKSPACE/unsigned-au.pkg"
+          echo "AU PKG created and signed successfully"
+
+      - name: Notarize and staple VST3 PKG
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
@@ -147,19 +195,17 @@ jobs:
         run: |
           PKG_PATH="${{ github.workspace }}/${{ inputs.plugin_name }}.vst3.pkg"
 
-          echo "Submitting PKG for notarization..."
+          echo "Submitting VST3 PKG for notarization..."
           xcrun notarytool submit "$PKG_PATH" \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_APP_SPECIFIC_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
             --wait \
-            2>&1 | tee notarization_log.txt
+            2>&1 | tee notarization_vst3_log.txt
 
-          # Check if notarization succeeded
-          if ! grep -q "status: Accepted" notarization_log.txt; then
-            echo "Notarization failed. Fetching detailed log..."
-            # Extract the submission ID from the output
-            SUBMISSION_ID=$(grep -o '[0-9a-f\-]\{36\}' notarization_log.txt | head -1)
+          if ! grep -q "status: Accepted" notarization_vst3_log.txt; then
+            echo "VST3 notarization failed. Fetching detailed log..."
+            SUBMISSION_ID=$(grep -o '[0-9a-f\-]\{36\}' notarization_vst3_log.txt | head -1)
             if [ -n "$SUBMISSION_ID" ]; then
               xcrun notarytool log "$SUBMISSION_ID" \
                 --apple-id "$APPLE_ID" \
@@ -169,15 +215,54 @@ jobs:
             exit 1
           fi
 
-          echo "Notarization accepted. Stapling ticket..."
+          echo "VST3 notarization accepted. Stapling ticket..."
           xcrun stapler staple "$PKG_PATH"
-          echo "PKG notarized and stapled successfully"
+          echo "VST3 PKG notarized and stapled successfully"
+
+      - name: Notarize and staple AU PKG
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          PKG_PATH="${{ github.workspace }}/${{ inputs.plugin_name }}.au.pkg"
+
+          echo "Submitting AU PKG for notarization..."
+          xcrun notarytool submit "$PKG_PATH" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait \
+            2>&1 | tee notarization_au_log.txt
+
+          if ! grep -q "status: Accepted" notarization_au_log.txt; then
+            echo "AU notarization failed. Fetching detailed log..."
+            SUBMISSION_ID=$(grep -o '[0-9a-f\-]\{36\}' notarization_au_log.txt | head -1)
+            if [ -n "$SUBMISSION_ID" ]; then
+              xcrun notarytool log "$SUBMISSION_ID" \
+                --apple-id "$APPLE_ID" \
+                --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+                --team-id "$APPLE_TEAM_ID" || true
+            fi
+            exit 1
+          fi
+
+          echo "AU notarization accepted. Stapling ticket..."
+          xcrun stapler staple "$PKG_PATH"
+          echo "AU PKG notarized and stapled successfully"
 
       - name: Upload VST3 artifact
         uses: actions/upload-artifact@v4
         with:
           name: "${{ inputs.plugin_name }}-vst3"
           path: "${{ inputs.plugin_name }}.vst3.pkg"
+          retention-days: 30
+
+      - name: Upload AU artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: "${{ inputs.plugin_name }}-au"
+          path: "${{ inputs.plugin_name }}.au.pkg"
           retention-days: 30
 
       - name: Notify Inngest - build completed
