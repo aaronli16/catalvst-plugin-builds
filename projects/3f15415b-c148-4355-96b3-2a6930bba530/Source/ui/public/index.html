@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apex Cathedral Reverb</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 600px;
+            height: 400px;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #ffffff;
+        }
+
+        .plugin-root {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+        }
+
+        .header {
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .title {
+            font-size: 32px;
+            font-weight: 300;
+            letter-spacing: 4px;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #ffffff 0%, #a0a0ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 12px;
+            font-weight: 400;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #8888aa;
+        }
+
+        .controls {
+            display: flex;
+            gap: 80px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .knob-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .knob {
+            width: 100px;
+            height: 100px;
+            position: relative;
+            cursor: ns-resize;
+            user-select: none;
+        }
+
+        .knob-track {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #2a2a3e 100%);
+            box-shadow: 
+                inset 0 4px 8px rgba(0, 0, 0, 0.5),
+                0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .knob-fill {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(
+                from 135deg,
+                transparent 0deg,
+                #6060ff 0deg,
+                #6060ff var(--fill-angle, 0deg),
+                transparent var(--fill-angle, 0deg)
+            );
+            transform: rotate(0deg);
+        }
+
+        .knob-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70%;
+            height: 70%;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        .knob-indicator {
+            position: absolute;
+            top: 10%;
+            left: 50%;
+            width: 3px;
+            height: 30%;
+            background: linear-gradient(180deg, #ffffff 0%, #6060ff 100%);
+            transform-origin: center 250%;
+            transform: translateX(-50%) rotate(var(--rotation, -135deg));
+            border-radius: 2px;
+            box-shadow: 0 0 8px rgba(96, 96, 255, 0.6);
+        }
+
+        .knob-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            font-weight: 600;
+            color: #ffffff;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .knob-label {
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #8888aa;
+        }
+    </style>
+</head>
+<body>
+    <div class="plugin-root">
+        <div class="header">
+            <div class="title">APEX</div>
+            <div class="subtitle">Cathedral Reverb</div>
+        </div>
+
+        <div class="controls">
+            <!-- Size Knob -->
+            <div class="knob-container">
+                <div class="knob" id="sizeKnob">
+                    <div class="knob-track"></div>
+                    <div class="knob-fill"></div>
+                    <div class="knob-center"></div>
+                    <div class="knob-indicator"></div>
+                    <div class="knob-value" id="sizeValue">70</div>
+                </div>
+                <div class="knob-label">Size</div>
+            </div>
+
+            <!-- Mix Knob -->
+            <div class="knob-container">
+                <div class="knob" id="mixKnob">
+                    <div class="knob-track"></div>
+                    <div class="knob-fill"></div>
+                    <div class="knob-center"></div>
+                    <div class="knob-indicator"></div>
+                    <div class="knob-value" id="mixValue">30</div>
+                </div>
+                <div class="knob-label">Mix</div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/juce/index.js"></script>
+    <script type="module">
+        import { getSliderState } from './js/juce/index.js';
+
+        // Get parameter states
+        const sizeState = getSliderState("SIZE");
+        const mixState = getSliderState("MIX");
+
+        // Knob elements
+        const sizeKnob = document.getElementById('sizeKnob');
+        const mixKnob = document.getElementById('mixKnob');
+        const sizeValue = document.getElementById('sizeValue');
+        const mixValue = document.getElementById('mixValue');
+        const sizeIndicator = sizeKnob.querySelector('.knob-indicator');
+        const mixIndicator = mixKnob.querySelector('.knob-indicator');
+        const sizeFill = sizeKnob.querySelector('.knob-fill');
+        const mixFill = mixKnob.querySelector('.knob-fill');
+
+        // Update knob visual
+        function updateKnob(indicator, fill, valueElement, normalizedValue) {
+            const rotation = -135 + (normalizedValue * 270);
+            const fillAngle = normalizedValue * 270;
+            const displayValue = Math.round(normalizedValue * 100);
+
+            indicator.style.setProperty('--rotation', `${rotation}deg`);
+            fill.style.setProperty('--fill-angle', `${fillAngle}deg`);
+            valueElement.textContent = displayValue;
+        }
+
+        // Initialize knobs from current parameter values
+        updateKnob(sizeIndicator, sizeFill, sizeValue, sizeState.getNormalisedValue());
+        updateKnob(mixIndicator, mixFill, mixValue, mixState.getNormalisedValue());
+
+        // Listen for parameter changes from DAW (automation, preset recall)
+        sizeState.valueChangedEvent.addListener(() => {
+            const value = sizeState.getNormalisedValue();
+            updateKnob(sizeIndicator, sizeFill, sizeValue, value);
+        });
+
+        mixState.valueChangedEvent.addListener(() => {
+            const value = mixState.getNormalisedValue();
+            updateKnob(mixIndicator, mixFill, mixValue, value);
+        });
+
+        // Knob interaction
+        function setupKnob(knob, state, indicator, fill, valueElement) {
+            let isDragging = false;
+            let lastY = 0;
+
+            knob.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                lastY = e.clientY;
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+
+                const deltaY = lastY - e.clientY;
+                let currentValue = state.getNormalisedValue();
+                let newValue = currentValue + (deltaY * 0.004);
+                newValue = Math.max(0, Math.min(1, newValue));
+
+                state.setNormalisedValue(newValue);
+                updateKnob(indicator, fill, valueElement, newValue);
+
+                lastY = e.clientY;
+                e.preventDefault();
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            // Double-click to reset
+            knob.addEventListener('dblclick', () => {
+                const defaultValue = state.getDefaultNormalisedValue();
+                state.setNormalisedValue(defaultValue);
+                updateKnob(indicator, fill, valueElement, defaultValue);
+            });
+        }
+
+        setupKnob(sizeKnob, sizeState, sizeIndicator, sizeFill, sizeValue);
+        setupKnob(mixKnob, mixState, mixIndicator, mixFill, mixValue);
+    </script>
+</body>
+</html>
