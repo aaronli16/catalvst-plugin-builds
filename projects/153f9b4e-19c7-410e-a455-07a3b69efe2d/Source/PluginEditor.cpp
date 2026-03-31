@@ -5,7 +5,7 @@
 // Constructor - CRITICAL: Initialize in correct order
 // ==============================================================================
 
-CharmAudioProcessorEditor::CharmAudioProcessorEditor(CharmAudioProcessor& p)
+AceAudioProcessorEditor::AceAudioProcessorEditor(AceAudioProcessor& p)
     : AudioProcessorEditor(&p), processorRef(p)
 {
     // ==========================================================================
@@ -86,7 +86,7 @@ CharmAudioProcessorEditor::CharmAudioProcessorEditor(CharmAudioProcessor& p)
 // Destructor
 // ==============================================================================
 
-CharmAudioProcessorEditor::~CharmAudioProcessorEditor()
+AceAudioProcessorEditor::~AceAudioProcessorEditor()
 {
     // Members automatically destroyed in reverse order:
     // 1. Attachments (stop calling evaluateJavascript)
@@ -98,13 +98,13 @@ CharmAudioProcessorEditor::~CharmAudioProcessorEditor()
 // AudioProcessorEditor Overrides
 // ==============================================================================
 
-void CharmAudioProcessorEditor::paint(juce::Graphics& g)
+void AceAudioProcessorEditor::paint(juce::Graphics& g)
 {
     // WebView fills the entire editor, no custom painting needed
     juce::ignoreUnused(g);
 }
 
-void CharmAudioProcessorEditor::resized()
+void AceAudioProcessorEditor::resized()
 {
     // Make WebView fill the entire editor bounds
     webView->setBounds(getLocalBounds());
@@ -115,7 +115,7 @@ void CharmAudioProcessorEditor::resized()
 // ==============================================================================
 
 std::optional<juce::WebBrowserComponent::Resource>
-CharmAudioProcessorEditor::getResource(const juce::String& url)
+AceAudioProcessorEditor::getResource(const juce::String& url)
 {
     // Helper lambda to convert raw binary data to vector<byte>
     auto makeVector = [](const char* data, int size) {

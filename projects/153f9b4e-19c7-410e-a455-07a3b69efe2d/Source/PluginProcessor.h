@@ -9,17 +9,17 @@
 #include "FaustDSP.h"
 
 // ==============================================================================
-// CharmAudioProcessor
+// AceAudioProcessor
 // ==============================================================================
 // Main audio processor class. Handles Faust DSP and parameter management.
 // Parameters are auto-discovered from the Faust DSP via MapUI at runtime.
 // ==============================================================================
 
-class CharmAudioProcessor : public juce::AudioProcessor
+class AceAudioProcessor : public juce::AudioProcessor
 {
 public:
-    CharmAudioProcessor();
-    ~CharmAudioProcessor() override;
+    AceAudioProcessor();
+    ~AceAudioProcessor() override;
 
     // --------------------------------------------------------------------------
     // AudioProcessor Interface (Required - DO NOT MODIFY SIGNATURES)
@@ -31,7 +31,7 @@ public:
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override { return true; }
 
-    const juce::String getName() const override { return "Charm"; }
+    const juce::String getName() const override { return "Ace"; }
     bool acceptsMidi() const override { return false; }
     bool producesMidi() const override { return false; }
     bool isMidiEffect() const override { return false; }
@@ -68,5 +68,5 @@ private:
     std::unique_ptr<dsp> fDSP;
     std::unique_ptr<MapUI> fUI;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CharmAudioProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AceAudioProcessor)
 };

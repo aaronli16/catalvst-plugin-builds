@@ -11,7 +11,7 @@
 // ==============================================================================
 
 juce::AudioProcessorValueTreeState::ParameterLayout
-CharmAudioProcessor::createParameterLayout()
+AceAudioProcessor::createParameterLayout()
 {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
@@ -49,7 +49,7 @@ CharmAudioProcessor::createParameterLayout()
 // Constructor
 // ==============================================================================
 
-CharmAudioProcessor::CharmAudioProcessor()
+AceAudioProcessor::AceAudioProcessor()
     : AudioProcessor(BusesProperties()
                         .withInput("Input", juce::AudioChannelSet::stereo(), true)
                         .withOutput("Output", juce::AudioChannelSet::stereo(), true))
@@ -57,7 +57,7 @@ CharmAudioProcessor::CharmAudioProcessor()
 {
 }
 
-CharmAudioProcessor::~CharmAudioProcessor()
+AceAudioProcessor::~AceAudioProcessor()
 {
 }
 
@@ -65,7 +65,7 @@ CharmAudioProcessor::~CharmAudioProcessor()
 // Prepare to Play - Called before playback starts
 // ==============================================================================
 
-void CharmAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
+void AceAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     juce::ignoreUnused(samplesPerBlock);
 
@@ -79,7 +79,7 @@ void CharmAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 // Release Resources - Called when playback stops
 // ==============================================================================
 
-void CharmAudioProcessor::releaseResources()
+void AceAudioProcessor::releaseResources()
 {
     fDSP.reset();
     fUI.reset();
@@ -89,7 +89,7 @@ void CharmAudioProcessor::releaseResources()
 // Process Block - Main DSP processing (called on audio thread)
 // ==============================================================================
 
-void CharmAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
+void AceAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                                                   juce::MidiBuffer& midiMessages)
 {
     if (!fDSP || !fUI) return;
@@ -127,23 +127,23 @@ void CharmAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 // Create Editor - Returns the plugin's GUI
 // ==============================================================================
 
-juce::AudioProcessorEditor* CharmAudioProcessor::createEditor()
+juce::AudioProcessorEditor* AceAudioProcessor::createEditor()
 {
-    return new CharmAudioProcessorEditor(*this);
+    return new AceAudioProcessorEditor(*this);
 }
 
 // ==============================================================================
 // State Management - Save/Load plugin state (presets, DAW recall)
 // ==============================================================================
 
-void CharmAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
+void AceAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
     auto state = parameters.copyState();
     std::unique_ptr<juce::XmlElement> xml(state.createXml());
     copyXmlToBinary(*xml, destData);
 }
 
-void CharmAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
+void AceAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
     std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
 
@@ -157,5 +157,5 @@ void CharmAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return new CharmAudioProcessor();
+    return new AceAudioProcessor();
 }

@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(CharmBuild VERSION 1.0.0)
+project(AceBuild VERSION 1.0.0)
 
 # ==============================================================================
-# Charm - JUCE Plugin Build Configuration
+# Ace - JUCE Plugin Build Configuration
 # ==============================================================================
 # This file is auto-generated for Faust-based plugins.
 # FaustDSP.h is generated BEFORE cmake runs by the GitHub Actions workflow:
@@ -16,19 +16,19 @@ if(DEFINED JUCE_SOURCE_DIR)
     add_subdirectory(${JUCE_SOURCE_DIR} juce_build EXCLUDE_FROM_ALL)
 endif()
 
-juce_add_plugin(Charm
+juce_add_plugin(Ace
     COMPANY_NAME "Catalvst"
     PLUGIN_MANUFACTURER_CODE Ctlv
     PLUGIN_CODE GBEW
     FORMATS VST3 AU
-    PRODUCT_NAME "Charm"
+    PRODUCT_NAME "Ace"
     NEEDS_WEB_BROWSER TRUE
 )
 
 # ==============================================================================
 # WebView UI Resources - Embed HTML/CSS/JS into plugin binary
 # ==============================================================================
-juce_add_binary_data(Charm_UIResources
+juce_add_binary_data(Ace_UIResources
     SOURCES
         Source/ui/index.html
         Source/ui/js/juce/index.js
@@ -38,7 +38,7 @@ juce_add_binary_data(Charm_UIResources
 # ==============================================================================
 # Source Files
 # ==============================================================================
-target_sources(Charm
+target_sources(Ace
     PRIVATE
         Source/PluginProcessor.cpp
         Source/PluginEditor.cpp
@@ -47,7 +47,7 @@ target_sources(Charm
 )
 
 # Include paths
-target_include_directories(Charm
+target_include_directories(Ace
     PRIVATE
         Source
 )
@@ -55,9 +55,9 @@ target_include_directories(Charm
 # ==============================================================================
 # Required JUCE Modules
 # ==============================================================================
-target_link_libraries(Charm
+target_link_libraries(Ace
     PRIVATE
-        Charm_UIResources
+        Ace_UIResources
         juce::juce_audio_basics
         juce::juce_audio_devices
         juce::juce_audio_formats
@@ -80,7 +80,7 @@ target_link_libraries(Charm
 # ==============================================================================
 # Compile Definitions
 # ==============================================================================
-target_compile_definitions(Charm
+target_compile_definitions(Ace
     PUBLIC
         JUCE_WEB_BROWSER=1
         JUCE_USE_CURL=0
