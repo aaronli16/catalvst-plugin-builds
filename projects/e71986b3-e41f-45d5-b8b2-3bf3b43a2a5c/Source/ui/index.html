@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sienna</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Inter:wght@400;500&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        
+        html, body {
+            width: 800px;
+            height: 540px;
+            margin: 0;
+            overflow: hidden;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #2C1810 0%, #3E2723 50%, #2C1810 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        /* Subtle grain texture overlay */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" stitchTiles="stitch"/></filter><rect width="300" height="300" filter="url(%23noise)" opacity="0.05"/></svg>');
+            pointer-events: none;
+            opacity: 0.4;
+        }
+        
+        .container {
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header {
+            font-family: 'Cinzel', serif;
+            font-size: 56px;
+            font-weight: 600;
+            color: #D4A574;
+            text-shadow: 0 4px 12px rgba(201, 169, 97, 0.4), 0 2px 4px rgba(0, 0, 0, 0.6);
+            margin-bottom: 60px;
+            letter-spacing: 4px;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 32px;
+            padding: 0 60px;
+        }
+        
+        .knob-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .knob-wrapper {
+            position: relative;
+            width: 90px;
+            height: 90px;
+        }
+        
+        .knob {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #4A3428, #2C1810);
+            border: 3px solid #5D4A3A;
+            box-shadow: 
+                inset 0 2px 8px rgba(0, 0, 0, 0.8),
+                inset 0 -2px 4px rgba(212, 165, 116, 0.1),
+                0 6px 16px rgba(0, 0, 0, 0.6),
+                0 0 20px rgba(201, 169, 97, 0.0);
+            cursor: pointer;
+            position: relative;
+            transition: box-shadow 0.2s ease;
+        }
+        
+        .knob:hover {
+            box-shadow: 
+                inset 0 2px 8px rgba(0, 0, 0, 0.8),
+                inset 0 -2px 4px rgba(212, 165, 116, 0.15),
+                0 6px 16px rgba(0, 0, 0, 0.6),
+                0 0 30px rgba(201, 169, 97, 0.3);
+        }
+        
+        .knob::before {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            width: 3px;
+            height: 28px;
+            background: linear-gradient(180deg, #D4A574 0%, #C9A961 100%);
+            border-radius: 2px;
+            transform: translateX(-50%);
+            box-shadow: 0 2px 6px rgba(201, 169, 97, 0.6), 0 0 12px rgba(201, 169, 97, 0.4);
+        }
+        
+        .knob-label {
+            font-size: 15px;
+            font-weight: 500;
+            color: #D4A574;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+        }
+        
+        /* Hidden range inputs for parameter control */
+        input[type="range"] {
+            position: absolute;
+            opacity: 0;
+            width: 90px;
+            height: 90px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">SIENNA</div>
+        <div class="controls">
+            <div class="knob-container">
+                <div class="knob-wrapper">
+                    <div class="knob" data-param="Pre-Delay" data-rotation="0"></div>
+                    <input type="range" data-param="Pre-Delay" min="0" max="1" value="0" step="0.001">
+                </div>
+                <div class="knob-label">Pre-Delay</div>
+            </div>
+            
+            <div class="knob-container">
+                <div class="knob-wrapper">
+                    <div class="knob" data-param="Decay" data-rotation="0"></div>
+                    <input type="range" data-param="Decay" min="0" max="1" value="0.141414" step="0.001">
+                </div>
+                <div class="knob-label">Decay</div>
+            </div>
+            
+            <div class="knob-container">
+                <div class="knob-wrapper">
+                    <div class="knob" data-param="Tone" data-rotation="0"></div>
+                    <input type="range" data-param="Tone" min="0" max="1" value="0.4" step="0.001">
+                </div>
+                <div class="knob-label">Tone</div>
+            </div>
+            
+            <div class="knob-container">
+                <div class="knob-wrapper">
+                    <div class="knob" data-param="Mix" data-rotation="0"></div>
+                    <input type="range" data-param="Mix" min="0" max="1" value="0.3" step="0.001">
+                </div>
+                <div class="knob-label">Mix</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Visual knob rotation on interaction
+        document.querySelectorAll('.knob-wrapper').forEach(wrapper => {
+            const knob = wrapper.querySelector('.knob');
+            const input = wrapper.querySelector('input[type="range"]');
+            
+            let isDragging = false;
+            let startY = 0;
+            let startValue = 0;
+            
+            function updateKnobRotation(value) {
+                // Map 0-1 to -135deg to +135deg (270 degree range)
+                const degrees = (value * 270) - 135;
+                knob.style.transform = `rotate(${degrees}deg)`;
+                knob.setAttribute('data-rotation', degrees);
+            }
+            
+            // Initialize knob position
+            updateKnobRotation(parseFloat(input.value));
+            
+            // Mouse down on knob
+            knob.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startY = e.clientY;
+                startValue = parseFloat(input.value);
+                e.preventDefault();
+            });
+            
+            // Mouse move
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                
+                const deltaY = startY - e.clientY;  // Inverted: up = increase
+                const sensitivity = 0.005;
+                let newValue = startValue + (deltaY * sensitivity);
+                newValue = Math.max(0, Math.min(1, newValue));
+                
+                input.value = newValue;
+                updateKnobRotation(newValue);
+                
+                // Trigger input event for bridge
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+            
+            // Mouse up
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                }
+            });
+            
+            // Sync visual rotation when input changes (from automation/preset)
+            input.addEventListener('input', () => {
+                updateKnobRotation(parseFloat(input.value));
+            });
+        });
+    </script>
+</body>
+</html>
