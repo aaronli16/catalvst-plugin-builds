@@ -9,17 +9,17 @@
 #include "FaustDSP.h"
 
 // ==============================================================================
-// Satin2AudioProcessor
+// CharmAudioProcessor
 // ==============================================================================
 // Main audio processor class. Handles Faust DSP and parameter management.
 // Parameters are auto-discovered from the Faust DSP via MapUI at runtime.
 // ==============================================================================
 
-class Satin2AudioProcessor : public juce::AudioProcessor
+class CharmAudioProcessor : public juce::AudioProcessor
 {
 public:
-    Satin2AudioProcessor();
-    ~Satin2AudioProcessor() override;
+    CharmAudioProcessor();
+    ~CharmAudioProcessor() override;
 
     // --------------------------------------------------------------------------
     // AudioProcessor Interface (Required - DO NOT MODIFY SIGNATURES)
@@ -31,7 +31,7 @@ public:
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override { return true; }
 
-    const juce::String getName() const override { return "Satin2"; }
+    const juce::String getName() const override { return "Charm"; }
     bool acceptsMidi() const override { return false; }
     bool producesMidi() const override { return false; }
     bool isMidiEffect() const override { return false; }
@@ -68,5 +68,5 @@ private:
     std::unique_ptr<dsp> fDSP;
     std::unique_ptr<MapUI> fUI;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Satin2AudioProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CharmAudioProcessor)
 };

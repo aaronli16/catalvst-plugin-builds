@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(Satin2Build VERSION 1.0.0)
+project(CharmBuild VERSION 1.0.0)
 
 # ==============================================================================
-# Satin2 - JUCE Plugin Build Configuration
+# Charm - JUCE Plugin Build Configuration
 # ==============================================================================
 # This file is auto-generated for Faust-based plugins.
 # FaustDSP.h is generated BEFORE cmake runs by the GitHub Actions workflow:
@@ -16,19 +16,19 @@ if(DEFINED JUCE_SOURCE_DIR)
     add_subdirectory(${JUCE_SOURCE_DIR} juce_build EXCLUDE_FROM_ALL)
 endif()
 
-juce_add_plugin(Satin2
+juce_add_plugin(Charm
     COMPANY_NAME "Catalvst"
     PLUGIN_MANUFACTURER_CODE Ctlv
     PLUGIN_CODE GBEW
     FORMATS VST3 AU
-    PRODUCT_NAME "Satin2"
+    PRODUCT_NAME "Charm"
     NEEDS_WEB_BROWSER TRUE
 )
 
 # ==============================================================================
 # WebView UI Resources - Embed HTML/CSS/JS into plugin binary
 # ==============================================================================
-juce_add_binary_data(Satin2_UIResources
+juce_add_binary_data(Charm_UIResources
     SOURCES
         Source/ui/index.html
         Source/ui/js/juce/index.js
@@ -38,7 +38,7 @@ juce_add_binary_data(Satin2_UIResources
 # ==============================================================================
 # Source Files
 # ==============================================================================
-target_sources(Satin2
+target_sources(Charm
     PRIVATE
         Source/PluginProcessor.cpp
         Source/PluginEditor.cpp
@@ -47,7 +47,7 @@ target_sources(Satin2
 )
 
 # Include paths
-target_include_directories(Satin2
+target_include_directories(Charm
     PRIVATE
         Source
 )
@@ -55,9 +55,9 @@ target_include_directories(Satin2
 # ==============================================================================
 # Required JUCE Modules
 # ==============================================================================
-target_link_libraries(Satin2
+target_link_libraries(Charm
     PRIVATE
-        Satin2_UIResources
+        Charm_UIResources
         juce::juce_audio_basics
         juce::juce_audio_devices
         juce::juce_audio_formats
@@ -80,7 +80,7 @@ target_link_libraries(Satin2
 # ==============================================================================
 # Compile Definitions
 # ==============================================================================
-target_compile_definitions(Satin2
+target_compile_definitions(Charm
     PUBLIC
         JUCE_WEB_BROWSER=1
         JUCE_USE_CURL=0

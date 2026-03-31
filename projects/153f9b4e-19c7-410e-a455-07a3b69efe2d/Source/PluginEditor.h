@@ -4,7 +4,7 @@
 #include "PluginProcessor.h"
 
 // ==============================================================================
-// Satin2AudioProcessorEditor - WebView-based Plugin Editor
+// CharmAudioProcessorEditor - WebView-based Plugin Editor
 // ==============================================================================
 //
 // CRITICAL: Member declaration order prevents 90% of release build crashes.
@@ -16,11 +16,11 @@
 //
 // ==============================================================================
 
-class Satin2AudioProcessorEditor : public juce::AudioProcessorEditor
+class CharmAudioProcessorEditor : public juce::AudioProcessorEditor
 {
 public:
-    explicit Satin2AudioProcessorEditor(Satin2AudioProcessor& p);
-    ~Satin2AudioProcessorEditor() override;
+    explicit CharmAudioProcessorEditor(CharmAudioProcessor& p);
+    ~CharmAudioProcessorEditor() override;
 
     void paint(juce::Graphics&) override;
     void resized() override;
@@ -32,7 +32,7 @@ private:
     std::optional<juce::WebBrowserComponent::Resource> getResource(const juce::String& url);
 
     // Reference to audio processor
-    Satin2AudioProcessor& processorRef;
+    CharmAudioProcessor& processorRef;
 
     // ==========================================================================
     // CRITICAL MEMBER DECLARATION ORDER - DO NOT REORDER!
@@ -71,5 +71,5 @@ private:
     //
     // ========================================================
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Satin2AudioProcessorEditor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CharmAudioProcessorEditor)
 };
