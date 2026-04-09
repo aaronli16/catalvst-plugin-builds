@@ -135,8 +135,10 @@ jobs:
 
           mkdir -p "$PROJECT_DIR/Source/ui/js/juce"
           cp "$JUCE_JS_SRC/index.js" "$PROJECT_DIR/Source/ui/js/juce/index.js"
+          cp "$JUCE_JS_SRC/check_native_interop.js" "$PROJECT_DIR/Source/ui/js/juce/check_native_interop.js"
 
-          echo "JUCE JS bridge files copied"
+          echo "JUCE JS bridge files copied:"
+          ls -la "$PROJECT_DIR/Source/ui/js/juce/"
 
       - name: Generate CMakeLists.txt from scaffold
         run: |
