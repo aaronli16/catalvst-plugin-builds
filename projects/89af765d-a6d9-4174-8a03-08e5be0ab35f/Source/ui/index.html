@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marble</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 600px;
+            height: 400px;
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #1a1a1a;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        .container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+        }
+
+        .header {
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .title {
+            font-size: 32px;
+            font-weight: 300;
+            letter-spacing: 4px;
+            color: #f0f0f0;
+            text-transform: uppercase;
+        }
+
+        .subtitle {
+            font-size: 11px;
+            font-weight: 400;
+            letter-spacing: 2px;
+            color: #888;
+            margin-top: 8px;
+            text-transform: uppercase;
+        }
+
+        .controls {
+            display: flex;
+            align-items: flex-start;
+            gap: 24px;
+            padding: 0 40px;
+        }
+
+        .knob-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .knob-wrapper {
+            position: relative;
+            width: 80px;
+            height: 80px;
+        }
+
+        .knob {
+            width: 80px;
+            height: 80px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: none;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .knob::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 0;
+            height: 0;
+        }
+
+        .knob::-moz-range-thumb {
+            width: 0;
+            height: 0;
+            border: none;
+            background: none;
+        }
+
+        .knob-visual {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #3a3a3a, #1a1a1a);
+            box-shadow: 
+                inset 0 2px 8px rgba(0, 0, 0, 0.6),
+                0 4px 12px rgba(0, 0, 0, 0.4),
+                0 1px 0 rgba(255, 255, 255, 0.1);
+            pointer-events: none;
+            transition: transform 0.05s ease-out;
+        }
+
+        .knob-indicator {
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 3px;
+            height: 16px;
+            background: #f0f0f0;
+            border-radius: 2px;
+            box-shadow: 0 0 8px rgba(240, 240, 240, 0.6);
+            pointer-events: none;
+        }
+
+        .knob-label {
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 1px;
+            color: #bbb;
+            text-transform: uppercase;
+            user-select: none;
+        }
+
+        .knob-value {
+            font-size: 11px;
+            color: #666;
+            font-weight: 400;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">Marble</div>
+            <div class="subtitle">Plate Reverb</div>
+        </div>
+        
+        <div class="controls">
+            <div class="knob-container">
+                <div class="knob-wrapper">
+                    <input 
+                        type="range" 
+                        class="knob" 
+                        id="decay-knob"
+                        data-param="Decay Rate"
+                        min="0" 
+                        max="1" 
+                        value="0.7" 
+                        step="0.01">
+                    <div class="knob-visual">
+                        <div class="knob-indicator"></div>
+                    </div>
+                </div>
+                <div class="knob-label">Decay</div>
+                <div class="knob-value" id="decay-value">70</div>
+            </div>
+
+            <div class="knob-container">
+                <div class="knob-wrapper">
+                    <input 
+                        type="range" 
+                        class="knob" 
+                        id="damping-knob"
+                        data-param="Damping"
+                        min="0" 
+                        max="1" 
+                        value="0.625" 
+                        step="0.01">
+                    <div class="knob-visual">
+                        <div class="knob-indicator"></div>
+                    </div>
+                </div>
+                <div class="knob-label">Damping</div>
+                <div class="knob-value" id="damping-value">63</div>
+            </div>
+
+            <div class="knob-container">
+                <div class="knob-wrapper">
+                    <input 
+                        type="range" 
+                        class="knob" 
+                        id="mix-knob"
+                        data-param="Dry/Wet Mix"
+                        min="0" 
+                        max="1" 
+                        value="0.5" 
+                        step="0.01">
+                    <div class="knob-visual">
+                        <div class="knob-indicator"></div>
+                    </div>
+                </div>
+                <div class="knob-label">Mix</div>
+                <div class="knob-value" id="mix-value">50</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Knob rotation logic
+        const knobs = document.querySelectorAll('.knob');
+        
+        knobs.forEach(knob => {
+            const visual = knob.nextElementSibling;
+            const container = knob.closest('.knob-container');
+            const valueDisplay = container.querySelector('.knob-value');
+            
+            function updateKnob() {
+                const value = parseFloat(knob.value);
+                const min = parseFloat(knob.min);
+                const max = parseFloat(knob.max);
+                const percentage = (value - min) / (max - min);
+                
+                // Rotate from -135deg to +135deg (270 degree range)
+                const rotation = -135 + (percentage * 270);
+                visual.style.transform = `rotate(${rotation}deg)`;
+                
+                // Update value display
+                valueDisplay.textContent = Math.round(percentage * 100);
+            }
+            
+            knob.addEventListener('input', updateKnob);
+            updateKnob(); // Initialize
+        });
+    </script>
+</body>
+</html>
