@@ -29,6 +29,8 @@ juce_add_plugin(__PLUGIN_NAME__
     EDITOR_WANTS_KEYBOARD_FOCUS TRUE
 )
 
+juce_generate_juce_header(__PLUGIN_NAME__)
+
 target_sources(__PLUGIN_NAME__
     PRIVATE
         Source/PluginProcessor.cpp
