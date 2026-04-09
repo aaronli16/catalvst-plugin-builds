@@ -1,142 +1,180 @@
-#include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "BinaryData.h"
+#include <unordered_map>
 
-// Static helper: enumerate Faust params via APIUI and build JUCE parameter layout
-juce::AudioProcessorValueTreeState::ParameterLayout PluginProcessor::createParameterLayout (FaustDSP& dsp)
+// MIME type lookup
+static const char* getMimeForExtension (const juce::String& extension)
 {
-    APIUI apiUI;
-    dsp.buildUserInterface (&apiUI);
+    static const std::unordered_map<juce::String, const char*> mimeMap = {
+        { "html", "text/html" },
+        { "htm",  "text/html" },
+        { "css",  "text/css" },
+        { "js",   "text/javascript" },
+        { "json", "application/json" },
+        { "png",  "image/png" },
+        { "jpg",  "image/jpeg" },
+        { "svg",  "image/svg+xml" },
+        { "woff2","font/woff2" }
+    };
 
-    juce::AudioProcessorValueTreeState::ParameterLayout layout;
+    if (const auto it = mimeMap.find (extension.toLowerCase()); it != mimeMap.end())
+        return it->second;
 
-    for (int i = 0; i < apiUI.getParamsCount(); i++)
-    {
-        auto address = juce::String (apiUI.getParamAddress (i));
-        auto label   = juce::String (apiUI.getParamLabel (i));
-        float minVal = static_cast<float> (apiUI.getParamMin (i));
-        float maxVal = static_cast<float> (apiUI.getParamMax (i));
-        float defVal = static_cast<float> (apiUI.getParamInit (i));
-        float step   = static_cast<float> (apiUI.getParamStep (i));
+    return "application/octet-stream";
+}
 
-        // Use address as parameter ID (unique even for duplicate labels like "Diffusion 1")
-        // Use label as display name (shown in DAW automation lanes)
-        if (step <= 0.0f) step = 0.001f;
+// JS shim injected into the HTML — wires [data-param] elements to JUCE WebSliderRelay.
+// Makes the same HTML work in browser (Faust bridge.ts) and DAW (JUCE relay).
+static const char* dataParamBridgeJS = R"JS(
+<script>
+(function() {
+    if (!window.__JUCE__) return;
 
-        layout.add (std::make_unique<juce::AudioParameterFloat> (
-            juce::ParameterID { address, 1 },
-            label,
-            juce::NormalisableRange<float> (minVal, maxVal, step),
-            defVal
-        ));
+    function wireParams() {
+        document.querySelectorAll('[data-param]').forEach(function(el) {
+            var name = el.getAttribute('data-param');
+            var state = window.__JUCE__.getSliderState(name);
+            if (!state) return;
+
+            el.addEventListener('input', function() {
+                state.setNormalisedValue(parseFloat(el.value));
+            });
+
+            state.valueChangedEvent.addListener(function() {
+                el.value = state.getNormalisedValue();
+            });
+
+            el.value = state.getNormalisedValue();
+        });
     }
 
-    return layout;
-}
-
-PluginProcessor::PluginProcessor()
-    : AudioProcessor (BusesProperties()
-                        .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
-                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
-      fDSP (std::make_unique<FaustDSP>()),
-      apvts (*this, nullptr, "Parameters", createParameterLayout (*fDSP))
-{
-    // Init Faust DSP at default sample rate (re-inited in prepareToPlay with actual rate)
-    fDSP->init (44100);
-
-    // Build MapUI for runtime param control in processBlock
-    fMapUI = std::make_unique<MapUI>();
-    fDSP->buildUserInterface (fMapUI.get());
-
-    // Build APIUI to read param addresses for mapping
-    fParamUI = std::make_unique<APIUI>();
-    fDSP->buildUserInterface (fParamUI.get());
-
-    // Cache param address → JUCE atomic pointer mappings for fast processBlock sync
-    for (int i = 0; i < fParamUI->getParamsCount(); i++)
-    {
-        auto address = juce::String (fParamUI->getParamAddress (i));
-        auto* rawParam = apvts.getRawParameterValue (address);
-        if (rawParam != nullptr)
-            paramMappings.push_back ({ address, rawParam });
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', wireParams);
+    } else {
+        wireParams();
     }
-}
+})();
+</script>
+)JS";
 
-PluginProcessor::~PluginProcessor() {}
-
-void PluginProcessor::prepareToPlay (double sampleRate, int /*samplesPerBlock*/)
+PluginEditor::PluginEditor (PluginProcessor& p)
+    : AudioProcessorEditor (p), processorRef (p)
 {
-    // Re-init Faust DSP at the host's actual sample rate
-    fDSP->init (static_cast<int> (sampleRate));
+    // Step 1: Create WebSliderRelay for each Faust parameter
+    // Relay name = Faust param label (matches data-param in HTML and JS getSliderState call)
+    const auto& labels = processorRef.getParamLabels();
 
-    // Rebuild MapUI (init resets internal state)
-    fMapUI = std::make_unique<MapUI>();
-    fDSP->buildUserInterface (fMapUI.get());
-}
+    for (const auto& label : labels)
+        sliderRelays.push_back (std::make_unique<juce::WebSliderRelay> (label));
 
-void PluginProcessor::releaseResources() {}
+    // Step 2: Build WebBrowserComponent options — chain all relays via withOptionsFrom
+    auto options = juce::WebBrowserComponent::Options{}
+        .withNativeIntegrationEnabled()
+        .withResourceProvider (
+            [this] (const auto& url) { return getResource (url); });
 
-void PluginProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
-{
-    juce::ScopedNoDenormals noDenormals;
+    for (auto& relay : sliderRelays)
+        options = options.withOptionsFrom (*relay);
 
-    // Sync JUCE parameter values → Faust
-    for (auto& mapping : paramMappings)
-        fMapUI->setParamValue (mapping.faustAddress.toRawUTF8(), mapping.juceParam->load());
+    // Step 3: Create the WebBrowserComponent with assembled options
+    webBrowser = std::make_unique<juce::WebBrowserComponent> (options);
+    addAndMakeVisible (*webBrowser);
 
-    auto totalNumInputChannels  = getTotalNumInputChannels();
-    auto totalNumOutputChannels = getTotalNumOutputChannels();
+    // Step 4: Create attachments (bidirectional sync: JUCE param <-> relay)
+    auto& params = processorRef.getParameters();
+    int relayIdx = 0;
 
-    // Clear unused output channels
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
-
-    int numSamples = buffer.getNumSamples();
-    int faustInputs = fDSP->getNumInputs();
-    int faustOutputs = fDSP->getNumOutputs();
-
-    if (faustOutputs >= 2)
+    for (auto* param : params)
     {
-        // Stereo Faust DSP — process in-place (--in-place flag allows shared buffers)
-        float* channels[2] = {
-            buffer.getWritePointer (0),
-            buffer.getWritePointer (1)
-        };
-
-        fDSP->compute (numSamples, channels, channels);
+        if (auto* rangedParam = dynamic_cast<juce::RangedAudioParameter*> (param))
+        {
+            if (relayIdx < static_cast<int> (sliderRelays.size()))
+            {
+                sliderAttachments.push_back (
+                    std::make_unique<juce::WebSliderParameterAttachment> (
+                        *rangedParam, *sliderRelays[static_cast<size_t> (relayIdx)], nullptr));
+                relayIdx++;
+            }
+        }
     }
-    else if (faustOutputs == 1)
+
+    // Step 5: Navigate to the embedded HTML
+    webBrowser->goToURL (juce::WebBrowserComponent::getResourceProviderRoot());
+
+    setSize (800, 540);
+    setResizable (false, false);
+}
+
+PluginEditor::~PluginEditor() {}
+
+void PluginEditor::resized()
+{
+    if (webBrowser)
+        webBrowser->setBounds (getLocalBounds());
+}
+
+// Resource provider — serves BinaryData files to the WebView.
+// BinaryData is generated at compile time by juce_add_binary_data (CMakeLists.txt).
+std::optional<PluginEditor::Resource>
+    PluginEditor::getResource (const juce::String& url) const
+{
+    auto path = url;
+    if (path == "/" || path.isEmpty())
+        path = "/index.html";
+
+    // Strip leading slash
+    auto filename = path.fromFirstOccurrenceOf ("/", false, false);
+
+    // Search BinaryData for a matching file
+    for (int i = 0; i < BinaryData::namedResourceListSize; i++)
     {
-        // Mono Faust DSP — process channel 0, copy to channel 1
-        float* monoOut[1] = { buffer.getWritePointer (0) };
-        float* monoIn[1]  = { buffer.getWritePointer (0) };
+        // BinaryData original filenames are stored in namedResourceList
+        juce::String resourceName (BinaryData::namedResourceList[i]);
 
-        fDSP->compute (numSamples, monoIn, monoOut);
+        // Get the original filename for this resource
+        int dataSize = 0;
+        const char* data = BinaryData::getNamedResource (
+            BinaryData::namedResourceList[i], dataSize);
 
-        // Duplicate mono to stereo
-        buffer.copyFrom (1, 0, buffer, 0, 0, numSamples);
+        if (data == nullptr || dataSize == 0)
+            continue;
+
+        // Match by original filename (BinaryData stores the original names)
+        juce::String originalFile (BinaryData::originalFilenames[i]);
+
+        // Compare: strip path prefix to match just the filename
+        if (originalFile.endsWith (filename) || originalFile == filename)
+        {
+            auto extension = filename.fromLastOccurrenceOf (".", false, false);
+            auto mimeType = juce::String (getMimeForExtension (extension));
+
+            // For HTML files, inject the data-param bridge JS shim before </body>
+            if (mimeType == "text/html")
+            {
+                auto html = juce::String::fromUTF8 (data, dataSize);
+
+                if (html.contains ("</body>"))
+                    html = html.replace ("</body>", juce::String (dataParamBridgeJS) + "\n</body>");
+                else
+                    html += dataParamBridgeJS;
+
+                auto utf8 = html.toUTF8();
+                return Resource {
+                    std::vector<std::byte> (
+                        reinterpret_cast<const std::byte*> (utf8.getAddress()),
+                        reinterpret_cast<const std::byte*> (utf8.getAddress()) + utf8.sizeInBytes() - 1),
+                    mimeType
+                };
+            }
+
+            return Resource {
+                std::vector<std::byte> (
+                    reinterpret_cast<const std::byte*> (data),
+                    reinterpret_cast<const std::byte*> (data) + dataSize),
+                mimeType
+            };
+        }
     }
-}
 
-juce::AudioProcessorEditor* PluginProcessor::createEditor()
-{
-    return new PluginEditor (*this);
-}
-
-void PluginProcessor::getStateInformation (juce::MemoryBlock& destData)
-{
-    auto state = apvts.copyState();
-    std::unique_ptr<juce::XmlElement> xml (state.createXml());
-    copyXmlToBinary (*xml, destData);
-}
-
-void PluginProcessor::setStateInformation (const void* data, int sizeInBytes)
-{
-    std::unique_ptr<juce::XmlElement> xml (getXmlFromBinary (data, sizeInBytes));
-    if (xml != nullptr && xml->hasTagName (apvts.state.getType()))
-        apvts.replaceState (juce::ValueTree::fromXml (*xml));
-}
-
-juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
-{
-    return new PluginProcessor();
+    return std::nullopt;
 }

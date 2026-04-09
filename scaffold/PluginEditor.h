@@ -1,7 +1,13 @@
 #pragma once
 
-#include <JuceHeader.h>
 #include "PluginProcessor.h"
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_gui_extra/juce_gui_extra.h>
+
+// Generic WebView-based plugin editor scaffold.
+// Serves HTML/CSS/JS from BinaryData (embedded at compile time).
+// Dynamically creates WebSliderRelay per Faust parameter.
+// Injects a JS shim that wires [data-param] elements to JUCE parameter relays.
 
 class PluginEditor : public juce::AudioProcessorEditor
 {
@@ -12,24 +18,21 @@ public:
     void resized() override;
 
 private:
+    using Resource = juce::WebBrowserComponent::Resource;
+
+    std::optional<Resource> getResource (const juce::String& url) const;
+
     PluginProcessor& processorRef;
 
-    // WebSliderRelays — one per Faust parameter. Must be created BEFORE webBrowser.
-    // Non-copyable, non-moveable — stored as unique_ptrs.
+    // WebSliderRelays — one per Faust parameter.
+    // Must be created BEFORE webBrowser (non-copyable, non-moveable).
     std::vector<std::unique_ptr<juce::WebSliderRelay>> sliderRelays;
 
-    // Attachments that bidirectionally sync JUCE AudioParameter ↔ WebSliderRelay
-    std::vector<std::unique_ptr<juce::WebSliderParameterAttachment>> sliderAttachments;
-
-    // WebView — constructed with options from all relays
+    // The WebBrowserComponent — constructed with options from all relays
     std::unique_ptr<juce::WebBrowserComponent> webBrowser;
 
-    // Resource provider: serves BinaryData files to the WebView
-    static std::optional<juce::WebBrowserComponent::Resource>
-        resourceProvider (const juce::String& url);
-
-    // MIME type lookup
-    static juce::String getMimeType (const juce::String& path);
+    // Attachments — bidirectional sync between JUCE AudioParameter and WebSliderRelay
+    std::vector<std::unique_ptr<juce::WebSliderParameterAttachment>> sliderAttachments;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginEditor)
 };

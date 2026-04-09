@@ -1,9 +1,15 @@
 #pragma once
 
-#include <JuceHeader.h>
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_audio_utils/juce_audio_utils.h>
 #include "FaustDSP.h"
 
-class PluginProcessor : public juce::AudioProcessor
+// Generic Faust→JUCE processor scaffold.
+// Works with ANY Faust-generated FaustDSP.h — dynamically reads parameters
+// via APIUI at construction time and creates matching JUCE AudioParameterFloats.
+
+class PluginProcessor : public juce::AudioProcessor,
+                        public juce::AudioProcessorValueTreeState::Listener
 {
 public:
     PluginProcessor();
@@ -30,23 +36,25 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    // Called when a JUCE parameter changes — forwards value to Faust via MapUI
+    void parameterChanged (const juce::String& parameterId, float newValue) override;
+
     juce::AudioProcessorValueTreeState& getAPVTS() { return apvts; }
+
+    // Faust parameter labels (needed by PluginEditor for WebSliderRelay names)
+    const juce::StringArray& getParamLabels() const { return paramLabels; }
 
 private:
     std::unique_ptr<FaustDSP> fDSP;
     std::unique_ptr<MapUI> fMapUI;
-    std::unique_ptr<APIUI> fParamUI;
 
     juce::AudioProcessorValueTreeState apvts;
 
-    // Cached param addresses for processBlock (avoids string lookups per block)
-    struct ParamMapping {
-        juce::String faustAddress;
-        std::atomic<float>* juceParam;
-    };
-    std::vector<ParamMapping> paramMappings;
+    // Cached param info for parameterChanged callback
+    juce::StringArray paramLabels;    // Faust labels (used as relay names)
+    juce::StringArray paramAddresses; // Faust addresses (used as APVTS param IDs)
 
-    static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout (FaustDSP& dsp);
+    juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginProcessor)
 };
