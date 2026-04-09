@@ -26,34 +26,38 @@ static const char* getMimeForExtension (const juce::String& extension)
 // JS shim injected into the HTML — wires [data-param] elements to JUCE WebSliderRelay.
 // Makes the same HTML work in browser (Faust bridge.ts) and DAW (JUCE relay).
 static const char* dataParamBridgeJS = R"JS(
-<script>
-(function() {
-    if (!window.__JUCE__) return;
+<script type="module">
+import * as Juce from "./js/juce/index.js";
 
-    function wireParams() {
-        document.querySelectorAll('[data-param]').forEach(function(el) {
-            var name = el.getAttribute('data-param');
-            var state = window.__JUCE__.getSliderState(name);
-            if (!state) return;
+function wireParams() {
+    document.querySelectorAll('[data-param]').forEach(function(el) {
+        var name = el.getAttribute('data-param');
+        var state = Juce.getSliderState(name);
+        if (!state) {
+            console.warn('[CatalvstBridge] No relay found for data-param="' + name + '"');
+            return;
+        }
 
-            el.addEventListener('input', function() {
-                state.setNormalisedValue(parseFloat(el.value));
-            });
+        // UI knob → DAW parameter
+        el.addEventListener('input', function() {
+            state.setNormalisedValue(parseFloat(el.value));
+        });
 
-            state.valueChangedEvent.addListener(function() {
-                el.value = state.getNormalisedValue();
-            });
-
+        // DAW automation → UI knob
+        state.valueChangedEvent.addListener(function() {
             el.value = state.getNormalisedValue();
         });
-    }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', wireParams);
-    } else {
-        wireParams();
-    }
-})();
+        // Set initial value from DAW parameter
+        el.value = state.getNormalisedValue();
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', wireParams);
+} else {
+    wireParams();
+}
 </script>
 )JS";
 
