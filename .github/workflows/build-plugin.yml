@@ -11,6 +11,10 @@ on:
         description: 'Sanitized plugin name (PascalCase, used in CMake)'
         required: true
         type: string
+      plugin_code:
+        description: '4-char unique plugin code (e.g., Wp3K)'
+        required: true
+        type: string
 
 jobs:
   build-macos:
@@ -45,6 +49,29 @@ jobs:
           echo "Project files:"
           find "projects/${{ inputs.project_id }}" -type f
 
+      - name: Cache Faust compiler
+        id: cache-faust
+        uses: actions/cache@v4
+        with:
+          path: ~/faust-install
+          key: faust-2.77.3-macos
+
+      - name: Install Faust compiler
+        if: steps.cache-faust.outputs.cache-hit != 'true'
+        run: |
+          FAUST_VERSION="2.77.3"
+          curl -L -o faust.dmg "https://github.com/grame-cncm/faust/releases/download/${FAUST_VERSION}/Faust-${FAUST_VERSION}.dmg"
+          hdiutil attach faust.dmg
+          mkdir -p ~/faust-install
+          cp -R "/Volumes/Faust-${FAUST_VERSION}/Faust-${FAUST_VERSION}.app/Contents/Resources/usr/local/"* ~/faust-install/
+          hdiutil detach "/Volumes/Faust-${FAUST_VERSION}"
+
+      - name: Add Faust to PATH
+        run: |
+          echo "$HOME/faust-install/bin" >> $GITHUB_PATH
+          export PATH="$HOME/faust-install/bin:$PATH"
+          faust --version
+
       - name: Cache JUCE SDK
         id: cache-juce
         uses: actions/cache@v4
@@ -59,20 +86,70 @@ jobs:
           git clone --depth 1 --branch 8.0.4 \
             https://github.com/juce-framework/JUCE.git juce-sdk
 
+      - name: Copy scaffold and compile Faust
+        run: |
+          PROJECT_DIR="projects/${{ inputs.project_id }}"
+
+          # Copy scaffold C++ files into project Source/
+          cp scaffold/faustMinimal.h "$PROJECT_DIR/Source/"
+          cp scaffold/PluginProcessor.h "$PROJECT_DIR/Source/"
+          cp scaffold/PluginProcessor.cpp "$PROJECT_DIR/Source/"
+          cp scaffold/PluginEditor.h "$PROJECT_DIR/Source/"
+          cp scaffold/PluginEditor.cpp "$PROJECT_DIR/Source/"
+
+          # Compile Faust .dsp → self-contained C++ header
+          export FAUST_LIB_PATH="$HOME/faust-install/share/faust"
+          faust -i --in-place \
+            -a "$PROJECT_DIR/Source/faustMinimal.h" \
+            "$PROJECT_DIR/Source/effect.dsp" \
+            -cn FaustDSP \
+            -o "$PROJECT_DIR/Source/FaustDSP.h"
+
+          echo "FaustDSP.h generated ($(wc -l < "$PROJECT_DIR/Source/FaustDSP.h") lines)"
+
       - name: Copy JUCE JS bridge files into project
         run: |
           PROJECT_DIR="projects/${{ inputs.project_id }}"
           JUCE_JS_SRC="$HOME/juce-sdk/modules/juce_gui_extra/native/javascript"
 
-          # Create target directory
           mkdir -p "$PROJECT_DIR/Source/ui/js/juce"
-
-          # Copy JUCE WebView bridge files
           cp "$JUCE_JS_SRC/index.js" "$PROJECT_DIR/Source/ui/js/juce/index.js"
-          cp "$JUCE_JS_SRC/check_native_interop.js" "$PROJECT_DIR/Source/ui/js/juce/check_native_interop.js"
 
-          echo "JUCE JS bridge files copied:"
-          ls -la "$PROJECT_DIR/Source/ui/js/juce/"
+          echo "JUCE JS bridge files copied"
+
+      - name: Generate CMakeLists.txt from scaffold
+        run: |
+          PROJECT_DIR="projects/${{ inputs.project_id }}"
+
+          # Enumerate ui/* files for BinaryData (relative to project dir)
+          UI_FILES=""
+          while IFS= read -r file; do
+            REL_PATH="${file#$PROJECT_DIR/}"
+            if [ -n "$UI_FILES" ]; then
+              UI_FILES="${UI_FILES}\n        ${REL_PATH}"
+            else
+              UI_FILES="${REL_PATH}"
+            fi
+          done < <(find "$PROJECT_DIR/Source/ui" -type f)
+
+          # Substitute placeholders in CMakeLists.txt template
+          sed -e "s|__PLUGIN_NAME__|${{ inputs.plugin_name }}|g" \
+              -e "s|__PLUGIN_CODE__|${{ inputs.plugin_code }}|g" \
+              scaffold/CMakeLists.txt.in > "$PROJECT_DIR/CMakeLists.txt"
+
+          # Replace __BINARY_DATA_FILES__ placeholder with actual file list
+          # Using printf to handle newlines properly
+          printf '%s\n' "$(echo -e "$UI_FILES")" > /tmp/ui_files.txt
+          python3 -c "
+          import sys
+          files = open('/tmp/ui_files.txt').read().strip()
+          cmake = open('$PROJECT_DIR/CMakeLists.txt').read()
+          cmake = cmake.replace('__BINARY_DATA_FILES__', files)
+          open('$PROJECT_DIR/CMakeLists.txt', 'w').write(cmake)
+          "
+
+          echo "Generated CMakeLists.txt:"
+          cat "$PROJECT_DIR/CMakeLists.txt"
 
       - name: Configure CMake
         run: |
@@ -100,13 +177,11 @@ jobs:
           fi
           echo "Found VST3 at: $VST3_PATH"
 
-          # Safety net: verify the binary actually exists inside the bundle
           if [ -z "$(ls -A "$VST3_PATH/Contents/MacOS/" 2>/dev/null)" ]; then
             echo "Error: VST3 bundle is empty — no binary in Contents/MacOS/"
             exit 1
           fi
 
-          # Sign with Developer ID certificate (required for notarization)
           codesign --force --deep \
             --sign "Developer ID Application: Aaron Li (${{ secrets.APPLE_TEAM_ID }})" \
             --options runtime \
@@ -114,14 +189,11 @@ jobs:
             "$VST3_PATH"
           echo "Developer ID signed successfully"
 
-          # Verify the signature
           codesign --verify --verbose=2 "$VST3_PATH"
 
-          # Create PKG installer (auto-installs VST3 to system plugin folder)
           mkdir -p "$GITHUB_WORKSPACE/staging-vst3"
           cp -R "$VST3_PATH" "$GITHUB_WORKSPACE/staging-vst3/"
 
-          # Build unsigned pkg
           pkgbuild \
             --root "$GITHUB_WORKSPACE/staging-vst3" \
             --install-location "/Library/Audio/Plug-Ins/VST3" \
@@ -129,7 +201,6 @@ jobs:
             --version "1.0.0" \
             "$GITHUB_WORKSPACE/unsigned-vst3.pkg"
 
-          # Sign the pkg with Developer ID Installer certificate
           productsign \
             --sign "Developer ID Installer: Aaron Li (${{ secrets.APPLE_TEAM_ID }})" \
             "$GITHUB_WORKSPACE/unsigned-vst3.pkg" \
@@ -149,13 +220,11 @@ jobs:
           fi
           echo "Found AU at: $AU_PATH"
 
-          # Safety net: verify the binary actually exists inside the bundle
           if [ -z "$(ls -A "$AU_PATH/Contents/MacOS/" 2>/dev/null)" ]; then
             echo "Error: AU bundle is empty — no binary in Contents/MacOS/"
             exit 1
           fi
 
-          # Sign with Developer ID certificate (required for notarization)
           codesign --force --deep \
             --sign "Developer ID Application: Aaron Li (${{ secrets.APPLE_TEAM_ID }})" \
             --options runtime \
@@ -163,14 +232,11 @@ jobs:
             "$AU_PATH"
           echo "Developer ID signed successfully"
 
-          # Verify the signature
           codesign --verify --verbose=2 "$AU_PATH"
 
-          # Create PKG installer (auto-installs AU to system plugin folder)
           mkdir -p "$GITHUB_WORKSPACE/staging-au"
           cp -R "$AU_PATH" "$GITHUB_WORKSPACE/staging-au/"
 
-          # Build unsigned pkg
           pkgbuild \
             --root "$GITHUB_WORKSPACE/staging-au" \
             --install-location "/Library/Audio/Plug-Ins/Components" \
@@ -178,7 +244,6 @@ jobs:
             --version "1.0.0" \
             "$GITHUB_WORKSPACE/unsigned-au.pkg"
 
-          # Sign the pkg with Developer ID Installer certificate
           productsign \
             --sign "Developer ID Installer: Aaron Li (${{ secrets.APPLE_TEAM_ID }})" \
             "$GITHUB_WORKSPACE/unsigned-au.pkg" \
@@ -204,7 +269,7 @@ jobs:
             2>&1 | tee notarization_vst3_log.txt
 
           if ! grep -q "status: Accepted" notarization_vst3_log.txt; then
-            echo "VST3 notarization failed. Fetching detailed log..."
+            echo "VST3 notarization failed."
             SUBMISSION_ID=$(grep -o '[0-9a-f\-]\{36\}' notarization_vst3_log.txt | head -1)
             if [ -n "$SUBMISSION_ID" ]; then
               xcrun notarytool log "$SUBMISSION_ID" \
@@ -236,7 +301,7 @@ jobs:
             2>&1 | tee notarization_au_log.txt
 
           if ! grep -q "status: Accepted" notarization_au_log.txt; then
-            echo "AU notarization failed. Fetching detailed log..."
+            echo "AU notarization failed."
             SUBMISSION_ID=$(grep -o '[0-9a-f\-]\{36\}' notarization_au_log.txt | head -1)
             if [ -n "$SUBMISSION_ID" ]; then
               xcrun notarytool log "$SUBMISSION_ID" \
@@ -269,23 +334,18 @@ jobs:
         if: always()
         run: |
           STATUS="${{ job.status }}"
-          # Map GitHub job status to our conclusion format
           if [ "$STATUS" = "success" ]; then
             CONCLUSION="success"
           else
             CONCLUSION="failure"
           fi
 
-          # On failure, capture last 50 lines of build log for AI debugging
           BUILD_ERROR=""
           if [ "$CONCLUSION" = "failure" ] && [ -f build_log.txt ]; then
-            # Get last 50 lines, cap at 2000 chars, escape for JSON
             BUILD_ERROR=$(tail -50 build_log.txt | head -c 2000 | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')
-            # python3 outputs a quoted JSON string like "foo\nbar" — strip outer quotes
             BUILD_ERROR=${BUILD_ERROR:1:-1}
           fi
 
-          # Build JSON payload — include build_error only on failure
           if [ -n "$BUILD_ERROR" ]; then
             PAYLOAD="{
               \"name\": \"build/workflow.completed\",
