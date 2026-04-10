@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resonance</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 800px;
+      height: 540px;
+      margin: 0;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #1a1a1a;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    .plugin-container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+      padding: 40px;
+    }
+
+    .header {
+      margin-bottom: 50px;
+      text-align: center;
+    }
+
+    .title {
+      font-size: 48px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      color: #e8dcc4;
+      text-transform: uppercase;
+      text-shadow: 0 2px 10px rgba(232, 220, 196, 0.2);
+    }
+
+    .subtitle {
+      font-size: 12px;
+      letter-spacing: 3px;
+      color: #666;
+      text-transform: uppercase;
+      margin-top: 8px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+    }
+
+    .knob-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .knob-wrapper {
+      position: relative;
+      width: 80px;
+      height: 80px;
+    }
+
+    .knob {
+      width: 80px;
+      height: 80px;
+      appearance: none;
+      background: none;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .knob-visual {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+      box-shadow: 
+        inset 0 2px 4px rgba(0, 0, 0, 0.6),
+        inset 0 -2px 4px rgba(255, 255, 255, 0.05),
+        0 4px 12px rgba(0, 0, 0, 0.4);
+      pointer-events: none;
+      transition: box-shadow 0.2s ease;
+    }
+
+    .knob:hover + .knob-visual {
+      box-shadow: 
+        inset 0 2px 4px rgba(0, 0, 0, 0.6),
+        inset 0 -2px 4px rgba(255, 255, 255, 0.08),
+        0 4px 16px rgba(0, 0, 0, 0.5);
+    }
+
+    .knob-indicator {
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      width: 3px;
+      height: 28px;
+      background: #e8dcc4;
+      transform-origin: center 32px;
+      border-radius: 2px;
+      pointer-events: none;
+      box-shadow: 0 0 8px rgba(232, 220, 196, 0.4);
+    }
+
+    .knob-label {
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      color: #e8dcc4;
+      text-transform: uppercase;
+      user-select: none;
+    }
+
+    .knob-value {
+      font-size: 11px;
+      color: #666;
+      font-weight: 400;
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body>
+  <div class="plugin-container">
+    <div class="header">
+      <div class="title">Resonance</div>
+      <div class="subtitle">Plate Reverb</div>
+    </div>
+
+    <div class="controls">
+      <!-- Decay Rate -->
+      <div class="knob-container">
+        <div class="knob-wrapper">
+          <input type="range" class="knob" data-param="Decay Rate" min="0" max="1" value="0.7" step="0.01">
+          <div class="knob-visual"></div>
+          <div class="knob-indicator"></div>
+        </div>
+        <div class="knob-label">Decay</div>
+        <div class="knob-value">70%</div>
+      </div>
+
+      <!-- Damping -->
+      <div class="knob-container">
+        <div class="knob-wrapper">
+          <input type="range" class="knob" data-param="Damping" min="0" max="1" value="0.625" step="0.01">
+          <div class="knob-visual"></div>
+          <div class="knob-indicator"></div>
+        </div>
+        <div class="knob-label">Damping</div>
+        <div class="knob-value">63%</div>
+      </div>
+
+      <!-- Diffusion 1 (Size) -->
+      <div class="knob-container">
+        <div class="knob-wrapper">
+          <input type="range" class="knob" data-param="Diffusion 1" min="0" max="1" value="0.625" step="0.01">
+          <div class="knob-visual"></div>
+          <div class="knob-indicator"></div>
+        </div>
+        <div class="knob-label">Size</div>
+        <div class="knob-value">63%</div>
+      </div>
+
+      <!-- Diffusion 2 (Diffusion) -->
+      <div class="knob-container">
+        <div class="knob-wrapper">
+          <input type="range" class="knob" data-param="Diffusion 2" min="0" max="1" value="0.625" step="0.01">
+          <div class="knob-visual"></div>
+          <div class="knob-indicator"></div>
+        </div>
+        <div class="knob-label">Diffusion</div>
+        <div class="knob-value">63%</div>
+      </div>
+
+      <!-- Dry/Wet Mix -->
+      <div class="knob-container">
+        <div class="knob-wrapper">
+          <input type="range" class="knob" data-param="Dry/Wet Mix" min="0" max="1" value="0.5" step="0.01">
+          <div class="knob-visual"></div>
+          <div class="knob-indicator"></div>
+        </div>
+        <div class="knob-label">Mix</div>
+        <div class="knob-value">50%</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Visual knob rotation and value display
+    const knobs = document.querySelectorAll('.knob');
+    
+    knobs.forEach(knob => {
+      const container = knob.closest('.knob-container');
+      const indicator = container.querySelector('.knob-indicator');
+      const valueDisplay = container.querySelector('.knob-value');
+      
+      function updateKnob() {
+        const value = parseFloat(knob.value);
+        const percent = Math.round(value * 100);
+        
+        // Rotate indicator from -135deg to +135deg (270 degree range)
+        const rotation = -135 + (value * 270);
+        indicator.style.transform = `rotate(${rotation}deg)`;
+        
+        // Update value display
+        valueDisplay.textContent = `${percent}%`;
+      }
+      
+      // Initialize
+      updateKnob();
+      
+      // Update on change
+      knob.addEventListener('input', updateKnob);
+    });
+  </script>
+</body>
+</html>
