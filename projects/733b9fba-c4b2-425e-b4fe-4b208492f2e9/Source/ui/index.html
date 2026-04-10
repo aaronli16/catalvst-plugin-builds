@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ether</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 800px;
+      height: 540px;
+      margin: 0;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0a0a0a;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    .container {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .header {
+      position: absolute;
+      top: 60px;
+      text-align: center;
+    }
+
+    .title {
+      font-size: 48px;
+      font-weight: 300;
+      letter-spacing: 8px;
+      color: #c0c0c0;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      text-shadow: 0 2px 8px rgba(192, 192, 192, 0.3);
+    }
+
+    .subtitle {
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: #666;
+      text-transform: uppercase;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+      margin-top: 80px;
+    }
+
+    .knob-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .knob-wrapper {
+      position: relative;
+      width: 80px;
+      height: 80px;
+    }
+
+    .knob {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #1a1a1a, #0d0d0d);
+      border: 2px solid #2a2a2a;
+      box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.8),
+        inset 0 2px 4px rgba(255, 255, 255, 0.05),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.5);
+      cursor: pointer;
+      position: relative;
+      transition: box-shadow 0.2s ease;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .knob:hover {
+      box-shadow: 
+        0 6px 16px rgba(0, 0, 0, 0.9),
+        inset 0 2px 4px rgba(255, 255, 255, 0.08),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .knob:active {
+      box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.9),
+        inset 0 3px 6px rgba(0, 0, 0, 0.7);
+    }
+
+    .knob-indicator {
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      width: 3px;
+      height: 28px;
+      background: linear-gradient(180deg, #c0c0c0 0%, #808080 100%);
+      transform-origin: center 32px;
+      border-radius: 2px;
+      pointer-events: none;
+      box-shadow: 0 1px 3px rgba(192, 192, 192, 0.4);
+    }
+
+    .knob-label {
+      font-size: 12px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      font-weight: 500;
+    }
+
+    .lfo-indicator {
+      position: absolute;
+      bottom: 100px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .lfo-label {
+      font-size: 10px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .lfo-ring {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 2px solid #333;
+      background: #0a0a0a;
+      position: relative;
+      box-shadow: 
+        inset 0 2px 6px rgba(0, 0, 0, 0.8),
+        0 1px 2px rgba(192, 192, 192, 0.1);
+    }
+
+    .lfo-dot {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 12px;
+      height: 12px;
+      background: #c0c0c0;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 
+        0 0 8px rgba(192, 192, 192, 0.6),
+        0 0 16px rgba(192, 192, 192, 0.3);
+      animation: lfoPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes lfoPulse {
+      0%, 100% {
+        opacity: 0.3;
+        transform: translate(-50%, -50%) scale(0.6);
+      }
+      50% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+
+    .warning {
+      position: absolute;
+      bottom: 50px;
+      font-size: 9px;
+      color: #555;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title">Ether</div>
+      <div class="subtitle">Thru-Zero Flanger</div>
+    </div>
+
+    <div class="controls">
+      <div class="knob-container">
+        <div class="knob-wrapper">
+          <input type="range" class="knob" data-param="Rate" min="0" max="1" value="0.1" step="0.001">
+          <div class="knob-indicator"></div>
+        </div>
+        <div class="knob-label">Rate</div>
+      </div>
+
+      <div class="knob-container">
+        <div class="knob-wrapper">
+          <input type="range" class="knob" data-param="Delay" min="0" max="1" value="0.4872" step="0.001">
+          <div class="knob-indicator"></div>
+        </div>
+        <div class="knob-label">Delay</div>
+      </div>
+
+      <div class="knob-container">
+        <div class="knob-wrapper">
+          <input type="range" class="knob" data-param="Depth" min="0" max="1" value="0.1753" step="0.001">
+          <div class="knob-indicator"></div>
+        </div>
+        <div class="knob-label">Depth</div>
+      </div>
+
+      <div class="knob-container">
+        <div class="knob-wrapper">
+          <input type="range" class="knob" data-param="L-R Offset" min="0" max="1" value="0" step="0.001">
+          <div class="knob-indicator"></div>
+        </div>
+        <div class="knob-label">L-R Offset</div>
+      </div>
+    </div>
+
+    <div class="lfo-indicator">
+      <div class="lfo-label">LFO</div>
+      <div class="lfo-ring">
+        <div class="lfo-dot"></div>
+      </div>
+    </div>
+
+    <div class="warning">Warning: Can completely zero the signal at extreme settings</div>
+  </div>
+
+  <script>
+    // Knob rotation visual feedback
+    document.querySelectorAll('.knob').forEach(knob => {
+      const indicator = knob.nextElementSibling;
+      
+      function updateRotation() {
+        const value = parseFloat(knob.value);
+        const min = parseFloat(knob.min);
+        const max = parseFloat(knob.max);
+        const normalized = (value - min) / (max - min);
+        const degrees = -135 + (normalized * 270);
+        indicator.style.transform = `rotate(${degrees}deg)`;
+      }
+      
+      updateRotation();
+      knob.addEventListener('input', updateRotation);
+    });
+
+    // Dynamic LFO animation based on Rate parameter
+    const rateKnob = document.querySelector('[data-param="Rate"]');
+    const lfoDot = document.querySelector('.lfo-dot');
+    
+    function updateLFOSpeed() {
+      const rateValue = parseFloat(rateKnob.value);
+      const rateHz = rateValue * 1.0; // 0-1 Hz range
+      const period = rateHz > 0.01 ? (1 / rateHz) : 100;
+      lfoDot.style.animationDuration = `${period}s`;
+    }
+    
+    updateLFOSpeed();
+    rateKnob.addEventListener('input', updateLFOSpeed);
+  </script>
+</body>
+</html>
