@@ -25,39 +25,69 @@ static const char* getMimeForExtension (const juce::String& extension)
 
 // JS shim injected into the HTML — wires [data-param] elements to JUCE WebSliderRelay.
 // Makes the same HTML work in browser (Faust bridge.ts) and DAW (JUCE relay).
+// Bridge shim that talks directly to window.__JUCE__.backend — no module imports needed.
+// This avoids ES module resolution issues in WebView resource provider contexts.
 static const char* dataParamBridgeJS = R"JS(
-<script type="module">
-import * as Juce from "./js/juce/index.js";
+<script>
+(function() {
+    console.log('[CatalvstBridge] Shim loaded');
 
-function wireParams() {
-    document.querySelectorAll('[data-param]').forEach(function(el) {
-        var name = el.getAttribute('data-param');
-        var state = Juce.getSliderState(name);
-        if (!state) {
-            console.warn('[CatalvstBridge] No relay found for data-param="' + name + '"');
-            return;
-        }
+    var backend = window.__JUCE__ && window.__JUCE__.backend;
+    if (!backend) {
+        console.warn('[CatalvstBridge] window.__JUCE__.backend not found — not in JUCE WebView');
+        return;
+    }
 
-        // UI knob → DAW parameter
-        el.addEventListener('input', function() {
-            state.setNormalisedValue(parseFloat(el.value));
+    console.log('[CatalvstBridge] JUCE backend found, wiring data-param elements...');
+
+    function wireParams() {
+        var elements = document.querySelectorAll('[data-param]');
+        console.log('[CatalvstBridge] Found ' + elements.length + ' data-param elements');
+
+        elements.forEach(function(el) {
+            var name = el.getAttribute('data-param');
+            var eventId = '__juce__slider' + name;
+
+            // Listen for value changes FROM the DAW (automation, preset load)
+            backend.addEventListener(eventId, function(e) {
+                if (e.detail && e.detail.eventType === 'valueChanged') {
+                    // Convert scaled value to normalized [0,1] for the HTML input
+                    // The properties contain start/end range
+                    var props = el.__juceProps;
+                    if (props) {
+                        var norm = (e.detail.value - props.start) / (props.end - props.start);
+                        el.value = Math.max(0, Math.min(1, norm));
+                    }
+                } else if (e.detail && e.detail.eventType === 'propertiesChanged') {
+                    el.__juceProps = e.detail;
+                }
+            });
+
+            // Request initial state from C++ relay
+            backend.emitEvent(eventId, { eventType: 'requestInitialUpdate' });
+
+            // UI knob → DAW parameter
+            el.addEventListener('input', function() {
+                var norm = parseFloat(el.value);
+                var props = el.__juceProps;
+                var scaled = norm; // default: pass normalized value directly
+                if (props) {
+                    // Convert normalized [0,1] to scaled value using range
+                    scaled = props.start + norm * (props.end - props.start);
+                }
+                backend.emitEvent(eventId, { eventType: 'valueChanged', value: scaled });
+            });
+
+            console.log('[CatalvstBridge] Wired: data-param="' + name + '"');
         });
+    }
 
-        // DAW automation → UI knob
-        state.valueChangedEvent.addListener(function() {
-            el.value = state.getNormalisedValue();
-        });
-
-        // Set initial value from DAW parameter
-        el.value = state.getNormalisedValue();
-    });
-}
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', wireParams);
-} else {
-    wireParams();
-}
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', wireParams);
+    } else {
+        wireParams();
+    }
+})();
 </script>
 )JS";
 
