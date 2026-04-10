@@ -52,23 +52,35 @@ function sanitizeName(name) {
     return name.replace(/[^a-zA-Z0-9_]/g, '_');
 }
 
+console.log('[CatalvstBridge] Wiring', document.querySelectorAll('[data-param]').length, 'params');
+
 document.querySelectorAll('[data-param]').forEach(function(el) {
     var rawName = el.getAttribute('data-param');
     var safeName = sanitizeName(rawName);
-    var state = getSliderState(safeName);
 
-    // UI knob → DAW parameter
-    el.addEventListener('input', function() {
-        state.setNormalisedValue(parseFloat(el.value));
-    });
+    try {
+        var state = getSliderState(safeName);
+        if (!state) {
+            console.warn('[CatalvstBridge] No relay found for:', safeName);
+            return;
+        }
 
-    // DAW automation → UI knob
-    state.valueChangedEvent.addListener(function() {
+        // UI knob → DAW parameter
+        el.addEventListener('input', function() {
+            state.setNormalisedValue(parseFloat(el.value));
+        });
+
+        // DAW automation → UI knob
+        state.valueChangedEvent.addListener(function() {
+            el.value = state.getNormalisedValue();
+        });
+
+        // Set initial value from DAW parameter
         el.value = state.getNormalisedValue();
-    });
-
-    // Set initial value from DAW parameter
-    el.value = state.getNormalisedValue();
+        console.log('[CatalvstBridge] Wired:', safeName);
+    } catch (e) {
+        console.error('[CatalvstBridge] Failed to wire', safeName, e);
+    }
 });
 </script>
 )JS";
@@ -89,7 +101,8 @@ PluginEditor::PluginEditor (PluginProcessor& p)
         .withNativeIntegrationEnabled()
         .withKeepPageLoadedWhenBrowserIsHidden()
         .withResourceProvider (
-            [this] (const auto& url) { return getResource (url); });
+            [this] (const auto& url) { return getResource (url); },
+            juce::URL { "http://localhost" }.getOrigin());
 
     for (auto& relay : sliderRelays)
         options = options.withOptionsFrom (*relay);
