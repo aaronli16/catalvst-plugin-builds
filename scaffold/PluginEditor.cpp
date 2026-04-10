@@ -2,6 +2,24 @@
 #include "BinaryData.h"
 #include <unordered_map>
 
+// Sanitize a parameter name to be a valid JUCE Identifier (alphanumeric + underscore only).
+// "Decay Rate" → "Decay_Rate", "Dry/Wet Mix" → "Dry_Wet_Mix"
+// Must match the JS-side sanitization exactly.
+static juce::String sanitizeForRelay (const juce::String& name)
+{
+    juce::String result;
+    for (int i = 0; i < name.length(); i++)
+    {
+        auto c = name[i];
+        if (juce::CharacterFunctions::isLetterOrDigit (c) || c == '_')
+            result += c;
+        else if (c == ' ' || c == '/' || c == '-' || c == '(' || c == ')')
+            result += '_';
+        // skip other special chars
+    }
+    return result;
+}
+
 // MIME type lookup
 static const char* getMimeForExtension (const juce::String& extension)
 {
@@ -23,87 +41,53 @@ static const char* getMimeForExtension (const juce::String& extension)
     return "application/octet-stream";
 }
 
-// JS shim injected into the HTML — wires [data-param] elements to JUCE WebSliderRelay.
-// Makes the same HTML work in browser (Faust bridge.ts) and DAW (JUCE relay).
-// Bridge shim that talks directly to window.__JUCE__.backend — no module imports needed.
-// This avoids ES module resolution issues in WebView resource provider contexts.
+// JS shim injected into the HTML.
+// Uses the PROVEN pattern from working plugins: import getSliderState from JUCE bridge module.
+// Sanitizes data-param names the same way C++ sanitizes relay names.
 static const char* dataParamBridgeJS = R"JS(
-<script>
-(function() {
-    console.log('[CatalvstBridge] Shim loaded');
+<script type="module">
+import { getSliderState } from './js/juce/index.js';
 
-    var backend = window.__JUCE__ && window.__JUCE__.backend;
-    if (!backend) {
-        console.warn('[CatalvstBridge] window.__JUCE__.backend not found — not in JUCE WebView');
-        return;
-    }
+function sanitizeName(name) {
+    return name.replace(/[^a-zA-Z0-9_]/g, '_');
+}
 
-    console.log('[CatalvstBridge] JUCE backend found, wiring data-param elements...');
+document.querySelectorAll('[data-param]').forEach(function(el) {
+    var rawName = el.getAttribute('data-param');
+    var safeName = sanitizeName(rawName);
+    var state = getSliderState(safeName);
 
-    function wireParams() {
-        var elements = document.querySelectorAll('[data-param]');
-        console.log('[CatalvstBridge] Found ' + elements.length + ' data-param elements');
+    // UI knob → DAW parameter
+    el.addEventListener('input', function() {
+        state.setNormalisedValue(parseFloat(el.value));
+    });
 
-        elements.forEach(function(el) {
-            var name = el.getAttribute('data-param');
-            var eventId = '__juce__slider' + name;
+    // DAW automation → UI knob
+    state.valueChangedEvent.addListener(function() {
+        el.value = state.getNormalisedValue();
+    });
 
-            // Listen for value changes FROM the DAW (automation, preset load)
-            backend.addEventListener(eventId, function(e) {
-                if (e.detail && e.detail.eventType === 'valueChanged') {
-                    // Convert scaled value to normalized [0,1] for the HTML input
-                    // The properties contain start/end range
-                    var props = el.__juceProps;
-                    if (props) {
-                        var norm = (e.detail.value - props.start) / (props.end - props.start);
-                        el.value = Math.max(0, Math.min(1, norm));
-                    }
-                } else if (e.detail && e.detail.eventType === 'propertiesChanged') {
-                    el.__juceProps = e.detail;
-                }
-            });
-
-            // Request initial state from C++ relay
-            backend.emitEvent(eventId, { eventType: 'requestInitialUpdate' });
-
-            // UI knob → DAW parameter
-            el.addEventListener('input', function() {
-                var norm = parseFloat(el.value);
-                var props = el.__juceProps;
-                var scaled = norm; // default: pass normalized value directly
-                if (props) {
-                    // Convert normalized [0,1] to scaled value using range
-                    scaled = props.start + norm * (props.end - props.start);
-                }
-                backend.emitEvent(eventId, { eventType: 'valueChanged', value: scaled });
-            });
-
-            console.log('[CatalvstBridge] Wired: data-param="' + name + '"');
-        });
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', wireParams);
-    } else {
-        wireParams();
-    }
-})();
+    // Set initial value from DAW parameter
+    el.value = state.getNormalisedValue();
+});
 </script>
 )JS";
 
 PluginEditor::PluginEditor (PluginProcessor& p)
     : AudioProcessorEditor (p), processorRef (p)
 {
-    // Step 1: Create WebSliderRelay for each Faust parameter
-    // Relay name = Faust param label (matches data-param in HTML and JS getSliderState call)
+    // Step 1: Create WebSliderRelay for each Faust parameter.
+    // Relay names MUST be sanitized — JUCE Identifier only allows alphanumeric + underscore.
     const auto& labels = processorRef.getParamLabels();
 
     for (const auto& label : labels)
-        sliderRelays.push_back (std::make_unique<juce::WebSliderRelay> (label));
+        sliderRelays.push_back (std::make_unique<juce::WebSliderRelay> (sanitizeForRelay (label)));
 
-    // Step 2: Build WebBrowserComponent options — chain all relays via withOptionsFrom
+    // Step 2: Build WebBrowserComponent options — chain all relays via withOptionsFrom.
+    // Matches the proven pattern from working plugins (Half Beat Echo).
     auto options = juce::WebBrowserComponent::Options{}
         .withNativeIntegrationEnabled()
+        .withKeepPageLoadedWhenBrowserIsHidden()
         .withResourceProvider (
             [this] (const auto& url) { return getResource (url); });
 
@@ -114,7 +98,7 @@ PluginEditor::PluginEditor (PluginProcessor& p)
     webBrowser = std::make_unique<juce::WebBrowserComponent> (options);
     addAndMakeVisible (*webBrowser);
 
-    // Step 4: Create attachments (bidirectional sync: JUCE param <-> relay)
+    // Step 4: Create attachments (bidirectional sync: JUCE param ↔ relay)
     auto& params = processorRef.getParameters();
     int relayIdx = 0;
 
@@ -147,66 +131,60 @@ void PluginEditor::resized()
         webBrowser->setBounds (getLocalBounds());
 }
 
-// Resource provider — serves BinaryData files to the WebView.
-// BinaryData is generated at compile time by juce_add_binary_data (CMakeLists.txt).
-// NOTE: BinaryData::originalFilenames stores ONLY the filename (e.g., "index.js"),
-// NOT the full path. So we match by filename, not path.
+// Resource provider — serves files to the WebView.
+// JUCE bridge files use HARDCODED paths (proven pattern from working plugins).
+// User files (HTML/CSS) use dynamic BinaryData lookup.
 std::optional<PluginEditor::Resource>
     PluginEditor::getResource (const juce::String& url) const
 {
-    auto path = url;
-    if (path == "/" || path.isEmpty())
-        path = "/index.html";
-
-    // Extract just the filename from the requested path
-    // e.g., "/js/juce/index.js" → "index.js"
-    auto requestedFilename = path.fromLastOccurrenceOf ("/", false, false);
-    if (requestedFilename.isEmpty())
-        requestedFilename = path.fromFirstOccurrenceOf ("/", false, false);
-
-    // Search BinaryData for a matching file by filename
-    for (int i = 0; i < BinaryData::namedResourceListSize; i++)
+    auto makeResource = [] (const char* data, int size, const char* mime)
+        -> std::optional<Resource>
     {
-        juce::String originalFile (BinaryData::originalFilenames[i]);
-
-        if (originalFile != requestedFilename)
-            continue;
-
-        int dataSize = 0;
-        const char* data = BinaryData::getNamedResource (
-            BinaryData::namedResourceList[i], dataSize);
-
-        if (data == nullptr || dataSize == 0)
-            continue;
-
-        auto extension = requestedFilename.fromLastOccurrenceOf (".", false, false);
-        auto mimeType = juce::String (getMimeForExtension (extension));
-
-        // For HTML files, inject the data-param bridge JS shim before </body>
-        if (mimeType == "text/html")
-        {
-            auto html = juce::String::fromUTF8 (data, dataSize);
-
-            if (html.contains ("</body>"))
-                html = html.replace ("</body>", juce::String (dataParamBridgeJS) + "\n</body>");
-            else
-                html += dataParamBridgeJS;
-
-            auto utf8 = html.toUTF8();
-            return Resource {
-                std::vector<std::byte> (
-                    reinterpret_cast<const std::byte*> (utf8.getAddress()),
-                    reinterpret_cast<const std::byte*> (utf8.getAddress()) + utf8.sizeInBytes() - 1),
-                mimeType
-            };
-        }
-
+        if (data == nullptr || size == 0) return std::nullopt;
         return Resource {
             std::vector<std::byte> (
                 reinterpret_cast<const std::byte*> (data),
-                reinterpret_cast<const std::byte*> (data) + dataSize),
-            mimeType
+                reinterpret_cast<const std::byte*> (data) + size),
+            juce::String (mime)
         };
+    };
+
+    // Hardcoded JUCE bridge files (same pattern as working Half Beat Echo plugin)
+    if (url == "/js/juce/index.js")
+        return makeResource (BinaryData::index_js, BinaryData::index_jsSize, "text/javascript");
+
+    if (url == "/js/juce/check_native_interop.js")
+        return makeResource (BinaryData::check_native_interop_js, BinaryData::check_native_interop_jsSize, "text/javascript");
+
+    // Main HTML — inject the data-param bridge shim before </body>
+    if (url == "/" || url == "/index.html")
+    {
+        auto html = juce::String::fromUTF8 (BinaryData::index_html, BinaryData::index_htmlSize);
+
+        if (html.contains ("</body>"))
+            html = html.replace ("</body>", juce::String (dataParamBridgeJS) + "\n</body>");
+        else
+            html += dataParamBridgeJS;
+
+        auto utf8 = html.toUTF8();
+        return Resource {
+            std::vector<std::byte> (
+                reinterpret_cast<const std::byte*> (utf8.getAddress()),
+                reinterpret_cast<const std::byte*> (utf8.getAddress()) + utf8.sizeInBytes() - 1),
+            juce::String ("text/html")
+        };
+    }
+
+    // CSS files
+    if (url.endsWithIgnoreCase (".css"))
+    {
+        // Convert filename to BinaryData identifier: "styles.css" → "styles_css"
+        auto filename = url.fromLastOccurrenceOf ("/", false, false);
+        auto identifier = filename.replace (".", "_").replace ("-", "");
+
+        int dataSize = 0;
+        if (auto* data = BinaryData::getNamedResource (identifier.toRawUTF8(), dataSize))
+            return makeResource (data, dataSize, "text/css");
     }
 
     return std::nullopt;
