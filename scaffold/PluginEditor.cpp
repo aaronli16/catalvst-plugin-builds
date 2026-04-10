@@ -119,6 +119,8 @@ void PluginEditor::resized()
 
 // Resource provider — serves BinaryData files to the WebView.
 // BinaryData is generated at compile time by juce_add_binary_data (CMakeLists.txt).
+// NOTE: BinaryData::originalFilenames stores ONLY the filename (e.g., "index.js"),
+// NOT the full path. So we match by filename, not path.
 std::optional<PluginEditor::Resource>
     PluginEditor::getResource (const juce::String& url) const
 {
@@ -126,16 +128,20 @@ std::optional<PluginEditor::Resource>
     if (path == "/" || path.isEmpty())
         path = "/index.html";
 
-    // Strip leading slash
-    auto filename = path.fromFirstOccurrenceOf ("/", false, false);
+    // Extract just the filename from the requested path
+    // e.g., "/js/juce/index.js" → "index.js"
+    auto requestedFilename = path.fromLastOccurrenceOf ("/", false, false);
+    if (requestedFilename.isEmpty())
+        requestedFilename = path.fromFirstOccurrenceOf ("/", false, false);
 
-    // Search BinaryData for a matching file
+    // Search BinaryData for a matching file by filename
     for (int i = 0; i < BinaryData::namedResourceListSize; i++)
     {
-        // BinaryData original filenames are stored in namedResourceList
-        juce::String resourceName (BinaryData::namedResourceList[i]);
+        juce::String originalFile (BinaryData::originalFilenames[i]);
 
-        // Get the original filename for this resource
+        if (originalFile != requestedFilename)
+            continue;
+
         int dataSize = 0;
         const char* data = BinaryData::getNamedResource (
             BinaryData::namedResourceList[i], dataSize);
@@ -143,41 +149,34 @@ std::optional<PluginEditor::Resource>
         if (data == nullptr || dataSize == 0)
             continue;
 
-        // Match by original filename (BinaryData stores the original names)
-        juce::String originalFile (BinaryData::originalFilenames[i]);
+        auto extension = requestedFilename.fromLastOccurrenceOf (".", false, false);
+        auto mimeType = juce::String (getMimeForExtension (extension));
 
-        // Compare: strip path prefix to match just the filename
-        if (originalFile.endsWith (filename) || originalFile == filename)
+        // For HTML files, inject the data-param bridge JS shim before </body>
+        if (mimeType == "text/html")
         {
-            auto extension = filename.fromLastOccurrenceOf (".", false, false);
-            auto mimeType = juce::String (getMimeForExtension (extension));
+            auto html = juce::String::fromUTF8 (data, dataSize);
 
-            // For HTML files, inject the data-param bridge JS shim before </body>
-            if (mimeType == "text/html")
-            {
-                auto html = juce::String::fromUTF8 (data, dataSize);
+            if (html.contains ("</body>"))
+                html = html.replace ("</body>", juce::String (dataParamBridgeJS) + "\n</body>");
+            else
+                html += dataParamBridgeJS;
 
-                if (html.contains ("</body>"))
-                    html = html.replace ("</body>", juce::String (dataParamBridgeJS) + "\n</body>");
-                else
-                    html += dataParamBridgeJS;
-
-                auto utf8 = html.toUTF8();
-                return Resource {
-                    std::vector<std::byte> (
-                        reinterpret_cast<const std::byte*> (utf8.getAddress()),
-                        reinterpret_cast<const std::byte*> (utf8.getAddress()) + utf8.sizeInBytes() - 1),
-                    mimeType
-                };
-            }
-
+            auto utf8 = html.toUTF8();
             return Resource {
                 std::vector<std::byte> (
-                    reinterpret_cast<const std::byte*> (data),
-                    reinterpret_cast<const std::byte*> (data) + dataSize),
+                    reinterpret_cast<const std::byte*> (utf8.getAddress()),
+                    reinterpret_cast<const std::byte*> (utf8.getAddress()) + utf8.sizeInBytes() - 1),
                 mimeType
             };
         }
+
+        return Resource {
+            std::vector<std::byte> (
+                reinterpret_cast<const std::byte*> (data),
+                reinterpret_cast<const std::byte*> (data) + dataSize),
+            mimeType
+        };
     }
 
     return std::nullopt;
