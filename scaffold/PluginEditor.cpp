@@ -41,47 +41,94 @@ static const char* getMimeForExtension (const juce::String& extension)
     return "application/octet-stream";
 }
 
-// JS shim injected into the HTML.
-// Uses the PROVEN pattern from working plugins: import getSliderState from JUCE bridge module.
-// Sanitizes data-param names the same way C++ sanitizes relay names.
+// JS bridge shim injected into the HTML before </body>.
+//
+// CRITICAL: Must NOT use <script type="module"> or ES imports!
+// Noizefield webview-008: "ES6 Modules Break All Interactivity" —
+// module scripts silently fail in JUCE WebView on macOS, blocking
+// all parameter communication. This was the root cause of the
+// day-long "knobs don't affect audio" bug.
+//
+// Instead, uses window.__JUCE__.backend directly — the native bridge
+// API injected by withNativeIntegrationEnabled(). No imports needed.
+// Communicates via the relay event protocol:
+//   eventId = "__juce__slider" + sanitizedParamName
+//   eventTypes: valueChanged, propertiesChanged, requestInitialUpdate,
+//               sliderDragStarted, sliderDragEnded
 static const char* dataParamBridgeJS = R"JS(
-<script type="module">
-import { getSliderState } from './js/juce/index.js';
-
-function sanitizeName(name) {
-    return name.replace(/[^a-zA-Z0-9_]/g, '_');
-}
-
-console.log('[CatalvstBridge] Wiring', document.querySelectorAll('[data-param]').length, 'params');
-
-document.querySelectorAll('[data-param]').forEach(function(el) {
-    var rawName = el.getAttribute('data-param');
-    var safeName = sanitizeName(rawName);
-
-    try {
-        var state = getSliderState(safeName);
-        if (!state) {
-            console.warn('[CatalvstBridge] No relay found for:', safeName);
-            return;
-        }
-
-        // UI knob → DAW parameter
-        el.addEventListener('input', function() {
-            state.setNormalisedValue(parseFloat(el.value));
-        });
-
-        // DAW automation → UI knob
-        state.valueChangedEvent.addListener(function() {
-            el.value = state.getNormalisedValue();
-        });
-
-        // Set initial value from DAW parameter
-        el.value = state.getNormalisedValue();
-        console.log('[CatalvstBridge] Wired:', safeName);
-    } catch (e) {
-        console.error('[CatalvstBridge] Failed to wire', safeName, e);
+<script>
+(function() {
+    var JUCE = window.__JUCE__;
+    if (!JUCE) {
+        console.error('[CatalvstBridge] window.__JUCE__ not found — not running in JUCE WebView');
+        return;
     }
-});
+
+    var backend = JUCE.backend;
+    if (!backend) {
+        console.error('[CatalvstBridge] window.__JUCE__.backend not found — native integration not enabled');
+        return;
+    }
+
+    function sanitizeName(name) {
+        return name.replace(/[^a-zA-Z0-9_]/g, '_');
+    }
+
+    var knobs = document.querySelectorAll('[data-param]');
+    console.log('[CatalvstBridge] Wiring ' + knobs.length + ' params');
+
+    knobs.forEach(function(el) {
+        var rawName = el.getAttribute('data-param');
+        var safeName = sanitizeName(rawName);
+        var eventId = '__juce__slider' + safeName;
+
+        // Track parameter range from C++ propertiesChanged events
+        var start = 0, end = 1;
+
+        try {
+            // Listen for C++ → JS events (automation, preset load, property updates)
+            backend.addEventListener(eventId, function(event) {
+                if (event.eventType === 'valueChanged' && event.value !== undefined) {
+                    // Convert scaled value to normalised 0-1 for the HTML knob
+                    var range = end - start;
+                    var norm = range > 0 ? (event.value - start) / range : 0;
+                    el.value = Math.max(0, Math.min(1, norm));
+                } else if (event.eventType === 'propertiesChanged' && event.properties) {
+                    start = event.properties.start !== undefined ? event.properties.start : 0;
+                    end = event.properties.end !== undefined ? event.properties.end : 1;
+                }
+            });
+
+            // Request initial value + range from C++
+            backend.emitEvent(eventId, { eventType: 'requestInitialUpdate' });
+
+            // UI knob → C++ parameter (normalised 0-1 → scaled value)
+            el.addEventListener('input', function() {
+                var norm = parseFloat(el.value);
+                var scaled = start + norm * (end - start);
+                backend.emitEvent(eventId, { eventType: 'valueChanged', value: scaled });
+            });
+
+            // Drag gestures — required for DAW automation recording + undo
+            el.addEventListener('mousedown', function() {
+                backend.emitEvent(eventId, { eventType: 'sliderDragStarted' });
+            });
+            el.addEventListener('mouseup', function() {
+                backend.emitEvent(eventId, { eventType: 'sliderDragEnded' });
+            });
+            el.addEventListener('touchstart', function() {
+                backend.emitEvent(eventId, { eventType: 'sliderDragStarted' });
+            });
+            el.addEventListener('touchend', function() {
+                backend.emitEvent(eventId, { eventType: 'sliderDragEnded' });
+            });
+
+            console.log('[CatalvstBridge] Wired: ' + safeName + ' (range ' + start + '-' + end + ')');
+        } catch (e) {
+            console.error('[CatalvstBridge] Failed to wire ' + safeName + ':', e);
+        }
+    });
+})();
 </script>
 )JS";
 
