@@ -50,9 +50,10 @@ private:
 
     juce::AudioProcessorValueTreeState apvts;
 
-    // Cached param info for parameterChanged callback
-    juce::StringArray paramLabels;    // Faust labels (used as relay names)
-    juce::StringArray paramAddresses; // Faust addresses (used as APVTS param IDs)
+    // Cached param info
+    juce::StringArray paramLabels;    // Faust labels (display names, used as relay names)
+    juce::StringArray paramAddresses; // Faust addresses (e.g., "/Dattorro/Decay_Rate")
+    juce::StringArray paramIds;       // Sanitized IDs for APVTS (e.g., "Decay_Rate")
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 

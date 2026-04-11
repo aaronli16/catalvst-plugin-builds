@@ -45,14 +45,34 @@ static const char* getMimeForExtension (const juce::String& extension)
 // Uses window.__JUCE__.backend directly (created by withNativeIntegrationEnabled).
 // Includes a visible debug banner so we can see exactly where the chain breaks.
 static const char* dataParamBridgeJS = R"JS(
-<div id="__dbg" style="position:fixed;top:0;left:0;right:0;background:#f00;color:#fff;font:12px monospace;padding:4px;z-index:99999;display:none"></div>
+<div id="__dbg" style="position:fixed;top:0;left:0;right:0;background:#222;color:#0f0;font:11px monospace;padding:4px;z-index:99999;max-height:120px;overflow-y:auto"></div>
 <script>
 (function() {
     var d = document.getElementById('__dbg');
-    function dbg(msg) { d.style.display='block'; d.textContent += msg + ' | '; }
+    function dbg(msg) { d.innerHTML += msg + '<br>'; }
 
-    if (!window.__JUCE__) { dbg('NO __JUCE__'); return; }
-    if (!window.__JUCE__.backend) { dbg('NO BACKEND'); return; }
+    // Diagnostic: check what's available
+    var hasJuce = typeof window.__JUCE__ !== 'undefined';
+    var hasBackend = hasJuce && typeof window.__JUCE__.backend !== 'undefined';
+    var hasWebkit = typeof window.webkit !== 'undefined'
+        && typeof window.webkit.messageHandlers !== 'undefined'
+        && typeof window.webkit.messageHandlers.__JUCE__ !== 'undefined';
+    var pmBody = hasJuce ? window.__JUCE__.postMessage.toString().substring(0, 80) : 'N/A';
+
+    dbg('__JUCE__:' + hasJuce + ' backend:' + hasBackend + ' webkit:' + hasWebkit);
+    dbg('postMessage: ' + pmBody);
+
+    if (!hasJuce) return;
+
+    // FIX: If postMessage is the no-op fallback but native handler exists, wire it up
+    if (hasWebkit && pmBody.indexOf('webkit') < 0 && pmBody.indexOf('messageHandler') < 0) {
+        window.__JUCE__.postMessage = function(msg) {
+            window.webkit.messageHandlers.__JUCE__.postMessage(msg);
+        };
+        dbg('FIXED postMessage -> webkit native handler');
+    }
+
+    if (!hasBackend) { dbg('NO BACKEND - cannot wire'); return; }
 
     var backend = window.__JUCE__.backend;
     var knobs = document.querySelectorAll('[data-param]');
@@ -69,12 +89,13 @@ static const char* dataParamBridgeJS = R"JS(
             if (event.eventType === 'propertiesChanged' && event.properties) {
                 start = event.properties.start !== undefined ? event.properties.start : 0;
                 end = event.properties.end !== undefined ? event.properties.end : 1;
-                dbg(safeName + ':range=' + start + '-' + end);
+                dbg('RECV props ' + safeName + ': ' + start + '-' + end);
             }
             if (event.eventType === 'valueChanged' && event.value !== undefined) {
                 var range = end - start;
                 var norm = range > 0 ? (event.value - start) / range : 0;
                 el.value = Math.max(0, Math.min(1, norm));
+                dbg('RECV val ' + safeName + '=' + event.value.toFixed(3));
             }
         });
 
@@ -84,7 +105,6 @@ static const char* dataParamBridgeJS = R"JS(
             var norm = parseFloat(el.value);
             var scaled = start + norm * (end - start);
             backend.emitEvent(eventId, { eventType: 'valueChanged', value: scaled });
-            dbg('SEND:' + safeName + '=' + scaled.toFixed(3));
         });
         el.addEventListener('mousedown', function() {
             backend.emitEvent(eventId, { eventType: 'sliderDragStarted' });
@@ -94,7 +114,13 @@ static const char* dataParamBridgeJS = R"JS(
         });
     });
 
-    dbg('OK:' + names.join(','));
+    dbg('Wired: ' + names.join(', '));
+
+    // Show init data (what relays C++ registered)
+    if (window.__JUCE__.initialisationData) {
+        var sliders = window.__JUCE__.initialisationData.__juce__sliders || [];
+        dbg('C++ relays: ' + (sliders.length > 0 ? sliders.join(', ') : 'NONE'));
+    }
 })();
 </script>
 )JS";
