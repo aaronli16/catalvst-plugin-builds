@@ -41,74 +41,60 @@ static const char* getMimeForExtension (const juce::String& extension)
     return "application/octet-stream";
 }
 
-// Inline JS bridge injected before </body>. Polyfills the JUCE Backend event bus
-// (ES modules fail silently in JUCE WebView on macOS, so we can't import index.js).
+// Inline JS bridge — wires [data-param] HTML elements to JUCE WebSliderRelay.
+// Uses window.__JUCE__.backend directly (created by withNativeIntegrationEnabled).
+// Includes a visible debug banner so we can see exactly where the chain breaks.
 static const char* dataParamBridgeJS = R"JS(
+<div id="__dbg" style="position:fixed;top:0;left:0;right:0;background:#f00;color:#fff;font:12px monospace;padding:4px;z-index:99999;display:none"></div>
 <script>
 (function() {
-    if (!window.__JUCE__) return;
+    var d = document.getElementById('__dbg');
+    function dbg(msg) { d.style.display='block'; d.textContent += msg + ' | '; }
 
-    // Backend polyfill — normally created by check_native_interop.js (via ES module),
-    // but modules fail in JUCE WebView on macOS.
-    if (!window.__JUCE__.backend) {
-        var _listeners = {};
-        window.__JUCE__.backend = {
-            addEventListener: function(eventId, fn) {
-                if (!_listeners[eventId]) _listeners[eventId] = [];
-                _listeners[eventId].push(fn);
-            },
-            emitEvent: function(eventId, object) {
-                window.__JUCE__.postMessage(JSON.stringify({ eventId: eventId, payload: object }));
-            },
-            emitByBackend: function(eventId, objectOrString) {
-                var obj = typeof objectOrString === 'string' ? JSON.parse(objectOrString) : objectOrString;
-                var fns = _listeners[eventId];
-                if (fns) {
-                    for (var i = 0; i < fns.length; i++) {
-                        try { fns[i](obj); } catch(e) { console.error(e); }
-                    }
-                }
-            }
-        };
-    }
+    if (!window.__JUCE__) { dbg('NO __JUCE__'); return; }
+    if (!window.__JUCE__.backend) { dbg('NO BACKEND'); return; }
 
     var backend = window.__JUCE__.backend;
     var knobs = document.querySelectorAll('[data-param]');
+    var names = [];
 
     knobs.forEach(function(el) {
         var rawName = el.getAttribute('data-param');
         var safeName = rawName.replace(/[^a-zA-Z0-9_]/g, '_');
         var eventId = '__juce__slider' + safeName;
         var start = 0, end = 1;
+        names.push(safeName);
 
-        try {
-            backend.addEventListener(eventId, function(event) {
-                if (event.eventType === 'valueChanged' && event.value !== undefined) {
-                    var range = end - start;
-                    var norm = range > 0 ? (event.value - start) / range : 0;
-                    el.value = Math.max(0, Math.min(1, norm));
-                } else if (event.eventType === 'propertiesChanged' && event.properties) {
-                    start = event.properties.start !== undefined ? event.properties.start : 0;
-                    end = event.properties.end !== undefined ? event.properties.end : 1;
-                }
-            });
+        backend.addEventListener(eventId, function(event) {
+            if (event.eventType === 'propertiesChanged' && event.properties) {
+                start = event.properties.start !== undefined ? event.properties.start : 0;
+                end = event.properties.end !== undefined ? event.properties.end : 1;
+                dbg(safeName + ':range=' + start + '-' + end);
+            }
+            if (event.eventType === 'valueChanged' && event.value !== undefined) {
+                var range = end - start;
+                var norm = range > 0 ? (event.value - start) / range : 0;
+                el.value = Math.max(0, Math.min(1, norm));
+            }
+        });
 
-            backend.emitEvent(eventId, { eventType: 'requestInitialUpdate' });
+        backend.emitEvent(eventId, { eventType: 'requestInitialUpdate' });
 
-            el.addEventListener('input', function() {
-                var norm = parseFloat(el.value);
-                backend.emitEvent(eventId, { eventType: 'valueChanged', value: start + norm * (end - start) });
-            });
-            el.addEventListener('mousedown', function() {
-                backend.emitEvent(eventId, { eventType: 'sliderDragStarted' });
-            });
-            el.addEventListener('mouseup', function() {
-                backend.emitEvent(eventId, { eventType: 'sliderDragEnded' });
-            });
-        } catch (e) {
-            console.error('[CatalvstBridge]', safeName, e);
-        }
+        el.addEventListener('input', function() {
+            var norm = parseFloat(el.value);
+            var scaled = start + norm * (end - start);
+            backend.emitEvent(eventId, { eventType: 'valueChanged', value: scaled });
+            dbg('SEND:' + safeName + '=' + scaled.toFixed(3));
+        });
+        el.addEventListener('mousedown', function() {
+            backend.emitEvent(eventId, { eventType: 'sliderDragStarted' });
+        });
+        el.addEventListener('mouseup', function() {
+            backend.emitEvent(eventId, { eventType: 'sliderDragEnded' });
+        });
     });
+
+    dbg('OK:' + names.join(','));
 })();
 </script>
 )JS";
@@ -129,8 +115,7 @@ PluginEditor::PluginEditor (PluginProcessor& p)
         .withNativeIntegrationEnabled()
         .withKeepPageLoadedWhenBrowserIsHidden()
         .withResourceProvider (
-            [this] (const auto& url) { return getResource (url); },
-            juce::URL { "http://localhost" }.getOrigin());
+            [this] (const auto& url) { return getResource (url); });
 
     for (auto& relay : sliderRelays)
         options = options.withOptionsFrom (*relay);
