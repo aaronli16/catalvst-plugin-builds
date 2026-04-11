@@ -48,12 +48,14 @@ private:
     std::unique_ptr<FaustDSP> fDSP;
     std::unique_ptr<MapUI> fMapUI;
 
-    juce::AudioProcessorValueTreeState apvts;
-
-    // Cached param info
+    // Cached param info — MUST be declared before apvts!
+    // createParameterLayout() populates these during apvts construction.
+    // If declared after apvts, their default constructors run AFTER and wipe the data.
     juce::StringArray paramLabels;    // Faust labels (display names, used as relay names)
     juce::StringArray paramAddresses; // Faust addresses (e.g., "/Dattorro/Decay_Rate")
     juce::StringArray paramIds;       // Sanitized IDs for APVTS (e.g., "Decay_Rate")
+
+    juce::AudioProcessorValueTreeState apvts;
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
