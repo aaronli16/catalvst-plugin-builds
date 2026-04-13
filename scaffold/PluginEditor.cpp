@@ -58,9 +58,9 @@ static const char* dataParamBridgeJS = R"JS(
         var fromCpp = false;
 
         backend.addEventListener(eventId, function(event) {
-            if (event.eventType === 'propertiesChanged' && event.properties) {
-                start = event.properties.start !== undefined ? event.properties.start : 0;
-                end = event.properties.end !== undefined ? event.properties.end : 1;
+            if (event.eventType === 'propertiesChanged') {
+                start = event.start !== undefined ? event.start : 0;
+                end = event.end !== undefined ? event.end : 1;
             }
             if (event.eventType === 'valueChanged' && event.value !== undefined) {
                 var range = end - start;
