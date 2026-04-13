@@ -45,9 +45,13 @@ static const char* getMimeForExtension (const juce::String& extension)
 // Uses window.__JUCE__.backend directly (created by withNativeIntegrationEnabled).
 // Includes a visible debug banner so we can see exactly where the chain breaks.
 static const char* dataParamBridgeJS = R"JS(
+<div id="__dbg" style="position:fixed;top:0;left:0;right:0;background:#222;color:#0f0;font:11px monospace;padding:4px;z-index:99999;max-height:80px;overflow-y:auto"></div>
 <script>
 (function() {
     if (!window.__JUCE__ || !window.__JUCE__.backend) return;
+
+    var d = document.getElementById('__dbg');
+    function dbg(msg) { d.innerHTML += msg + '<br>'; }
 
     var backend = window.__JUCE__.backend;
 
@@ -61,6 +65,7 @@ static const char* dataParamBridgeJS = R"JS(
             if (event.eventType === 'propertiesChanged') {
                 start = event.start !== undefined ? event.start : 0;
                 end = event.end !== undefined ? event.end : 1;
+                dbg('PROPS ' + safeName + ': ' + start + ' to ' + end);
             }
             if (event.eventType === 'valueChanged' && event.value !== undefined) {
                 var range = end - start;
@@ -68,6 +73,7 @@ static const char* dataParamBridgeJS = R"JS(
                 el.value = range > 0 ? Math.max(0, Math.min(1, (event.value - start) / range)) : 0;
                 el.dispatchEvent(new Event('input', { bubbles: true }));
                 fromCpp = false;
+                dbg('VAL ' + safeName + '=' + event.value.toFixed(3) + ' norm=' + el.value);
             }
         });
 
