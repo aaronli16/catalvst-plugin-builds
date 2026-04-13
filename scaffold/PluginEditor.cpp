@@ -55,6 +55,7 @@ static const char* dataParamBridgeJS = R"JS(
         var safeName = el.getAttribute('data-param').replace(/[^a-zA-Z0-9_]/g, '_');
         var eventId = '__juce__slider' + safeName;
         var start = 0, end = 1;
+        var fromCpp = false;
 
         backend.addEventListener(eventId, function(event) {
             if (event.eventType === 'propertiesChanged' && event.properties) {
@@ -63,14 +64,17 @@ static const char* dataParamBridgeJS = R"JS(
             }
             if (event.eventType === 'valueChanged' && event.value !== undefined) {
                 var range = end - start;
+                fromCpp = true;
                 el.value = range > 0 ? Math.max(0, Math.min(1, (event.value - start) / range)) : 0;
                 el.dispatchEvent(new Event('input', { bubbles: true }));
+                fromCpp = false;
             }
         });
 
         backend.emitEvent(eventId, { eventType: 'requestInitialUpdate' });
 
         el.addEventListener('input', function() {
+            if (fromCpp) return;
             var norm = parseFloat(el.value);
             backend.emitEvent(eventId, { eventType: 'valueChanged', value: start + norm * (end - start) });
         });
