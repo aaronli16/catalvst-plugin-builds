@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 600px;
+      height: 400px;
+      margin: 0;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: 
+        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600"><defs><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" seed="2"/><feColorMatrix type="saturate" values="0"/></filter><linearGradient id="velvetGrad" x1="0%25" y1="0%25" x2="100%25" y2="100%25"><stop offset="0%25" style="stop-color:%231a0f28;stop-opacity:1"/><stop offset="50%25" style="stop-color:%230e0a1a;stop-opacity:1"/><stop offset="100%25" style="stop-color:%23251530;stop-opacity:1"/></linearGradient><radialGradient id="glow1" cx="20%25" cy="30%25"><stop offset="0%25" style="stop-color:%236b4b7a;stop-opacity:0.15"/><stop offset="100%25" style="stop-color:%23000000;stop-opacity:0"/></radialGradient><radialGradient id="glow2" cx="80%25" cy="70%25"><stop offset="0%25" style="stop-color:%234a5b7a;stop-opacity:0.12"/><stop offset="100%25" style="stop-color:%23000000;stop-opacity:0"/></radialGradient></defs><rect width="800" height="600" fill="url(%23velvetGrad)"/><rect width="800" height="600" fill="url(%23glow1)"/><rect width="800" height="600" fill="url(%23glow2)"/><rect width="800" height="600" filter="url(%23noise)" opacity="0.03"/><ellipse cx="150" cy="120" rx="180" ry="180" fill="%23503a60" opacity="0.06" filter="blur(60px)"/><ellipse cx="650" cy="480" rx="160" ry="160" fill="%233a4a5a" opacity="0.05" filter="blur(50px)"/><ellipse cx="400" cy="300" rx="220" ry="220" fill="%235a4068" opacity="0.04" filter="blur(80px)"/></svg>') center/cover no-repeat,
+        linear-gradient(165deg, #1a0f28 0%, #0e0a1a 50%, #251530 100%);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      position: relative;
+    }
+    
+    html::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(ellipse at 25% 25%, rgba(120, 80, 140, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 75% 75%, rgba(80, 100, 140, 0.12) 0%, transparent 50%);
+      pointer-events: none;
+      animation: breathe 8s ease-in-out infinite;
+    }
+    
+    @keyframes breathe {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 0.7; }
+    }
+
+    .container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+
+    .title {
+      font-size: 38px;
+      font-weight: 100;
+      letter-spacing: 12px;
+      color: #f0eef5;
+      margin-bottom: 45px;
+      text-transform: uppercase;
+      text-shadow: 
+        0 0 30px rgba(180, 160, 200, 0.6),
+        0 0 60px rgba(140, 120, 180, 0.3),
+        0 4px 12px rgba(0,0,0,0.8);
+      font-style: italic;
+      position: relative;
+      background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(200,180,220,0.8) 50%, rgba(160,140,200,0.7) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmer 4s ease-in-out infinite;
+    }
+    
+    @keyframes shimmer {
+      0%, 100% { 
+        background-position: 0% 50%;
+        filter: brightness(1);
+      }
+      50% { 
+        background-position: 100% 50%;
+        filter: brightness(1.15);
+      }
+    }
+    
+    .title::after {
+      content: '';
+      position: absolute;
+      bottom: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(180, 160, 200, 0.5), transparent);
+      box-shadow: 0 0 8px rgba(180, 160, 200, 0.3);
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+      width: 100%;
+      max-width: 560px;
+    }
+
+    .section {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .section-title {
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #b8a8c8;
+      font-weight: 700;
+      padding-left: 4px;
+      text-shadow: 
+        0 0 12px rgba(184, 168, 200, 0.6),
+        0 2px 4px rgba(0,0,0,0.5);
+      position: relative;
+      padding-bottom: 4px;
+    }
+    
+    .section-title::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 30px;
+      height: 2px;
+      background: linear-gradient(90deg, rgba(184, 168, 200, 0.6), transparent);
+      box-shadow: 0 0 8px rgba(184, 168, 200, 0.4);
+    }
+
+    .section-knobs {
+      display: flex;
+      gap: 36px;
+      justify-content: center;
+    }
+
+    .knob-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .knob-wrapper {
+      position: relative;
+      width: 65px;
+      height: 65px;
+    }
+
+    .knob {
+      width: 65px;
+      height: 65px;
+      border-radius: 50%;
+      background: 
+        radial-gradient(circle at 35% 35%, #3d3545, #2a2430 50%, #1e1a24);
+      border: 3px solid transparent;
+      background-clip: padding-box;
+      box-shadow: 
+        0 0 0 1px rgba(140, 120, 160, 0.3),
+        0 6px 16px rgba(0,0,0,0.7),
+        0 2px 4px rgba(0,0,0,0.5),
+        inset 0 2px 4px rgba(255,255,255,0.06),
+        inset 0 -2px 4px rgba(0,0,0,0.4);
+      cursor: pointer;
+      position: relative;
+      -webkit-appearance: none;
+      appearance: none;
+      transition: all 0.1s ease;
+    }
+    
+    .knob:hover {
+      box-shadow: 
+        0 0 0 1px rgba(160, 140, 180, 0.5),
+        0 6px 20px rgba(0,0,0,0.8),
+        0 2px 4px rgba(0,0,0,0.6),
+        inset 0 2px 4px rgba(255,255,255,0.08),
+        inset 0 -2px 4px rgba(0,0,0,0.4),
+        0 0 20px rgba(140, 120, 160, 0.15);
+    }
+
+    .knob::before {
+      content: '';
+      position: absolute;
+      width: 4px;
+      height: 24px;
+      background: linear-gradient(180deg, #e8e8f0, #c8c8d8);
+      top: 5px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-radius: 2px;
+      box-shadow: 
+        0 0 8px rgba(232, 232, 240, 0.8),
+        0 0 16px rgba(200, 180, 220, 0.4),
+        0 2px 4px rgba(0,0,0,0.6);
+    }
+
+    .knob-label {
+      font-size: 11px;
+      color: #d8d0e0;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      text-shadow: 
+        0 0 8px rgba(216, 208, 224, 0.3),
+        0 2px 4px rgba(0,0,0,0.6);
+    }
+
+    input[type="range"] {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="title">Velour 2</div>
+    
+    <div class="controls">
+      <!-- Main Controls -->
+      <div class="section">
+        <div class="section-title">Main</div>
+        <div class="section-knobs">
+          <div class="knob-container">
+            <div class="knob-wrapper">
+              <div class="knob" data-param="Decay Rate" data-value="0.7"></div>
+              <input type="range" class="knob-input" data-param="Decay Rate" min="0" max="1" value="0.7" step="0.01">
+            </div>
+            <div class="knob-label">Decay</div>
+          </div>
+
+          <div class="knob-container">
+            <div class="knob-wrapper">
+              <div class="knob" data-param="Damping" data-value="0.625"></div>
+              <input type="range" class="knob-input" data-param="Damping" min="0" max="1" value="0.625" step="0.01">
+            </div>
+            <div class="knob-label">Damping</div>
+          </div>
+
+          <div class="knob-container">
+            <div class="knob-wrapper">
+              <div class="knob" data-param="Dry/Wet Mix" data-value="0.0"></div>
+              <input type="range" class="knob-input" data-param="Dry/Wet Mix" min="0" max="1" value="0.0" step="0.01">
+            </div>
+            <div class="knob-label">Mix</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tone -->
+      <div class="section">
+        <div class="section-title">Tone</div>
+        <div class="section-knobs">
+          <div class="knob-container">
+            <div class="knob-wrapper">
+              <div class="knob" data-param="Prefilter" data-value="0.7"></div>
+              <input type="range" class="knob-input" data-param="Prefilter" min="0" max="1" value="0.7" step="0.01">
+            </div>
+            <div class="knob-label">Prefilter</div>
+          </div>
+
+          <div class="knob-container">
+            <div class="knob-wrapper">
+              <div class="knob" data-param="Level" data-value="0.5"></div>
+              <input type="range" class="knob-input" data-param="Level" min="0" max="1" value="0.5" step="0.01">
+            </div>
+            <div class="knob-label">Level</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Diffusion -->
+      <div class="section">
+        <div class="section-title">Diffusion</div>
+        <div class="section-knobs">
+          <div class="knob-container">
+            <div class="knob-wrapper">
+              <div class="knob" data-param="Diffusion 1" data-value="0.625"></div>
+              <input type="range" class="knob-input" data-param="Diffusion 1" min="0" max="1" value="0.625" step="0.01">
+            </div>
+            <div class="knob-label">Input 1</div>
+          </div>
+
+          <div class="knob-container">
+            <div class="knob-wrapper">
+              <div class="knob" data-param="Diffusion 2" data-value="0.625"></div>
+              <input type="range" class="knob-input" data-param="Diffusion 2" min="0" max="1" value="0.625" step="0.01">
+            </div>
+            <div class="knob-label">Input 2</div>
+          </div>
+
+          <div class="knob-container">
+            <div class="knob-wrapper">
+              <div class="knob" data-param="Diffusion 1" data-value="0.625"></div>
+              <input type="range" class="knob-input" data-param="Diffusion 1" min="0" max="1" value="0.625" step="0.01">
+            </div>
+            <div class="knob-label">Tank 1</div>
+          </div>
+
+          <div class="knob-container">
+            <div class="knob-wrapper">
+              <div class="knob" data-param="Diffusion 2" data-value="0.625"></div>
+              <input type="range" class="knob-input" data-param="Diffusion 2" min="0" max="1" value="0.625" step="0.01">
+            </div>
+            <div class="knob-label">Tank 2</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Knob rotation interaction
+    const knobs = document.querySelectorAll('.knob');
+    
+    knobs.forEach(knob => {
+      const input = knob.parentElement.querySelector('.knob-input');
+      
+      // Sync knob rotation to value
+      function updateKnobRotation() {
+        const value = parseFloat(input.value);
+        const rotation = -135 + (value * 270); // -135° to +135° (270° total range)
+        knob.style.transform = `rotate(${rotation}deg)`;
+      }
+      
+      // Initialize rotation
+      updateKnobRotation();
+      
+      // Mouse drag handler
+      let isDragging = false;
+      let startY = 0;
+      let startValue = 0;
+      
+      knob.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startY = e.clientY;
+        startValue = parseFloat(input.value);
+        e.preventDefault();
+      });
+      
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        
+        const deltaY = startY - e.clientY;
+        const sensitivity = 0.005;
+        let newValue = startValue + (deltaY * sensitivity);
+        
+        // Clamp value
+        newValue = Math.max(0, Math.min(1, newValue));
+        
+        input.value = newValue;
+        input.dispatchEvent(new Event('input'));
+        updateKnobRotation();
+      });
+      
+      document.addEventListener('mouseup', () => {
+        isDragging = false;
+      });
+      
+      // Update rotation when input changes (from automation/preset)
+      input.addEventListener('input', updateKnobRotation);
+    });
+  </script>
+</body>
+</html>
