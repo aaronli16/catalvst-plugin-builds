@@ -105,7 +105,18 @@ PluginEditor::PluginEditor (PluginProcessor& p)
         .withNativeIntegrationEnabled()
         .withKeepPageLoadedWhenBrowserIsHidden()
         .withResourceProvider (
-            [this] (const auto& url) { return getResource (url); });
+            [this] (const auto& url) { return getResource (url); })
+        .withEventListener (
+            "pluginResize",
+            [this] (const juce::var& payload)
+            {
+                if (! payload.isObject()) return;
+                const int w = juce::jlimit (100, 2400,
+                    static_cast<int> (payload.getProperty ("width",  getWidth())));
+                const int h = juce::jlimit (100, 1400,
+                    static_cast<int> (payload.getProperty ("height", getHeight())));
+                setSize (w, h);
+            });
 
     for (auto& relay : sliderRelays)
         options = options.withOptionsFrom (*relay);
