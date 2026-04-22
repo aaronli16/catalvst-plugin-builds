@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    html, body {
+      width: 600px;
+      height: 340px;
+      margin: 0;
+      overflow: hidden;
+      background: linear-gradient(180deg, #1e2228 0%, #141618 100%);
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .plugin-title {
+      font-size: 20px;
+      font-weight: 300;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      margin-bottom: 32px;
+      color: #5ec4b6;
+      text-shadow: 0 0 18px rgba(94, 196, 182, 0.3);
+    }
+
+    .controls {
+      display: flex;
+      gap: 40px;
+      align-items: center;
+    }
+
+    .knob-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .knob-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #6b7280;
+      font-weight: 400;
+    }
+
+    .knob-value {
+      font-size: 12px;
+      color: #5ec4b6;
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body>
+  <div class="plugin-title">Warm Plate Reverb</div>
+
+  <div class="controls">
+    <div class="knob-group">
+      <input type="range" class="input-knob" data-asset-sprite="knob-teal"
+             data-param="Pre-Delay" min="0" max="1" value="0.2" step="0.01" data-diameter="68">
+      <div class="knob-label">Pre-Delay</div>
+      <span class="knob-value">20%</span>
+    </div>
+
+    <div class="knob-group">
+      <input type="range" class="input-knob" data-asset-sprite="knob-teal"
+             data-param="Bandwidth" min="0" max="1" value="0.7" step="0.01" data-diameter="68">
+      <div class="knob-label">Size</div>
+      <span class="knob-value">70%</span>
+    </div>
+
+    <div class="knob-group">
+      <input type="range" class="input-knob" data-asset-sprite="knob-teal"
+             data-param="Decay" min="0" max="1" value="0.7" step="0.01" data-diameter="68">
+      <div class="knob-label">Decay</div>
+      <span class="knob-value">70%</span>
+    </div>
+
+    <div class="knob-group">
+      <input type="range" class="input-knob" data-asset-sprite="knob-teal"
+             data-param="Damping" min="0" max="1" value="0.15" step="0.01" data-diameter="68">
+      <div class="knob-label">Damping</div>
+      <span class="knob-value">15%</span>
+    </div>
+
+    <div class="knob-group">
+      <input type="range" class="input-knob" data-asset-sprite="knob-teal"
+             data-param="Mix" min="0" max="1" value="0.35" step="0.01" data-diameter="68">
+      <div class="knob-label">Mix</div>
+      <span class="knob-value">35%</span>
+    </div>
+  </div>
+
+  <script data-asset="input-knobs"></script>
+  <script>
+  document.querySelectorAll('.input-knob').forEach(function(knob) {
+    var display = knob.closest('.knob-group').querySelector('.knob-value');
+    if (display) knob.addEventListener('input', function() {
+      display.textContent = Math.round(knob.value * 100) + '%';
+    });
+  });
+  </script>
+</body>
+</html>
