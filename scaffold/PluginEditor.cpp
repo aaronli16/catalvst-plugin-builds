@@ -214,5 +214,19 @@ std::optional<PluginEditor::Resource>
             return makeResource (data, dataSize, "text/css");
     }
 
+    // PNG files — e.g., the shared knob sprite at ui/knob-sprite.png.
+    // App-side transform references it by relative URL ("knob-sprite.png"),
+    // which JUCE resolves against getResourceProviderRoot(), landing here.
+    if (url.endsWithIgnoreCase (".png"))
+    {
+        // Convert filename to BinaryData identifier: "knob-sprite.png" → "knobsprite_png"
+        auto filename = url.fromLastOccurrenceOf ("/", false, false);
+        auto identifier = filename.replace (".", "_").replace ("-", "");
+
+        int dataSize = 0;
+        if (auto* data = BinaryData::getNamedResource (identifier.toRawUTF8(), dataSize))
+            return makeResource (data, dataSize, "image/png");
+    }
+
     return std::nullopt;
 }
