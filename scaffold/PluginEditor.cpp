@@ -146,7 +146,7 @@ PluginEditor::PluginEditor (PluginProcessor& p)
     // Step 5: Navigate to the embedded HTML
     webBrowser->goToURL (juce::WebBrowserComponent::getResourceProviderRoot());
 
-    setSize (800, 540);
+    setSize (1100, 680);
     setResizable (false, false);
 }
 
