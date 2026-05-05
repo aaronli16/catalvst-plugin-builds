@@ -1,0 +1,1235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>X Reverb</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EF60A2;
+    --bg-deep:#D6307F;
+    --ink:#ffffff;
+    --ink-soft:rgba(255,255,255,0.55);
+    --ink-faint:rgba(255,255,255,0.22);
+    --ink-trace:rgba(255,255,255,0.10);
+    --stroke:2.5px;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:100%;height:100%;min-height:100vh;overflow:auto}
+  body{
+    font-family:"Space Grotesk",system-ui,sans-serif;
+    color:var(--ink);
+    background:#1a1115;
+    display:flex; align-items:center; justify-content:center;
+    padding:32px;
+  }
+
+  .plugin{
+    position:relative;
+    width:960px; height:640px;
+    background:var(--bg);
+    overflow:hidden;
+    background-image:
+      radial-gradient(ellipse 120% 90% at 50% 50%, rgba(255,255,255,0.04), transparent 55%),
+      radial-gradient(ellipse 80% 60% at 50% 110%, rgba(0,0,0,0.18), transparent 60%);
+    box-shadow:
+      0 30px 60px -20px rgba(0,0,0,0.6),
+      0 10px 20px -5px rgba(0,0,0,0.4);
+    border-radius:6px;
+  }
+
+  /* ============ FRAME / CHROME ============ */
+  .frame{
+    position:absolute; inset:14px;
+    border:1.5px solid var(--ink-faint);
+    pointer-events:none;
+  }
+  .frame::before,.frame::after{
+    content:""; position:absolute; width:18px; height:18px;
+    border:1.5px solid var(--ink);
+  }
+  .frame::before{top:-4px;left:-4px;border-right:none;border-bottom:none}
+  .frame::after{bottom:-4px;right:-4px;border-left:none;border-top:none}
+
+  /* corner ticks - other two */
+  .corner-tr,.corner-bl{
+    position:absolute; width:18px; height:18px;
+    border:1.5px solid var(--ink);
+    z-index:2;
+  }
+  .corner-tr{top:10px;right:10px;border-left:none;border-bottom:none}
+  .corner-bl{bottom:10px;left:10px;border-right:none;border-top:none}
+
+  /* ============ HEADER ============ */
+  .header{
+    position:absolute; top:30px; left:36px; right:36px;
+    display:flex; justify-content:space-between; align-items:center;
+    z-index:3;
+  }
+  .brand{display:flex; align-items:center; gap:14px}
+  .brand .mark{
+    width:44px;height:44px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .brand .wordmark{
+    display:flex; flex-direction:column; line-height:1;
+  }
+  .brand .name{
+    font-weight:700; font-size:22px; letter-spacing:-0.01em;
+  }
+  .brand .sub{
+    font-family:"JetBrains Mono",monospace;
+    font-size:9.5px; letter-spacing:0.22em; text-transform:uppercase;
+    color:var(--ink-soft); margin-top:5px;
+    white-space:nowrap;
+  }
+
+  .meta{
+    display:flex; gap:22px; align-items:center;
+    font-family:"JetBrains Mono",monospace;
+    font-size:9.5px; letter-spacing:0.18em; text-transform:uppercase;
+    color:var(--ink-soft);
+  }
+  .meta .led{
+    display:inline-block; width:7px; height:7px;
+    background:var(--ink); border-radius:50%;
+    margin-right:8px; transform:translateY(-1px);
+    animation:pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{opacity:0.4}
+    50%{opacity:1}
+  }
+  .meta .v{color:var(--ink)}
+
+  /* ============ MAIN GRID ============ */
+  .stage{
+    position:absolute; top:90px; left:36px; right:36px; bottom:90px;
+    display:grid;
+    grid-template-columns: 320px 1fr;
+    gap:24px;
+  }
+
+  /* ============ HERO PANEL ============ */
+  .hero{
+    position:relative;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:8px 0 0;
+  }
+  .hero-rings{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:300px; height:300px;
+    pointer-events:none;
+    margin-top:-6px;
+  }
+  .hero-rings svg{width:100%;height:100%;overflow:visible}
+  .hero-rings .bloom{
+    transform-origin:center;
+    animation:bloom 5.5s ease-in-out infinite;
+  }
+  .hero-rings .bloom:nth-child(2){animation-delay:-1.4s}
+  .hero-rings .bloom:nth-child(3){animation-delay:-2.8s}
+  .hero-rings .bloom:nth-child(4){animation-delay:-4.2s}
+  @keyframes bloom{
+    0%{transform:scale(0.45);opacity:0}
+    20%{opacity:0.5}
+    100%{transform:scale(1.4);opacity:0}
+  }
+
+  .hero-knob-wrap{
+    position:relative; z-index:2;
+    width:200px; height:200px;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  /* knob structure (shared) */
+  .knob{
+    position:relative;
+    display:flex; flex-direction:column; align-items:center;
+  }
+  .knob .face{
+    position:relative;
+    border-radius:50%;
+    background:transparent;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .knob .arc{
+    position:absolute; inset:0;
+    pointer-events:none;
+  }
+  .knob .arc svg{width:100%;height:100%;overflow:visible}
+
+  /* the actual range input - invisible but functional */
+  .input-knob{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    opacity:0;
+    cursor:grab;
+    margin:0;
+    z-index:5;
+  }
+  .input-knob:active{cursor:grabbing}
+
+  /* indicator: rotates based on --val (0..1) — line from center outward */
+  .knob .pointer{
+    position:absolute; left:50%; top:50%;
+    width:0; height:0;
+    transform:translate(-50%,-50%) rotate(calc((var(--val,0.55) * 270deg) + 45deg));
+    pointer-events:none;
+  }
+  .knob .pointer .stem{
+    position:absolute;
+    top:0;
+    left:50%;
+    width:2.5px;
+    height:var(--len,86px);
+    background:var(--ink);
+    transform:translateX(-50%);
+  }
+  .knob .pointer .tip{
+    position:absolute;
+    top:var(--len,86px);
+    left:50%;
+    width:0;height:0;
+    border-left: var(--tipw,7px) solid transparent;
+    border-right: var(--tipw,7px) solid transparent;
+    border-bottom: var(--tiph,12px) solid var(--ink);
+    transform:translate(-50%,-100%) rotate(180deg);
+  }
+
+  /* HERO knob: line extends from center to ~edge */
+  .hero-knob{ --len:60px; --tipw:6px; --tiph:11px; }
+  .hero-knob .face{ width:200px; height:200px; border:var(--stroke) solid var(--ink); }
+  .hero-knob .face::before{
+    content:""; position:absolute; inset:14px;
+    border:1px solid var(--ink-faint); border-radius:50%;
+  }
+  .hero-knob .face::after{
+    content:""; position:absolute; inset:54px;
+    border:1px solid var(--ink-faint); border-radius:50%;
+  }
+  .hero-knob .center-dot{
+    position:absolute; left:50%; top:50%;
+    width:10px;height:10px;border-radius:50%;
+    background:var(--ink);
+    transform:translate(-50%,-50%);
+  }
+
+  /* tick marks around hero */
+  .hero-knob .ticks{
+    position:absolute; inset:-14px; pointer-events:none;
+  }
+
+  /* hero label below */
+  .hero-label{
+    margin-top:18px;
+    text-align:center;
+    z-index:2;
+  }
+  .hero-label .name{
+    font-weight:700; font-size:15px; letter-spacing:0.32em;
+    text-transform:uppercase;
+  }
+  .hero-label .val{
+    margin-top:6px;
+    font-family:"JetBrains Mono",monospace;
+    font-size:11px; letter-spacing:0.14em;
+    color:var(--ink-soft);
+  }
+
+  /* ============ RIGHT SIDE ============ */
+  .controls{
+    display:flex; flex-direction:column; justify-content:space-between;
+    padding-top:6px;
+  }
+
+  .row{
+    display:flex; justify-content:space-between; align-items:flex-start;
+  }
+
+  /* PRIMARY knobs: 96px */
+  .knob-primary{ --len:28px; --tipw:4px; --tiph:7px; }
+  .knob-primary .face{
+    width:96px; height:96px;
+    border:var(--stroke) solid var(--ink);
+  }
+  .knob-primary .face::before{
+    content:""; position:absolute; inset:8px;
+    border:1px solid var(--ink-faint); border-radius:50%;
+  }
+  .knob-primary .center-dot{
+    position:absolute; left:50%; top:50%;
+    width:6px;height:6px;border-radius:50%;
+    background:var(--ink);
+    transform:translate(-50%,-50%);
+  }
+  .knob-primary .label{
+    margin-top:12px; text-align:center;
+    white-space:nowrap;
+  }
+  .knob-primary .label .name{
+    font-weight:600; font-size:11px; letter-spacing:0.24em;
+    text-transform:uppercase;
+  }
+  .knob-primary .label .val{
+    margin-top:4px;
+    font-family:"JetBrains Mono",monospace;
+    font-size:9.5px; letter-spacing:0.1em; color:var(--ink-soft);
+  }
+
+  /* SECONDARY knobs: 60px */
+  .knob-secondary{ --len:17px; --tipw:3px; --tiph:5px; }
+  .knob-secondary .face{
+    width:60px; height:60px;
+    border:var(--stroke) solid var(--ink);
+  }
+  .knob-secondary .center-dot{
+    position:absolute; left:50%; top:50%;
+    width:4px;height:4px;border-radius:50%;
+    background:var(--ink);
+    transform:translate(-50%,-50%);
+  }
+  .knob-secondary .label{
+    margin-top:10px; text-align:center;
+    white-space:nowrap;
+  }
+  .knob-secondary .label .name{
+    font-weight:600; font-size:9.5px; letter-spacing:0.22em;
+    text-transform:uppercase;
+  }
+  .knob-secondary .label .val{
+    margin-top:3px;
+    font-family:"JetBrains Mono",monospace;
+    font-size:8.5px; letter-spacing:0.08em; color:var(--ink-soft);
+  }
+
+  /* spacing inside the right column */
+  .primary-row{
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap:8px;
+  }
+  .primary-row .knob{align-self:start}
+
+  .secondary-row{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap:8px;
+    padding:0 30px;
+  }
+  .secondary-row .knob{align-self:start}
+
+  /* arc fill that responds to --val */
+  .arc-fill{
+    fill:none;
+    stroke:var(--ink);
+    stroke-width:2.5;
+    stroke-linecap:butt;
+    /* dasharray length: for the hero we use circumference of 270deg arc */
+  }
+  .arc-track{
+    fill:none; stroke:var(--ink-faint); stroke-width:1;
+  }
+
+  /* ============ FOOTER ============ */
+  .footer{
+    position:absolute; left:36px; right:36px; bottom:30px;
+    display:flex; justify-content:space-between; align-items:center;
+    font-family:"JetBrains Mono",monospace;
+    font-size:9.5px; letter-spacing:0.2em; text-transform:uppercase;
+    color:var(--ink-soft);
+    z-index:3;
+  }
+  .footer .left, .footer .right{display:flex; gap:22px}
+  .footer .seg{display:flex; gap:8px; align-items:center}
+  .footer .v{color:var(--ink)}
+
+  /* ============ DECORATIVE GLYPHS ============ */
+  .glyph-tl{
+    position:absolute; top:120px; left:36px;
+    font-family:"JetBrains Mono",monospace;
+    font-size:8.5px; letter-spacing:0.22em;
+    color:var(--ink-faint); text-transform:uppercase;
+    transform:rotate(-90deg); transform-origin:left top;
+    z-index:1;
+  }
+
+  /* signal bars background */
+  .signal{
+    position:absolute; left:36px; right:36px; bottom:62px;
+    height:18px; display:flex; gap:3px; align-items:end;
+    opacity:0.55;
+    z-index:1;
+  }
+  .signal span{
+    flex:1; background:var(--ink); 
+    border-radius:0;
+    animation: bar 1.6s ease-in-out infinite;
+  }
+  @keyframes bar{
+    0%,100%{height:20%}
+    50%{height:90%}
+  }
+</style>
+</head>
+<body>
+
+<div class="plugin">
+
+  <div class="frame"></div>
+  <div class="corner-tr"></div>
+  <div class="corner-bl"></div>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="brand">
+      <div class="mark">
+        <img src="data:image/jpeg;base64,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" alt="X" width="44" height="44" style="display:block;border-radius:6px">
+      </div>
+      <div class="wordmark">
+        <div class="name">X REVERB</div>
+        <div class="sub">Shimmer · Mk II</div>
+      </div>
+    </div>
+
+    <div class="meta">
+      <div class="seg"><span class="led"></span><span>Active</span></div>
+      <div class="seg"><span>Preset</span> <span class="v" style="margin-left:8px">Cathedral 03</span></div>
+      <div class="seg"><span>44.1k · 24b</span></div>
+    </div>
+  </header>
+
+  <!-- vertical glyph -->
+  <div class="glyph-tl">SHIMMER · ENGINE · X</div>
+
+  <!-- STAGE -->
+  <main class="stage">
+
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-rings" aria-hidden="true"></div>
+
+      <div class="hero-knob-wrap">
+        <div class="knob hero-knob" style="--val:0.55">
+          <div class="face">
+            <!-- arc track + fill, 270deg sweep starting bottom-left going clockwise -->
+            <div class="arc">
+              <svg viewBox="0 0 200 200">
+                <!-- track -->
+                <path class="arc-track"
+                      d="M 35.86 164.14 A 90 90 0 1 1 164.14 164.14"/>
+                <!-- fill: sweep length proportional to val. 270deg arc on r=90 = 424.12 -->
+                <path class="arc-fill"
+                      d="M 35.86 164.14 A 90 90 0 1 1 164.14 164.14"
+                      stroke-dasharray="424.12"
+                      stroke-dashoffset="190.85"/>
+                <!-- tick marks at min/max -->
+                <line x1="35.86" y1="164.14" x2="29" y2="171" stroke="white" stroke-width="2"/>
+                <line x1="164.14" y1="164.14" x2="171" y2="171" stroke="white" stroke-width="2"/>
+                <line x1="100" y1="10" x2="100" y2="2" stroke="white" stroke-width="2"/>
+              </svg>
+            </div>
+            <input class="input-knob" type="range"
+                   min="0" max="1" step="0.01" value="0.55"
+                   data-param="Shimmer" data-diameter="120"
+                   aria-label="Shimmer" data-src="knobsprite.png" data-sprites="127">
+            <div class="pointer"><div class="stem"></div><div class="tip"></div></div>
+            <div class="center-dot"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-label">
+        <div class="name">Shimmer</div>
+        <div class="val">0.55 · BLOOM</div>
+      </div>
+    </section>
+
+    <!-- RIGHT CONTROLS -->
+    <section class="controls">
+
+      <!-- 4 PRIMARY knobs -->
+      <div class="primary-row">
+
+        <div class="knob knob-primary" style="--val:0.60">
+          <div class="face">
+            <div class="arc">
+              <svg viewBox="0 0 96 96">
+                <path class="arc-track" d="M 17.21 78.79 A 43 43 0 1 1 78.79 78.79"/>
+                <path class="arc-fill"  d="M 17.21 78.79 A 43 43 0 1 1 78.79 78.79"
+                      stroke-dasharray="202.6"
+                      stroke-dashoffset="81.04"/>
+              </svg>
+            </div>
+            <input class="input-knob" type="range" min="0" max="1" step="0.01" value="0.60"
+                   data-param="Size" data-diameter="80" aria-label="Size" data-src="knobsprite.png" data-sprites="127">
+            <div class="pointer"><div class="stem"></div><div class="tip"></div></div>
+            <div class="center-dot"></div>
+          </div>
+          <div class="label">
+            <div class="name">Size</div>
+            <div class="val">12.4 s</div>
+          </div>
+        </div>
+
+        <div class="knob knob-primary" style="--val:0.60">
+          <div class="face">
+            <div class="arc">
+              <svg viewBox="0 0 96 96">
+                <path class="arc-track" d="M 17.21 78.79 A 43 43 0 1 1 78.79 78.79"/>
+                <path class="arc-fill"  d="M 17.21 78.79 A 43 43 0 1 1 78.79 78.79"
+                      stroke-dasharray="202.6"
+                      stroke-dashoffset="81.04"/>
+              </svg>
+            </div>
+            <input class="input-knob" type="range" min="0" max="1" step="0.01" value="0.60"
+                   data-param="Pitch" data-diameter="80" aria-label="Pitch" data-src="knobsprite.png" data-sprites="127">
+            <div class="pointer"><div class="stem"></div><div class="tip"></div></div>
+            <div class="center-dot"></div>
+          </div>
+          <div class="label">
+            <div class="name">Pitch</div>
+            <div class="val">+8 / +12</div>
+          </div>
+        </div>
+
+        <div class="knob knob-primary" style="--val:0.50">
+          <div class="face">
+            <div class="arc">
+              <svg viewBox="0 0 96 96">
+                <path class="arc-track" d="M 17.21 78.79 A 43 43 0 1 1 78.79 78.79"/>
+                <path class="arc-fill"  d="M 17.21 78.79 A 43 43 0 1 1 78.79 78.79"
+                      stroke-dasharray="202.6"
+                      stroke-dashoffset="101.30"/>
+              </svg>
+            </div>
+            <input class="input-knob" type="range" min="0" max="1" step="0.01" value="0.50"
+                   data-param="Damping" data-diameter="80" aria-label="Damping" data-src="knobsprite.png" data-sprites="127">
+            <div class="pointer"><div class="stem"></div><div class="tip"></div></div>
+            <div class="center-dot"></div>
+          </div>
+          <div class="label">
+            <div class="name">Damping</div>
+            <div class="val">5.0 kHz</div>
+          </div>
+        </div>
+
+        <div class="knob knob-primary" style="--val:0.40">
+          <div class="face">
+            <div class="arc">
+              <svg viewBox="0 0 96 96">
+                <path class="arc-track" d="M 17.21 78.79 A 43 43 0 1 1 78.79 78.79"/>
+                <path class="arc-fill"  d="M 17.21 78.79 A 43 43 0 1 1 78.79 78.79"
+                      stroke-dasharray="202.6"
+                      stroke-dashoffset="121.56"/>
+              </svg>
+            </div>
+            <input class="input-knob" type="range" min="0" max="1" step="0.01" value="0.40"
+                   data-param="Mix" data-diameter="80" aria-label="Mix" data-src="knobsprite.png" data-sprites="127">
+            <div class="pointer"><div class="stem"></div><div class="tip"></div></div>
+            <div class="center-dot"></div>
+          </div>
+          <div class="label">
+            <div class="name">Mix</div>
+            <div class="val">40 %</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 3 SECONDARY knobs -->
+      <div class="secondary-row">
+
+        <div class="knob knob-secondary" style="--val:0.25">
+          <div class="face">
+            <div class="arc">
+              <svg viewBox="0 0 60 60">
+                <path class="arc-track" d="M 10.76 49.24 A 27 27 0 1 1 49.24 49.24"/>
+                <path class="arc-fill"  d="M 10.76 49.24 A 27 27 0 1 1 49.24 49.24"
+                      stroke-dasharray="127.23"
+                      stroke-dashoffset="95.42"/>
+              </svg>
+            </div>
+            <input class="input-knob" type="range" min="0" max="1" step="0.01" value="0.25"
+                   data-param="Pre-Delay" data-diameter="60" aria-label="Pre-Delay" data-src="knobsprite.png" data-sprites="127">
+            <div class="pointer"><div class="stem"></div><div class="tip"></div></div>
+            <div class="center-dot"></div>
+          </div>
+          <div class="label">
+            <div class="name">Pre-Delay</div>
+            <div class="val">62 ms</div>
+          </div>
+        </div>
+
+        <div class="knob knob-secondary" style="--val:0.70">
+          <div class="face">
+            <div class="arc">
+              <svg viewBox="0 0 60 60">
+                <path class="arc-track" d="M 10.76 49.24 A 27 27 0 1 1 49.24 49.24"/>
+                <path class="arc-fill"  d="M 10.76 49.24 A 27 27 0 1 1 49.24 49.24"
+                      stroke-dasharray="127.23"
+                      stroke-dashoffset="38.17"/>
+              </svg>
+            </div>
+            <input class="input-knob" type="range" min="0" max="1" step="0.01" value="0.70"
+                   data-param="Diffusion" data-diameter="60" aria-label="Diffusion" data-src="knobsprite.png" data-sprites="127">
+            <div class="pointer"><div class="stem"></div><div class="tip"></div></div>
+            <div class="center-dot"></div>
+          </div>
+          <div class="label">
+            <div class="name">Diffusion</div>
+            <div class="val">70 %</div>
+          </div>
+        </div>
+
+        <div class="knob knob-secondary" style="--val:0.85">
+          <div class="face">
+            <div class="arc">
+              <svg viewBox="0 0 60 60">
+                <path class="arc-track" d="M 10.76 49.24 A 27 27 0 1 1 49.24 49.24"/>
+                <path class="arc-fill"  d="M 10.76 49.24 A 27 27 0 1 1 49.24 49.24"
+                      stroke-dasharray="127.23"
+                      stroke-dashoffset="19.08"/>
+              </svg>
+            </div>
+            <input class="input-knob" type="range" min="0" max="1" step="0.01" value="0.85"
+                   data-param="Width" data-diameter="60" aria-label="Width" data-src="knobsprite.png" data-sprites="127">
+            <div class="pointer"><div class="stem"></div><div class="tip"></div></div>
+            <div class="center-dot"></div>
+          </div>
+          <div class="label">
+            <div class="name">Width</div>
+            <div class="val">85 %</div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+  </main>
+
+  <!-- decorative signal bars (subtle, behind footer) -->
+  <div class="signal" aria-hidden="true">
+    <span style="animation-delay:-0.0s"></span>
+    <span style="animation-delay:-0.1s"></span>
+    <span style="animation-delay:-0.2s"></span>
+    <span style="animation-delay:-0.3s"></span>
+    <span style="animation-delay:-0.4s"></span>
+    <span style="animation-delay:-0.5s"></span>
+    <span style="animation-delay:-0.6s"></span>
+    <span style="animation-delay:-0.7s"></span>
+    <span style="animation-delay:-0.8s"></span>
+    <span style="animation-delay:-0.9s"></span>
+    <span style="animation-delay:-1.0s"></span>
+    <span style="animation-delay:-1.1s"></span>
+    <span style="animation-delay:-1.2s"></span>
+    <span style="animation-delay:-1.3s"></span>
+    <span style="animation-delay:-1.4s"></span>
+    <span style="animation-delay:-1.5s"></span>
+    <span style="animation-delay:-0.05s"></span>
+    <span style="animation-delay:-0.15s"></span>
+    <span style="animation-delay:-0.25s"></span>
+    <span style="animation-delay:-0.35s"></span>
+    <span style="animation-delay:-0.45s"></span>
+    <span style="animation-delay:-0.55s"></span>
+    <span style="animation-delay:-0.65s"></span>
+    <span style="animation-delay:-0.75s"></span>
+    <span style="animation-delay:-0.85s"></span>
+    <span style="animation-delay:-0.95s"></span>
+    <span style="animation-delay:-1.05s"></span>
+    <span style="animation-delay:-1.15s"></span>
+    <span style="animation-delay:-1.25s"></span>
+    <span style="animation-delay:-1.35s"></span>
+    <span style="animation-delay:-1.45s"></span>
+    <span style="animation-delay:-1.55s"></span>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="left">
+      <div class="seg"><span>In</span> <span class="v">−6.2 dB</span></div>
+      <div class="seg"><span>Out</span> <span class="v">−4.8 dB</span></div>
+      <div class="seg"><span>CPU</span> <span class="v">3.4 %</span></div>
+    </div>
+    <div class="right">
+      <div class="seg"><span class="v">A</span> <span>·</span> <span>B</span></div>
+      <div class="seg">Bypass</div>
+      <div class="seg">Init</div>
+      <div class="seg"><span>v 2.6.0</span></div>
+    </div>
+  </footer>
+
+</div><!-- /.plugin -->
+
+<script>
+(() => {
+  // arc circumference per knob diameter (matches the SVG paths in the markup)
+  const ARCS = { 200: 424.12, 96: 202.6, 60: 127.23 };
+
+  // value formatters per data-param
+  const fmt = {
+    'Shimmer':   v => v.toFixed(2) + ' \u00b7 BLOOM',
+    'Size':      v => (1 + v * 19).toFixed(1) + ' s',
+    'Pitch':     v => {
+      // octave + fifth blend; show two semitone offsets that scale with v
+      const oct = Math.round(v * 12);
+      const fif = Math.round(v * 7) + 5;
+      return '+' + oct + ' / +' + (oct + fif - Math.round(v * 7));
+    },
+    'Damping':   v => (0.2 + v * 19.8).toFixed(1) + ' kHz',
+    'Mix':       v => Math.round(v * 100) + ' %',
+    'Pre-Delay': v => Math.round(v * 250) + ' ms',
+    'Diffusion': v => Math.round(v * 100) + ' %',
+    'Width':     v => Math.round(v * 100) + ' %',
+  };
+  // simpler pitch: keep formatting consistent with the static label "+8 / +12"
+  fmt['Pitch'] = v => {
+    const oct = Math.round(v * 12);
+    const fif = Math.round(v * 7);
+    return '+' + oct + ' / +' + (oct + fif);
+  };
+
+  function paint(input){
+    const v = parseFloat(input.value);
+    const knob = input.closest('.knob');
+    if (!knob) return;
+    knob.style.setProperty('--val', v);
+
+    // arc-fill dashoffset
+    const face = input.closest('.face');
+    const dia = parseInt(input.dataset.diameter, 10);
+    // map data-diameter (120/80/60 from spec) to actual rendered svg radii (200/96/60)
+    const arcKey = dia >= 100 ? 200 : (dia >= 70 ? 96 : 60);
+    const C = ARCS[arcKey];
+    const arc = face && face.querySelector('.arc-fill');
+    if (arc && C) {
+      arc.setAttribute('stroke-dashoffset', String(C - C * v));
+    }
+
+    // value readout
+    const param = input.dataset.param;
+    let valEl = knob.querySelector('.label .val');
+    if (!valEl && param === 'Shimmer') {
+      valEl = document.querySelector('.hero-label .val');
+    }
+    if (valEl && fmt[param]) {
+      valEl.textContent = fmt[param](v);
+    }
+
+    // Catalvst bridge integration: emit 'input' so wireFaustBridge picks up
+    // the value change and pushes it to the Faust DSP node.
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  // drag-to-turn behavior
+  function attach(input){
+    paint(input);
+
+    let dragging = false;
+    let startY = 0;
+    let startVal = 0;
+
+    const min = parseFloat(input.min);
+    const max = parseFloat(input.max);
+    const step = parseFloat(input.step) || 0.01;
+    const range = max - min;
+
+    function onMove(e){
+      if (!dragging) return;
+      const y = (e.touches ? e.touches[0].clientY : e.clientY);
+      const dy = startY - y;
+      // 200px of drag = full sweep; hold shift for fine
+      const speed = e.shiftKey ? 600 : 200;
+      let v = startVal + (dy / speed) * range;
+      v = Math.max(min, Math.min(max, v));
+      v = Math.round(v / step) * step;
+      input.value = v.toFixed(2);
+      paint(input);
+      e.preventDefault();
+    }
+    function onUp(){
+      dragging = false;
+      document.body.style.cursor = '';
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onUp);
+    }
+    function onDown(e){
+      dragging = true;
+      startY = (e.touches ? e.touches[0].clientY : e.clientY);
+      startVal = parseFloat(input.value);
+      document.body.style.cursor = 'grabbing';
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+      window.addEventListener('touchmove', onMove, {passive:false});
+      window.addEventListener('touchend', onUp);
+      e.preventDefault();
+    }
+    input.addEventListener('mousedown', onDown);
+    input.addEventListener('touchstart', onDown, {passive:false});
+
+    // wheel for fine adjust
+    input.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = -Math.sign(e.deltaY) * (e.shiftKey ? step : step * 4);
+      let v = parseFloat(input.value) + delta;
+      v = Math.max(min, Math.min(max, v));
+      v = Math.round(v / step) * step;
+      input.value = v.toFixed(2);
+      paint(input);
+    }, {passive:false});
+
+    // double-click to reset to default (the value attribute as authored)
+    const defaultVal = input.getAttribute('value');
+    input.addEventListener('dblclick', () => {
+      input.value = defaultVal;
+      paint(input);
+    });
+
+    // keyboard
+    input.addEventListener('keydown', (e) => {
+      const big = e.shiftKey ? step * 10 : step;
+      let v = parseFloat(input.value);
+      if (e.key === 'ArrowUp' || e.key === 'ArrowRight'){ v += big; e.preventDefault(); }
+      else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft'){ v -= big; e.preventDefault(); }
+      else return;
+      v = Math.max(min, Math.min(max, v));
+      v = Math.round(v / step) * step;
+      input.value = v.toFixed(2);
+      paint(input);
+    });
+  }
+
+  document.querySelectorAll('.input-knob').forEach(attach);
+
+  // Catalvst preview integration: report canvas size ONCE at load. Our canvas
+  // is fixed at 960x640, so observing body resize creates a feedback loop
+  // (parent resizes iframe → body resizes → observer fires → post → repeat)
+  // that manifests as visual glitching when knobs are moved.
+  const reportSize = () => {
+    parent.postMessage(
+      { type: 'pluginResize', width: 960, height: 640 },
+      '*',
+    );
+  };
+  if (document.readyState === 'complete') reportSize();
+  else window.addEventListener('load', reportSize);
+})();
+</script>
+
+<script>window.addEventListener("load",()=>{
+  let op=window.inputKnobsOptions||{};
+  op.knobWidth=op.knobWidth||op.knobDiameter||64;
+  op.knobHeight=op.knobHeight||op.knobDiameter||64;
+  op.sliderWidth=op.sliderWidth||op.sliderDiameter||128;
+  op.sliderHeight=op.sliderHeight||op.sliderDiameter||20;
+  op.switchWidth=op.switchWidth||op.switchDiameter||24;
+  op.switchHeight=op.switchHeight||op.switchDiameter||24;
+  op.fgcolor=op.fgcolor||"#f00";
+  op.bgcolor=op.bgcolor||"#000";
+  op.knobMode=op.knobMode||"linear";
+  op.sliderMode=op.sliderMode||"relative";
+  let styles=document.createElement("style");
+  styles.innerHTML=
+`input[type=range].input-knob,input[type=range].input-slider{
+  -webkit-appearance:none;
+  -moz-appearance:none;
+  border:none;
+  box-sizing:border-box;
+  overflow:hidden;
+  background-repeat:no-repeat;
+  background-size:100% 100%;
+  background-position:0px 0%;
+  background-color:transparent;
+  touch-action:none;
+}
+input[type=range].input-knob{
+  width:${op.knobWidth}px; height:${op.knobHeight}px;
+}
+input[type=range].input-slider{
+  width:${op.sliderWidth}px; height:${op.sliderHeight}px;
+}
+input[type=range].input-knob::-webkit-slider-thumb,input[type=range].input-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  opacity:0;
+}
+input[type=range].input-knob::-moz-range-thumb,input[type=range].input-slider::-moz-range-thumb{
+  -moz-appearance:none;
+  height:0;
+  border:none;
+}
+input[type=range].input-knob::-moz-range-track,input[type=range].input-slider::-moz-range-track{
+  -moz-appearance:none;
+  height:0;
+  border:none;
+}
+input[type=checkbox].input-switch,input[type=radio].input-switch {
+  width:${op.switchWidth}px;
+  height:${op.switchHeight}px;
+  -webkit-appearance:none;
+  -moz-appearance:none;
+  background-size:100% 200%;
+  background-position:0% 0%;
+  background-repeat:no-repeat;
+  border:none;
+  border-radius:0;
+  background-color:transparent;
+}
+input[type=checkbox].input-switch:checked,input[type=radio].input-switch:checked {
+  background-position:0% 100%;
+}`;
+  document.head.appendChild(styles);
+  let makeKnobFrames=(fr,fg,bg)=>{
+    let r=
+`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="64" height="${fr*64}" viewBox="0 0 64 ${fr*64}" preserveAspectRatio="none">
+<defs><g id="K"><circle cx="32" cy="32" r="30" fill="${bg}"/>
+<line x1="32" y1="28" x2="32" y2="7" stroke-linecap="round" stroke-width="6" stroke="${fg}"/></g></defs>
+<use xlink:href="#K" transform="rotate(-135,32,32)"/>`;
+    for(let i=1;i<fr;++i)
+      r+=`<use xlink:href="#K" transform="translate(0,${64*i}) rotate(${-135+270*i/fr},32,32)"/>`;
+    return r+"</svg>";
+  }
+  let makeHSliderFrames=(fr,fg,bg,w,h)=>{
+    let r=
+`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${w}" height="${fr*h}" viewBox="0 0 ${w} ${fr*h}" preserveAspectRatio="none">
+<defs><g id="B"><rect x="0" y="0" width="${w}" height="${h}" rx="${h/2}" ry="${h/2}" fill="${bg}"/></g>
+<g id="K"><circle x="${w/2}" y="0" r="${h/2*0.9}" fill="${fg}"/></g></defs>`;
+    for(let i=0;i<fr;++i){
+      r+=`<use xlink:href="#B" transform="translate(0,${h*i})"/>`;
+      r+=`<use xlink:href="#K" transform="translate(${h/2+(w-h)*i/100},${h/2+h*i})"/>`;
+    }
+    return r+"</svg>";
+  }
+  let makeVSliderFrames=(fr,fg,bg,w,h)=>{
+    let r=
+`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${w}" height="${fr*h}" viewBox="0 0 ${w} ${fr*h}" preserveAspectRatio="none">
+<defs><rect id="B" x="0" y="0" width="${w}" height="${h}" rx="${w/2}" ry="${w/2}" fill="${bg}"/>
+<circle id="K" x="0" y="0" r="${w/2*0.9}" fill="${fg}"/></defs>`;
+    for(let i=0;i<fr;++i){
+      r+=`<use xlink:href="#B" transform="translate(0,${h*i})"/>`;
+      r+=`<use xlink:href="#K" transform="translate(${w/2} ${h*(i+1)-w/2-i*(h-w)/100})"/>`;
+    }
+    return r+"</svg>";
+  }
+  let initSwitches=(el)=>{
+    let w,h,d,fg,bg;
+    if(el.inputKnobs)
+      return;
+    el.inputKnobs={};
+    el.refresh=()=>{
+      let src=el.getAttribute("data-src");
+      d=+el.getAttribute("data-diameter");
+      let st=document.defaultView.getComputedStyle(el,null);
+      w=parseFloat(el.getAttribute("data-width")||d||st.width);
+      h=parseFloat(el.getAttribute("data-height")||d||st.height);
+      bg=el.getAttribute("data-bgcolor")||op.bgcolor;
+      fg=el.getAttribute("data-fgcolor")||op.fgcolor;
+      el.style.width=w+"px";
+      el.style.height=h+"px";
+      if(src)
+        el.style.backgroundImage="url("+src+")";
+      else {
+        let minwh=Math.min(w,h);
+        let svg=
+`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h*2}" viewBox="0 0 ${w} ${h*2}" preserveAspectRatio="none">
+<g><rect fill="${bg}" x="1" y="1" width="${w-2}" height="${h-2}" rx="${minwh*0.25}" ry="${minwh*0.25}"/>
+<rect fill="${bg}" x="1" y="${h+1}" width="${w-2}" height="${h-2}" rx="${minwh*0.25}" ry="${minwh*0.25}"/>
+<circle fill="${fg}" cx="${w*0.5}" cy="${h*1.5}" r="${minwh*0.25}"/></g></svg>`;
+        el.style.backgroundImage="url(data:image/svg+xml;base64,"+btoa(svg)+")";
+      }
+    };
+    el.refresh();
+  };
+  let initKnobs=(el)=>{
+    let w,h,d,fg,bg;
+    if(el.inputKnobs){
+      el.redraw();
+      return;
+    }
+    let ik=el.inputKnobs={};
+    el.refresh=()=>{
+      d=+el.getAttribute("data-diameter");
+      let st=document.defaultView.getComputedStyle(el,null);
+      w=parseFloat(el.getAttribute("data-width")||d||st.width);
+      h=parseFloat(el.getAttribute("data-height")||d||st.height);
+      bg=el.getAttribute("data-bgcolor")||op.bgcolor;
+      fg=el.getAttribute("data-fgcolor")||op.fgcolor;
+      ik.sensex=ik.sensey=200;
+      if(el.className.indexOf("input-knob")>=0)
+        ik.itype="k";
+      else{
+        if(w>=h){
+          ik.itype="h";
+          ik.sensex=w-h;
+          ik.sensey=Infinity;
+          el.style.backgroundSize="auto 100%";
+        }
+        else{
+          ik.itype="v";
+          ik.sensex=Infinity;
+          ik.sensey=h-w;
+          el.style.backgroundSize="100% auto";
+        }
+      }
+      if(!el.hasAttribute("data-svg-variant")){
+        el.style.width=w+"px";
+        el.style.height=h+"px";
+      }
+      ik.frameheight=h;
+      let svgVariant=el.getAttribute("data-svg-variant");
+      if(svgVariant){
+        ik.svgMode=true;
+        let rotId=el.getAttribute("data-rotating-id")||"pointer";
+        let wrap=el.parentElement;
+        let svgEl=wrap?wrap.querySelector("svg"):null;
+        ik.svgPointer=svgEl?svgEl.querySelector("#"+rotId):null;
+        ik.svgMinAngle=parseFloat(el.getAttribute("data-min-angle"));
+        ik.svgMaxAngle=parseFloat(el.getAttribute("data-max-angle"));
+        if(!isFinite(ik.svgMinAngle)) ik.svgMinAngle=-135;
+        if(!isFinite(ik.svgMaxAngle)) ik.svgMaxAngle=135;
+        ik.svgFill=svgEl?svgEl.querySelector("#fill"):null;
+        ik.svgFillChildren=ik.svgFill?Array.from(ik.svgFill.children):[];
+        ik.svgFillSegmentCount=0;
+        for(let i=0;i<ik.svgFillChildren.length;++i){
+          if(ik.svgFillChildren[i].hasAttribute("data-seg-index")) ik.svgFillSegmentCount++;
+        }
+        ik.svgFillLit=ik.svgFill?(ik.svgFill.getAttribute("data-lit-color")||"currentColor"):"currentColor";
+        // Do not set backgroundImage; the SVG sibling is the visual.
+      }
+      else {
+        let src=el.getAttribute("data-src");
+        if(src){
+          el.style.backgroundImage=`url(${src})`;
+          let sp=+el.getAttribute("data-sprites");
+          if(sp)
+            ik.sprites=sp;
+          else
+            ik.sprites=0;
+          if(ik.sprites>=1)
+            el.style.backgroundSize=`100% ${(ik.sprites+1)*100}%`;
+          else if(ik.itype!="k"){
+            el.style.backgroundColor=bg;
+            el.style.borderRadius=Math.min(w,h)*0.25+"px";
+          }
+        }
+        else{
+          let svg;
+          switch(ik.itype){
+          case "k": svg=makeKnobFrames(101,fg,bg); break;
+          case "h": svg=makeHSliderFrames(101,fg,bg,w,h); break;
+          case "v": svg=makeVSliderFrames(101,fg,bg,w,h); break;
+          }
+          ik.sprites=100;
+          el.style.backgroundImage="url(data:image/svg+xml;base64,"+btoa(svg)+")";
+          el.style.backgroundSize=`100% ${(ik.sprites+1)*100}%`;
+        }
+      }
+      ik.valrange={min:+el.min, max:(el.max=="")?100:+el.max, step:(el.step=="")?1:+el.step};
+      el.redraw(true);
+    };
+    el.setValue=(v)=>{
+      v=(Math.round((v-ik.valrange.min)/ik.valrange.step))*ik.valrange.step+ik.valrange.min;
+      if(v<ik.valrange.min) v=ik.valrange.min;
+      if(v>ik.valrange.max) v=ik.valrange.max;
+      el.value=v;
+      if(el.value!=ik.oldvalue){
+        el.setAttribute("value",el.value);
+        el.redraw();
+        let event=document.createEvent("HTMLEvents");
+        event.initEvent("input",false,true);
+        el.dispatchEvent(event);
+        ik.oldvalue=el.value;
+      }
+    };
+    ik.pointerdown=(ev)=>{
+      el.focus();
+      const evorg = ev;
+      if(ev.touches)
+        ev = ev.touches[0];
+      let rc=el.getBoundingClientRect();
+      let cx=(rc.left+rc.right)*0.5,cy=(rc.top+rc.bottom)*0.5;
+      let dx=ev.clientX,dy=ev.clientY;
+      let da=Math.atan2(ev.clientX-cx,cy-ev.clientY);
+      if(ik.itype=="k"&&op.knobMode=="circularabs"){
+        dv=ik.valrange.min+(da/Math.PI*0.75+0.5)*(ik.valrange.max-ik.valrange.min);
+        el.setValue(dv);
+      }
+      if(ik.itype!="k"&&op.sliderMode=="abs"){
+        dv=(ik.valrange.min+ik.valrange.max)*0.5+((dx-cx)/ik.sensex-(dy-cy)/ik.sensey)*(ik.valrange.max-ik.valrange.min);
+        el.setValue(dv);
+      }
+      ik.dragfrom={x:ev.clientX,y:ev.clientY,a:Math.atan2(ev.clientX-cx,cy-ev.clientY),v:+el.value};
+      document.addEventListener("mousemove",ik.pointermove);
+      document.addEventListener("mouseup",ik.pointerup);
+      document.addEventListener("touchmove",ik.pointermove);
+      document.addEventListener("touchend",ik.pointerup);
+      document.addEventListener("touchcancel",ik.pointerup);
+      document.addEventListener("touchstart",ik.preventScroll);
+      evorg.preventDefault();
+      evorg.stopPropagation();
+    };
+    ik.pointermove=(ev)=>{
+      let dv;
+      let rc=el.getBoundingClientRect();
+      let cx=(rc.left+rc.right)*0.5,cy=(rc.top+rc.bottom)*0.5;
+      if(ev.touches)
+        ev = ev.touches[0];
+      let dx=ev.clientX-ik.dragfrom.x,dy=ev.clientY-ik.dragfrom.y;
+      let da=Math.atan2(ev.clientX-cx,cy-ev.clientY);
+      switch(ik.itype){
+      case "k":
+        switch(op.knobMode){
+        case "linear":
+          dv=(dx/ik.sensex-dy/ik.sensey)*(ik.valrange.max-ik.valrange.min);
+          if(ev.shiftKey)
+            dv*=0.2;
+          el.setValue(ik.dragfrom.v+dv);
+          break;
+        case "circularabs":
+          if(!ev.shiftKey){
+            dv=ik.valrange.min+(da/Math.PI*0.75+0.5)*(ik.valrange.max-ik.valrange.min);
+            el.setValue(dv);
+            break;
+          }
+        case "circularrel":
+          if(da>ik.dragfrom.a+Math.PI) da-=Math.PI*2;
+          if(da<ik.dragfrom.a-Math.PI) da+=Math.PI*2;
+          da-=ik.dragfrom.a;
+          dv=da/Math.PI/1.5*(ik.valrange.max-ik.valrange.min);
+          if(ev.shiftKey)
+            dv*=0.2;
+          el.setValue(ik.dragfrom.v+dv);
+        }
+        break;
+      case "h":
+      case "v":
+        dv=(dx/ik.sensex-dy/ik.sensey)*(ik.valrange.max-ik.valrange.min);
+        if(ev.shiftKey)
+          dv*=0.2;
+        el.setValue(ik.dragfrom.v+dv);
+        break;
+      }
+    };
+    ik.pointerup=()=>{
+      document.removeEventListener("mousemove",ik.pointermove);
+      document.removeEventListener("touchmove",ik.pointermove);
+      document.removeEventListener("mouseup",ik.pointerup);
+      document.removeEventListener("touchend",ik.pointerup);
+      document.removeEventListener("touchcancel",ik.pointerup);
+      document.removeEventListener("touchstart",ik.preventScroll);
+      let event=document.createEvent("HTMLEvents");
+      event.initEvent("change",false,true);
+      el.dispatchEvent(event);
+    };
+    ik.preventScroll=(ev)=>{
+      ev.preventDefault();
+    };
+    ik.keydown=()=>{
+      el.redraw();
+    };
+    ik.wheel=(ev)=>{
+      let delta=ev.deltaY>0?-ik.valrange.step:ik.valrange.step;
+      if(!ev.shiftKey)
+        delta*=5;
+      el.setValue(+el.value+delta);
+      ev.preventDefault();
+      ev.stopPropagation();
+    };
+    el.redraw=(f)=>{
+      if(f||ik.valueold!=el.value){
+        let v=(el.value-ik.valrange.min)/(ik.valrange.max-ik.valrange.min);
+        if(ik.svgMode){
+          if(ik.svgPointer){
+            let angle=ik.svgMinAngle+v*(ik.svgMaxAngle-ik.svgMinAngle);
+            ik.svgPointer.style.transform="rotate("+angle+"deg)";
+          }
+          if(ik.svgFill){
+            for(let i=0;i<ik.svgFillChildren.length;++i){
+              let c=ik.svgFillChildren[i];
+              if(c.hasAttribute("pathLength")){
+                c.style.strokeDashoffset=String(100*(1-v));
+              } else if(c.hasAttribute("data-seg-index")){
+                let idx=+c.getAttribute("data-seg-index");
+                c.style.fill=(idx<v*ik.svgFillSegmentCount)?ik.svgFillLit:"";
+              }
+            }
+          }
+        }
+        else if(ik.sprites>=1)
+          el.style.backgroundPosition="0px "+(-((v*ik.sprites)|0)*ik.frameheight)+"px";
+        else{
+          switch(ik.itype){
+          case "k":
+            el.style.transform="rotate("+(270*v-135)+"deg)";
+            break;
+          case "h":
+            el.style.backgroundPosition=((w-h)*v)+"px 0px";
+            break;
+          case "v":
+            el.style.backgroundPosition="0px "+(h-w)*(1-v)+"px";
+            break;
+          }
+        }
+        ik.valueold=el.value;
+      }
+    };
+    el.refresh();
+    el.redraw(true);
+    el.addEventListener("keydown",ik.keydown);
+    el.addEventListener("mousedown",ik.pointerdown);
+    el.addEventListener("touchstart",ik.pointerdown);
+    el.addEventListener("wheel",ik.wheel);
+  }
+  let refreshque=()=>{
+    let elem=document.querySelectorAll("input.input-knob,input.input-slider");
+    for(let i=0;i<elem.length;++i)
+      procque.push([initKnobs,elem[i]]);
+    elem=document.querySelectorAll("input[type=checkbox].input-switch,input[type=radio].input-switch");
+    for(let i=0;i<elem.length;++i){
+      procque.push([initSwitches,elem[i]]);
+    }
+  }
+  let procque=[];
+  refreshque();
+  setInterval(()=>{
+    for(let i=0;procque.length>0&&i<8;++i){
+      let q=procque.shift();
+      q[0](q[1]);
+    }
+    if(procque.length<=0)
+      refreshque();
+  },50);
+});
+</script>
+<script>(function(){
+  let lastW = 0, lastH = 0;
+  function report(){
+    const w = Math.ceil(document.body.scrollWidth);
+    const h = Math.ceil(document.body.scrollHeight);
+    if (w === lastW && h === lastH) return;
+    lastW = w; lastH = h;
+    if (window.__JUCE__ && window.__JUCE__.backend && typeof window.__JUCE__.backend.emitEvent === 'function') {
+      window.__JUCE__.backend.emitEvent('pluginResize', { width: w, height: h });
+    } else if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'pluginResize', width: w, height: h }, '*');
+    }
+  }
+  if (document.readyState === 'complete') {
+    report();
+  } else {
+    window.addEventListener('load', report);
+  }
+  try {
+    new ResizeObserver(report).observe(document.body);
+  } catch (e) {
+    // ResizeObserver not available — fall back to the load event only.
+  }
+})();</script>
+</body>
+
+</body>
+</html>
