@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>VOCODER</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%;
+    min-height: 100vh;
+    overflow: hidden;
+    background: #000;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color: #d8d8dc;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ---------- STAGE ---------- */
+  .stage {
+    position: relative;
+    width: 960px; height: 640px;
+    background:
+      radial-gradient(ellipse 700px 500px at 50% 45%, #1a1a1f 0%, #0a0a0c 55%, #000 100%);
+    overflow: hidden;
+  }
+  /* faint grid + scanlines */
+  .stage::before {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0 1px, transparent 1px 3px);
+    pointer-events: none;
+    mix-blend-mode: screen;
+  }
+  /* corner crosshairs */
+  .crosshair {
+    position: absolute; width: 14px; height: 14px;
+    border: 1px solid rgba(220,220,230,0.25);
+    pointer-events: none;
+  }
+  .crosshair.tl { top: 14px; left: 14px; border-right: none; border-bottom: none; }
+  .crosshair.tr { top: 14px; right: 14px; border-left: none; border-bottom: none; }
+  .crosshair.bl { bottom: 14px; left: 14px; border-right: none; border-top: none; }
+  .crosshair.br { bottom: 14px; right: 14px; border-left: none; border-top: none; }
+
+  /* ---------- HEADER ---------- */
+  .header {
+    position: absolute; top: 22px; left: 0; right: 0;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 32px;
+    z-index: 10;
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand-mark {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 35% 30%, #ffffff 0%, #cfcfd6 25%, #6b6b75 60%, #1a1a1f 100%);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.2),
+                0 0 12px rgba(180,200,255,0.25);
+  }
+  .brand-meta {
+    font-size: 9px; letter-spacing: 0.32em;
+    color: #6e6e78; text-transform: uppercase;
+    line-height: 1.5;
+  }
+  .brand-meta b { color: #c8c8d0; font-weight: 500; }
+
+  .status { display: flex; align-items: center; gap: 18px; font-size: 9px; letter-spacing: 0.3em; color: #6e6e78; text-transform: uppercase; }
+  .status .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #ff6b6b, #6a0d0d);
+    box-shadow: 0 0 6px rgba(255,80,80,0.6);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  /* ---------- WORDMARK ---------- */
+  .wordmark {
+    position: absolute;
+    top: 60px; left: 50%; transform: translateX(-50%);
+    width: 520px; height: 90px;
+    z-index: 5;
+  }
+  .wordmark svg { width: 100%; height: 100%; display: block; }
+
+  /* ---------- HELMET CENTERPIECE ---------- */
+  .helmet-wrap {
+    position: absolute;
+    top: 215px; left: 50%; transform: translateX(-50%);
+    width: 180px; height: 180px;
+    cursor: ns-resize;
+  }
+  .helmet-wrap:focus { outline: none; }
+  .helmet-wrap:focus .helmet-ring {
+    box-shadow:
+      inset 0 0 0 1px rgba(180,210,255,0.5),
+      0 0 30px rgba(180,210,255,0.35);
+  }
+
+  .helmet-ring {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    background:
+      conic-gradient(from 0deg,
+        #2a2a30 0deg, #555560 30deg, #fafaff 60deg, #555560 90deg,
+        #2a2a30 120deg, #555560 150deg, #fafaff 180deg, #555560 210deg,
+        #2a2a30 240deg, #555560 270deg, #fafaff 300deg, #555560 330deg, #2a2a30 360deg);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,0.15),
+      0 0 40px rgba(0,0,0,0.6);
+    transition: box-shadow 0.2s;
+  }
+  .helmet-ring::after {
+    content: "";
+    position: absolute; inset: 8px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 25%, #2a2a32 0%, #0a0a0e 70%);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.6);
+  }
+
+  /* tick marks around helmet */
+  .helmet-ticks {
+    position: absolute; inset: 0;
+    pointer-events: none;
+  }
+
+  /* the rotating helmet itself */
+  .helmet {
+    position: absolute;
+    top: 18px; left: 18px;
+    width: calc(100% - 36px); height: calc(100% - 36px);
+    border-radius: 50%;
+    transform-origin: center;
+    transition: transform 0.05s linear, filter 0.2s;
+  }
+  .helmet svg { width: 100%; height: 100%; display: block; overflow: visible; }
+
+  /* prismatic glow that intensifies with value */
+  .prism-glow {
+    position: absolute; inset: -4px;
+    border-radius: 50%;
+    pointer-events: none;
+    background: conic-gradient(from 0deg,
+      #ff2d6f, #ffaa3a, #f9f871, #76f7c2, #4ad7ff, #b078ff, #ff2d6f);
+    filter: blur(18px);
+    opacity: 0;
+    z-index: -1;
+    mix-blend-mode: screen;
+  }
+
+  /* big readout at center bottom of helmet */
+  .helmet-readout {
+    position: absolute;
+    top: -34px; left: 50%; transform: translateX(-50%);
+    font-size: 10px; letter-spacing: 0.35em;
+    color: #b8b8c0;
+    white-space: nowrap;
+    z-index: 4;
+  }
+  .helmet-readout .v {
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 12px rgba(180,210,255,0.5);
+  }
+  .helmet-label {
+    position: absolute;
+    bottom: -28px; left: 50%; transform: translateX(-50%);
+    font-size: 11px; letter-spacing: 0.55em;
+    color: #c8c8d0;
+    white-space: nowrap;
+    z-index: 4;
+  }
+  .helmet-label::before, .helmet-label::after {
+    content: ""; display: inline-block;
+    width: 30px; height: 1px;
+    background: linear-gradient(90deg, transparent, #6e6e78, transparent);
+    vertical-align: middle;
+    margin: 0 12px;
+  }
+
+  /* ---------- SMALL KNOBS ---------- */
+  .knob-row {
+    position: absolute;
+    bottom: 52px; left: 0; right: 0;
+    display: flex; justify-content: center; gap: 84px;
+    z-index: 3;
+  }
+  .small-knob {
+    width: 110px; height: 150px;
+    display: flex; flex-direction: column; align-items: center;
+    cursor: ns-resize;
+  }
+  .small-knob:focus { outline: none; }
+
+  .sk-label {
+    font-size: 9px; letter-spacing: 0.45em;
+    color: #8a8a92;
+    margin-bottom: 10px;
+  }
+  .sk-dial-wrap {
+    position: relative; width: 86px; height: 86px;
+  }
+  .sk-dial {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 50% 35%, #f4f4f8 0%, #c0c0c8 18%, #707078 55%, #2c2c32 100%);
+    box-shadow:
+      inset 0 -6px 12px rgba(0,0,0,0.6),
+      inset 0 6px 10px rgba(255,255,255,0.18),
+      0 6px 14px rgba(0,0,0,0.5),
+      0 0 0 1px rgba(0,0,0,0.5);
+  }
+  .sk-dial::before {
+    /* brushed circular pattern */
+    content: "";
+    position: absolute; inset: 8px;
+    border-radius: 50%;
+    background:
+      repeating-conic-gradient(from 0deg,
+        rgba(255,255,255,0.05) 0deg, rgba(0,0,0,0.05) 1deg,
+        rgba(255,255,255,0.04) 2deg, rgba(0,0,0,0.04) 3deg);
+    box-shadow:
+      inset 0 0 0 1px rgba(0,0,0,0.4),
+      inset 0 0 12px rgba(0,0,0,0.5);
+  }
+  .sk-dial::after {
+    content: "";
+    position: absolute;
+    top: 12px; left: 50%;
+    width: 3px; height: 18px;
+    margin-left: -1.5px;
+    background: linear-gradient(180deg, #ffffff, #b0d8ff 60%, #6694c8);
+    border-radius: 1.5px;
+    transform-origin: 50% 31px;
+    box-shadow: 0 0 8px rgba(180,210,255,0.7);
+  }
+  .sk-rotate { /* wraps the indicator pseudo via container transform */
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    transform-origin: center;
+    transition: transform 0.05s linear;
+  }
+  /* arc ticks around small knob */
+  .sk-arc {
+    position: absolute; inset: -10px;
+    pointer-events: none;
+  }
+  .sk-readout {
+    margin-top: 12px;
+    font-size: 10px; letter-spacing: 0.2em;
+    color: #b8b8c0;
+    font-variant-numeric: tabular-nums;
+  }
+  .sk-readout .u { color: #6e6e78; }
+
+  /* ---------- HIDDEN INPUTS ---------- */
+  input[type="range"].plug-input {
+    position: absolute;
+    width: 1px; height: 1px;
+    opacity: 0;
+    pointer-events: none;
+    /* keep in DOM, accessible to bridge */
+  }
+
+  /* ---------- FOOTER ---------- */
+  .footer {
+    position: absolute;
+    bottom: 18px; left: 32px; right: 32px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 9px; letter-spacing: 0.3em;
+    color: #4e4e58; text-transform: uppercase;
+  }
+  .footer .seg {
+    display: inline-flex; gap: 8px; align-items: center;
+  }
+  .footer .bar {
+    display: inline-block; width: 1px; height: 10px;
+    background: #2a2a30;
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+
+
+
+  <!-- HEADER (cleared) -->
+
+  <!-- WORDMARK: liquid chrome SVG -->
+  <div class="wordmark">
+    <svg viewBox="0 0 520 90" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="chrome" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ffffff"/>
+          <stop offset="22%" stop-color="#dcdce4"/>
+          <stop offset="48%" stop-color="#5a5a64"/>
+          <stop offset="52%" stop-color="#1a1a20"/>
+          <stop offset="62%" stop-color="#7a7a86"/>
+          <stop offset="80%" stop-color="#f4f4fa"/>
+          <stop offset="100%" stop-color="#a8a8b2"/>
+        </linearGradient>
+        <linearGradient id="chromeEdge" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#a8a8b2"/>
+          <stop offset="50%" stop-color="#000000"/>
+          <stop offset="100%" stop-color="#3a3a44"/>
+        </linearGradient>
+        <filter id="liquid" x="-10%" y="-30%" width="120%" height="160%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="0.4"/>
+        </filter>
+      </defs>
+      <!-- chromatic ghost layers -->
+      <g style="mix-blend-mode:screen">
+        <text x="260" y="68" text-anchor="middle"
+              font-family="Georgia, 'Times New Roman', serif" font-style="italic"
+              font-weight="700" font-size="72"
+              fill="#ff2d6f" opacity="0.35"
+              transform="translate(-2,1)">ROBOTIZER</text>
+        <text x="260" y="68" text-anchor="middle"
+              font-family="Georgia, 'Times New Roman', serif" font-style="italic"
+              font-weight="700" font-size="72"
+              fill="#4ad7ff" opacity="0.35"
+              transform="translate(2,-1)">ROBOTIZER</text>
+      </g>
+      <!-- main chrome fill -->
+      <text x="260" y="68" text-anchor="middle"
+            font-family="Georgia, 'Times New Roman', serif" font-style="italic"
+            font-weight="700" font-size="72"
+            fill="url(#chrome)"
+            stroke="url(#chromeEdge)" stroke-width="1.2"
+            filter="url(#liquid)">ROBOTIZER</text>
+      <!-- specular highlight -->
+      <text x="260" y="68" text-anchor="middle"
+            font-family="Georgia, 'Times New Roman', serif" font-style="italic"
+            font-weight="700" font-size="72"
+            fill="none"
+            stroke="rgba(255,255,255,0.7)" stroke-width="0.4">ROBOTIZER</text>
+    </svg>
+  </div>
+
+  <!-- ROBOTIZE HELMET -->
+  <div class="helmet-wrap" id="robotize" tabindex="0" role="slider"
+       aria-label="Robotize" aria-valuemin="0" aria-valuemax="100">
+    <div class="prism-glow" id="prismGlow"></div>
+    <div class="helmet-ring"></div>
+
+    <!-- ticks ring -->
+    <svg class="helmet-ticks" viewBox="0 0 320 320">
+      <g stroke="#5a5a64" stroke-width="1">
+        <!-- 21 major ticks across 270° arc (-135 to +135) -->
+      </g>
+      <g id="tickGroup"></g>
+    </svg>
+
+
+
+    <div class="helmet" id="helmet">
+      <svg viewBox="0 0 240 240">
+        <defs>
+          <radialGradient id="domeGrad" cx="40%" cy="30%" r="80%">
+            <stop offset="0%"  stop-color="#ffffff" stop-opacity="0.95"/>
+            <stop offset="18%" stop-color="#e6e8ef" stop-opacity="0.55"/>
+            <stop offset="55%" stop-color="#5a5e6a" stop-opacity="0.35"/>
+            <stop offset="100%" stop-color="#0a0a10" stop-opacity="0.85"/>
+          </radialGradient>
+          <linearGradient id="visorGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#0a0a12"/>
+            <stop offset="40%" stop-color="#1a1c26"/>
+            <stop offset="55%" stop-color="#2a2e3c"/>
+            <stop offset="100%" stop-color="#05050a"/>
+          </linearGradient>
+          <linearGradient id="visorShine" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%"  stop-color="#ffffff" stop-opacity="0"/>
+            <stop offset="35%" stop-color="#9fd6ff" stop-opacity="0.6"/>
+            <stop offset="50%" stop-color="#ffffff" stop-opacity="0.9"/>
+            <stop offset="65%" stop-color="#d8a8ff" stop-opacity="0.5"/>
+            <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+          </linearGradient>
+          <linearGradient id="jawGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#cfd0d8"/>
+            <stop offset="50%" stop-color="#7a7c86"/>
+            <stop offset="100%" stop-color="#2a2c34"/>
+          </linearGradient>
+          <radialGradient id="cheekGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
+            <stop offset="60%" stop-color="#9fd6ff" stop-opacity="0.4"/>
+            <stop offset="100%" stop-color="#9fd6ff" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+
+        <!-- outer dome silhouette -->
+        <ellipse cx="120" cy="118" rx="96" ry="104"
+                 fill="url(#domeGrad)" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+
+        <!-- visor band (rotates feeling) -->
+        <path d="M 30 118
+                 Q 120 96 210 118
+                 L 210 142
+                 Q 120 168 30 142 Z"
+              fill="url(#visorGrad)"
+              stroke="rgba(255,255,255,0.25)" stroke-width="0.8"/>
+
+        <!-- visor highlight (the moving sweep) -->
+        <path id="visorSweep"
+              d="M 36 124 Q 120 108 204 124 L 204 138 Q 120 156 36 138 Z"
+              fill="url(#visorShine)" opacity="0.7"/>
+
+        <!-- visor center horizon line -->
+        <line x1="36" y1="130" x2="204" y2="130"
+              stroke="rgba(180,210,255,0.45)" stroke-width="0.6"/>
+
+        <!-- bottom jaw plate -->
+        <path d="M 56 168
+                 Q 120 196 184 168
+                 L 178 188
+                 Q 120 210 62 188 Z"
+              fill="url(#jawGrad)"
+              stroke="rgba(0,0,0,0.5)" stroke-width="0.6"/>
+        <!-- jaw vents -->
+        <g stroke="#0a0a10" stroke-width="1.4" stroke-linecap="round">
+          <line x1="92"  y1="184" x2="100" y2="186"/>
+          <line x1="108" y1="188" x2="116" y2="190"/>
+          <line x1="124" y1="190" x2="132" y2="188"/>
+          <line x1="140" y1="186" x2="148" y2="184"/>
+        </g>
+
+        <!-- top dome highlight -->
+        <ellipse cx="92" cy="56" rx="34" ry="14"
+                 fill="#ffffff" opacity="0.55"/>
+        <ellipse cx="78" cy="48" rx="10" ry="4"
+                 fill="#ffffff" opacity="0.85"/>
+
+        <!-- side cheek glows (LED-ish) -->
+        <circle id="cheekL" cx="32"  cy="130" r="10" fill="url(#cheekGlow)" opacity="0.4"/>
+        <circle id="cheekR" cx="208" cy="130" r="10" fill="url(#cheekGlow)" opacity="0.4"/>
+
+        <!-- antenna spike -->
+        <line x1="120" y1="14" x2="120" y2="2"
+              stroke="#cfcfd6" stroke-width="1.4"/>
+        <circle cx="120" cy="2" r="2" fill="#fff"/>
+
+        <!-- center indicator dot (rotates as part of helmet group) -->
+        <circle id="centerDot" cx="120" cy="38" r="3"
+                fill="#fff" opacity="0.0"/>
+      </svg>
+    </div>
+
+    <div class="helmet-readout" style="display:none">
+      <span class="v" id="robotizeVal">050</span>
+    </div>
+  </div>
+
+  <!-- SMALL KNOBS -->
+  <div class="knob-row">
+    <div class="small-knob" id="sk-Pitch" tabindex="0" role="slider" aria-label="Pitch">
+      <div class="sk-label">P I T C H</div>
+      <div class="sk-dial-wrap">
+        <svg class="sk-arc" viewBox="0 0 106 106"></svg>
+        <div class="sk-rotate"><div class="sk-dial"></div></div>
+      </div>
+      <div class="sk-readout"><span id="PitchVal">MID</span></div>
+    </div>
+
+    <div class="small-knob" id="sk-Tone" tabindex="0" role="slider" aria-label="Tone">
+      <div class="sk-label">T O N E</div>
+      <div class="sk-dial-wrap">
+        <svg class="sk-arc" viewBox="0 0 106 106"></svg>
+        <div class="sk-rotate"><div class="sk-dial"></div></div>
+      </div>
+      <div class="sk-readout"><span id="ToneVal">050</span><span class="u">%</span></div>
+    </div>
+
+    <div class="small-knob" id="sk-Width" tabindex="0" role="slider" aria-label="Width">
+      <div class="sk-label">W I D T H</div>
+      <div class="sk-dial-wrap">
+        <svg class="sk-arc" viewBox="0 0 106 106"></svg>
+        <div class="sk-rotate"><div class="sk-dial"></div></div>
+      </div>
+      <div class="sk-readout"><span id="WidthVal">070</span><span class="u">%</span></div>
+    </div>
+  </div>
+
+  <!-- FOOTER (cleared) -->
+
+  <!-- HIDDEN BRIDGE INPUTS -->
+  <input type="range" class="plug-input" min="0" max="1" step="0.01" value="0.7"  data-param="Robotize">
+  <input type="range" class="plug-input" min="0" max="1" step="0.01" value="0.4"  data-param="Pitch">
+  <input type="range" class="plug-input" min="0" max="1" step="0.01" value="0.55" data-param="Tone">
+  <input type="range" class="plug-input" min="0" max="1" step="0.01" value="0.7"  data-param="Width">
+
+</div>
+
+<script>
+/* ===== Resize report ===== */
+(function reportResize(){
+  const send = () => parent.postMessage({type:'pluginResize', width:960, height:640}, '*');
+  send();
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(send);
+    ro.observe(document.body);
+  }
+})();
+
+/* ===== Helmet ticks ===== */
+(function buildTicks(){
+  const g = document.getElementById('tickGroup');
+  const cx = 160, cy = 160;
+  const rOuter = 158, rInner = 150, rMaj = 146;
+  // arc from -135deg to +135deg (270deg), 27 ticks
+  const N = 27;
+  for (let i=0; i<N; i++) {
+    const t = i/(N-1);
+    const angle = (-135 + t*270) * Math.PI/180;
+    const sin = Math.sin(angle), cos = -Math.cos(angle); // -cos so 0 is top
+    const major = (i % 3 === 0);
+    const r1 = rOuter, r2 = major ? rMaj : rInner;
+    const x1 = cx + sin*r1, y1 = cy + cos*r1;
+    const x2 = cx + sin*r2, y2 = cy + cos*r2;
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('stroke', major ? '#c8c8d0' : '#5a5a64');
+    line.setAttribute('stroke-width', major ? '1.4' : '0.8');
+    line.setAttribute('stroke-linecap','round');
+    g.appendChild(line);
+  }
+})();
+
+/* ===== Small-knob arc ticks ===== */
+document.querySelectorAll('.sk-arc').forEach(svg => {
+  const cx=53, cy=53, rOut=52, rInM=46, rInm=49;
+  const N=15;
+  const ns='http://www.w3.org/2000/svg';
+  for(let i=0;i<N;i++){
+    const t=i/(N-1);
+    const a=(-135+t*270)*Math.PI/180;
+    const sin=Math.sin(a), cos=-Math.cos(a);
+    const major=(i===0||i===N-1||i===Math.floor((N-1)/2));
+    const ri = major?rInM:rInm;
+    const x1=cx+sin*rOut, y1=cy+cos*rOut;
+    const x2=cx+sin*ri,   y2=cy+cos*ri;
+    const ln=document.createElementNS(ns,'line');
+    ln.setAttribute('x1',x1); ln.setAttribute('y1',y1);
+    ln.setAttribute('x2',x2); ln.setAttribute('y2',y2);
+    ln.setAttribute('stroke',major?'#9a9aa4':'#3a3a44');
+    ln.setAttribute('stroke-width',major?'1.2':'0.7');
+    ln.setAttribute('stroke-linecap','round');
+    svg.appendChild(ln);
+  }
+});
+
+/* ===== Knob controller ===== */
+const inputs = {};
+document.querySelectorAll('input.plug-input').forEach(i => inputs[i.dataset.param] = i);
+
+function dispatchInput(input){
+  input.dispatchEvent(new Event('input', {bubbles:true}));
+}
+
+/* render funcs */
+function pad3(n){ return String(n).padStart(3,'0'); }
+function pitchLabel(v){ return v < 0.34 ? 'LOW' : v < 0.67 ? 'MID' : 'HIGH'; }
+
+function renderRobotize(v){
+  const helmet = document.getElementById('helmet');
+  // rotate helmet -135 -> +135 across 0..1
+  const deg = -135 + v*270;
+  helmet.style.transform = `rotate(${deg}deg)`;
+  // visor shine intensity
+  helmet.style.filter = `drop-shadow(0 0 ${4 + v*20}px rgba(180,210,255,${0.3 + v*0.5}))`;
+  // cheek LED brightness
+  const cl = document.getElementById('cheekL');
+  const cr = document.getElementById('cheekR');
+  if (cl) cl.setAttribute('opacity', String(0.25 + v*0.85));
+  if (cr) cr.setAttribute('opacity', String(0.25 + v*0.85));
+  // prismatic glow
+  document.getElementById('prismGlow').style.opacity = String(Math.max(0, (v-0.4)) * 1.2);
+  // value readout
+  document.getElementById('robotizeVal').textContent = pad3(Math.round(v*100));
+  document.getElementById('robotize').setAttribute('aria-valuenow', Math.round(v*100));
+}
+
+function renderSmall(name, v){
+  const knob = document.getElementById('sk-'+name);
+  const rot = knob.querySelector('.sk-rotate');
+  const deg = -135 + v*270;
+  rot.style.transform = `rotate(${deg}deg)`;
+  const out = document.getElementById(name+'Val');
+  if (name === 'Pitch') {
+    out.textContent = pitchLabel(v);
+  } else {
+    out.textContent = pad3(Math.round(v*100));
+  }
+  knob.setAttribute('aria-valuenow', Math.round(v*100));
+}
+
+function setValue(name, v, fromUser=true){
+  v = Math.max(0, Math.min(1, v));
+  const input = inputs[name];
+  input.value = String(v);
+  if (name === 'Robotize') renderRobotize(v);
+  else renderSmall(name, v);
+  if (fromUser) dispatchInput(input);
+}
+
+/* defaults render */
+const defaults = {Robotize:0.7, Pitch:0.4, Tone:0.55, Width:0.7};
+Object.entries(defaults).forEach(([k,v]) => setValue(k, v, false));
+
+/* ===== Interactions ===== */
+function bindKnob(elId, paramName){
+  const el = document.getElementById(elId);
+  let dragging = false, startY = 0, startV = 0;
+
+  el.addEventListener('mousedown', (e) => {
+    if (e.detail === 2) return; // dblclick handled separately
+    dragging = true;
+    startY = e.clientY;
+    startV = parseFloat(inputs[paramName].value);
+    el.focus();
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const dy = startY - e.clientY; // up = increase
+    const sensitivity = e.shiftKey ? 400 : 200;
+    const nv = startV + dy/sensitivity;
+    setValue(paramName, nv, true);
+  });
+  window.addEventListener('mouseup', () => { dragging = false; });
+
+  el.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const step = e.shiftKey ? 0.1 : 0.01;
+    const cur = parseFloat(inputs[paramName].value);
+    setValue(paramName, cur - Math.sign(e.deltaY) * step, true);
+  }, {passive:false});
+
+  el.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    setValue(paramName, defaults[paramName], true);
+  });
+
+  el.addEventListener('keydown', (e) => {
+    const cur = parseFloat(inputs[paramName].value);
+    const step = e.shiftKey ? 0.1 : 0.01;
+    if (e.key === 'ArrowUp')   { setValue(paramName, cur+step, true); e.preventDefault(); }
+    if (e.key === 'ArrowDown') { setValue(paramName, cur-step, true); e.preventDefault(); }
+  });
+}
+
+bindKnob('robotize', 'Robotize');
+bindKnob('sk-Pitch', 'Pitch');
+bindKnob('sk-Tone',  'Tone');
+bindKnob('sk-Width', 'Width');
+
+/* prevent text selection while dragging anywhere */
+document.addEventListener('selectstart', e => e.preventDefault());
+</script>
+<script>(function(){
+  let lastW = 0, lastH = 0;
+  function report(){
+    const w = Math.ceil(document.body.scrollWidth);
+    const h = Math.ceil(document.body.scrollHeight);
+    if (w === lastW && h === lastH) return;
+    lastW = w; lastH = h;
+    if (window.__JUCE__ && window.__JUCE__.backend && typeof window.__JUCE__.backend.emitEvent === 'function') {
+      window.__JUCE__.backend.emitEvent('pluginResize', { width: w, height: h });
+    } else if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'pluginResize', width: w, height: h }, '*');
+    }
+  }
+  if (document.readyState === 'complete') {
+    report();
+  } else {
+    window.addEventListener('load', report);
+  }
+  try {
+    new ResizeObserver(report).observe(document.body);
+  } catch (e) {
+    // ResizeObserver not available — fall back to the load event only.
+  }
+})();</script>
+</body>
+</html>
